@@ -1,6 +1,21 @@
+// Copyright © 2020 The Knative Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package service
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -13,8 +28,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/zhanggbj/kperf/pkg"
-	"github.com/zhanggbj/kperf/pkg/generator"
+	"knative.dev/kperf/pkg"
+	"knative.dev/kperf/pkg/generator"
 )
 
 func NewServiceCleanCommand(p *pkg.PerfParams) *cobra.Command {
@@ -35,12 +50,20 @@ kperf service clean --nsprefix testns/ --ns nsname
 					fmt.Printf("Expected Range like 1,500, given %s\n", nsRange)
 					os.Exit(1)
 				}
-				start, _ := strconv.Atoi(r[0])
-				end, _ := strconv.Atoi(r[1])
+				start, err := strconv.Atoi(r[0])
+				if err != nil {
+					return err
+				}
+				end, err := strconv.Atoi(r[1])
+				if err != nil {
+					return err
+				}
 				if start >= 0 && end >= 0 && start <= end {
 					for i := start; i <= end; i++ {
 						nsRangeMap[fmt.Sprintf("%s%d", nsPrefix, i)] = true
 					}
+				} else {
+					return fmt.Errorf("failed to parse namespace range %s\n", err)
 				}
 			}
 
@@ -85,7 +108,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 					return fmt.Errorf("no namespace found with prefix %s", nsPrefix)
 				}
 			} else {
-				return fmt.Errorf("both ns and nsPrefix are empty")
+				return errors.New("both ns and nsPrefix are empty")
 			}
 			matchedNsNameList := [][2]string{}
 			for i := 0; i < len(nsNameList); i++ {
@@ -101,7 +124,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 			if len(matchedNsNameList) > 0 {
 				generator.NewBatchCleaner(matchedNsNameList, concurrency, cleanKsvc).Clean()
 			} else {
-				fmt.Printf("No service found for cleaning\n")
+				fmt.Println("No service found for cleaning\n")
 			}
 			return nil
 		},

@@ -1,4 +1,4 @@
-module github.com/zhanggbj/kperf
+module knative.dev/kperf
 
 go 1.14
 
@@ -10,6 +10,7 @@ require (
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.6.2
+	github.com/zhanggbj/kperf v0.0.0-20200824145203-df0304cc49b0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	k8s.io/api v0.18.1
 	k8s.io/apimachinery v0.18.1

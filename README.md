@@ -1,10 +1,10 @@
 # kperf
 A Knative Load Test Tool
 
-Please **NOTE** this project is under development.
+**Please NOTE this project is under rapid development**.
 Kperf is designed for Knative Load test. It helps to generate workload like Knative services and 
 gives measurement result about underneath resource create time duration based on server side timestamps, 
-and give statics and raw measurement result, to help Knative developers or operators to figure out Kntive platform
+and give statics and raw measurement result, to help Knative developers or operators to figure out Knative platform
 stability, scalability and performance bottleneck.
 
 
@@ -12,7 +12,9 @@ stability, scalability and performance bottleneck.
 ## Build kperf
 ```cassandraql
 # format and build kperf
-$ cd {workspace}/src/github.com/zhanggbj/kperf
+$ cd {workspace}/src/knative.dev/kperf
+$ go get -u github.com/jteeuwen/go-bindata/...
+$ export PATH=$PATH:$GOPATH/bin
 $ ./hack/build.sh
 
 # Move kperf
@@ -23,7 +25,7 @@ Note: [go-bindata](https://github.com/go-bindata/go-bindata) is required in the 
 
 ## User Stories
 
-### As a Codeengine developer, I want to generate Codeengine Service concurrently for test
+### As a Knative developer, I want to generate Knative Service concurrently for test
 ```
 # Generate total 30 knative service, for each 15 seconds create 10 ksvc with 5 concurrency in namespace test1, test2 and test3, and the ksvc names are ktest1, ktest2.....ktest29.
 $ kperf service generate -n 30 -b 10 -c 5 -i 15 --nsPrefix test --nsRange 1,3 --svcPrefix ktest --maxScale 1 --minScale 1
@@ -45,7 +47,7 @@ Creating ksvc ktestsss1 in namespace test2
 Creating ksvc ktestsss29 in namespace test3
 ```
 
-### As a Codeengine developer, I want to clean Codeengine Service generated for test
+### As a Knative developer, I want to clean Knative Service generated for test
 ```
 # Delete all ksvc with name prefix ktest in namespaces with name prefix test and index 1,2,3
 $ kperf service clean --nsPrefix test --nsRange 1,3 --svcPrefix ktest
@@ -60,7 +62,7 @@ Delete ksvc ktestsss5 in namespace test3
 Delete ksvc ktestsss8 in namespace test3
 ```
 
-### As a Codeengine developer, I want to measure Codeengine Service creation time duration
+### As a Knative developer, I want to measure Knative Service creation time duration
 - Service Configurations Duration Measurement: time duration for Knative Configurations to be ready
 - Service Routes Duration Measurement: time duration for Knative Routes to be ready
 - Overall Service Ready Measurement: time duration for Knative Service to be ready

@@ -145,7 +145,8 @@
                     formatter: function (params) {
                         var content = params[0].axisValue + '<br/>'
                         params.forEach(item => {
-                            var icon = '<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="12" height="12"><path stroke="' + item.color + '" fill="' + item.color + '" d="' + legendIcons[legendGroupMap[legendMap[item.seriesName]]].replace('path://', '') + '"/></g></svg>'
+                            var icon = '<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="12" height="12">' +
+                                '<path stroke="' + item.color + '" fill="' + item.color + '" d="' + legendIcons[legendGroupMap[legendMap[item.seriesName]]].replace('path://', '') + '"/></g></svg>'
                             content += icon + ' ' + item.seriesName + ': ' + item.value + '<br/>'
                         });
                         return content;

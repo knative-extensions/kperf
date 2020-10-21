@@ -1,6 +1,21 @@
+// Copyright © 2020 The Knative Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package service
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -8,11 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zhanggbj/kperf/pkg/command/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"knative.dev/kperf/pkg/command/utils"
 
-	"github.com/zhanggbj/kperf/pkg"
+	"knative.dev/kperf/pkg"
 
 	"github.com/montanaflynn/stats"
 	"github.com/spf13/cobra"
@@ -62,8 +77,16 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 				if len(r) != 2 {
 					return fmt.Errorf("expected range like 1,500, given %s\n", svcRange)
 				}
-				start, _ := strconv.Atoi(r[0])
-				end, _ := strconv.Atoi(r[1])
+
+				start, err := strconv.Atoi(r[0])
+				if err != nil {
+					return err
+				}
+				end, err := strconv.Atoi(r[1])
+				if err != nil {
+					return err
+				}
+
 				for i := start; i <= end; i++ {
 					sName := fmt.Sprintf("%s-%s", svcPrefix, strconv.Itoa(i))
 					svcNamespacedName = append(svcNamespacedName, []string{sName, svcNamespace})
@@ -81,8 +104,15 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 				if len(r) != 2 {
 					return fmt.Errorf("expected nsrange like 1,500, given %s\n", svcNsRange)
 				}
-				start, _ := strconv.Atoi(r[0])
-				end, _ := strconv.Atoi(r[1])
+
+				start, err := strconv.Atoi(r[0])
+				if err != nil {
+					return err
+				}
+				end, err := strconv.Atoi(r[1])
+				if err != nil {
+					return err
+				}
 				for i := start; i <= end; i++ {
 					svcNsName := fmt.Sprintf("%s-%s", svcNsPrefix, strconv.Itoa(i))
 					svcList := &servingv1api.ServiceList{}
@@ -328,6 +358,10 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 						group.Done()
 					}
 				}()
+			}
+
+			if len(svcNamespacedName) == 0 {
+				return errors.New("no service found to measure")
 			}
 
 			for _, item := range svcNamespacedName {

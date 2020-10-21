@@ -1,6 +1,21 @@
+// Copyright © 2020 The Knative Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package service
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -17,8 +32,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/zhanggbj/kperf/pkg"
-	"github.com/zhanggbj/kperf/pkg/generator"
+	"knative.dev/kperf/pkg"
+	"knative.dev/kperf/pkg/generator"
 )
 
 var (
@@ -39,7 +54,7 @@ func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
 
 For example:
 # To generate ksvc workload
-kperf service generate —count 500 —interval 20 —batch 20 --min-scale 0 --max-scale 5 (--nsprefix testns/ --ns nsname)
+kperf service generate —n 500 —interval 20 —batch 20 --min-scale 0 --max-scale 5 (--nsprefix testns/ --ns nsname)
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var nsRangeMap map[string]bool = map[string]bool{}
@@ -49,12 +64,20 @@ kperf service generate —count 500 —interval 20 —batch 20 --min-scale 0 --m
 					fmt.Printf("Expected Range like 1,500, given %s\n", nsRange)
 					os.Exit(1)
 				}
-				start, _ := strconv.Atoi(r[0])
-				end, _ := strconv.Atoi(r[1])
+				start, err := strconv.Atoi(r[0])
+				if err != nil {
+					return err
+				}
+				end, err := strconv.Atoi(r[1])
+				if err != nil {
+					return err
+				}
 				if start > 0 && end > 0 && start <= end {
 					for i := start; i <= end; i++ {
 						nsRangeMap[fmt.Sprintf("%s-%d", nsPrefix, i)] = true
 					}
+				} else {
+					return errors.New("failed to parse namespace range")
 				}
 			}
 
@@ -147,14 +170,14 @@ func createKSVC(ns string, index int) (string, string) {
 		Spec: servingv1.RevisionSpec{},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: map[string]string{
-				"autoscaling.knative.dev/minScale": fmt.Sprintf("%d", minScale),
-				"autoscaling.knative.dev/maxScale": fmt.Sprintf("%d", maxScale),
+				"autoscaling.knative.dev/minScale": strconv.Itoa(minScale),
+				"autoscaling.knative.dev/maxScale": strconv.Itoa(maxScale),
 			},
 		},
 	}
 	service.Spec.Template.Spec.Containers = []corev1.Container{
 		{
-			Image: "docker.io/qibobo/go4autoscaler:latest",
+			Image: "gcr.io/knative-samples/helloworld-go",
 			Ports: []corev1.ContainerPort{
 				{
 					ContainerPort: 8080,
