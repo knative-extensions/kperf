@@ -125,7 +125,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 			if len(matchedNsNameList) > 0 {
 				generator.NewBatchCleaner(matchedNsNameList, concurrency, cleanKsvc).Clean()
 			} else {
-				fmt.Println("No service found for cleaning\n")
+				fmt.Println("No service found for cleaning")
 			}
 			return nil
 		},
