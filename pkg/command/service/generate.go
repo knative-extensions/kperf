@@ -15,6 +15,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -91,13 +92,13 @@ kperf service generate —n 500 —interval 20 —batch 20 --min-scale 0 --max-s
 			}
 			nsNameList := []string{}
 			if ns != "" {
-				nss, err := p.ClientSet.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+				nss, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
 				nsNameList = append(nsNameList, nss.Name)
 			} else if nsPrefix != "" {
-				nsList, err := p.ClientSet.CoreV1().Namespaces().List(metav1.ListOptions{})
+				nsList, err := p.ClientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 				if err != nil {
 					return err
 				}
@@ -186,7 +187,7 @@ func createKSVC(ns string, index int) (string, string) {
 		},
 	}
 	fmt.Printf("Creating ksvc %s in namespace %s\n", service.GetName(), service.GetNamespace())
-	_, err := ksvcClient.Services(ns).Create(&service)
+	_, err := ksvcClient.Services(ns).Create(context.TODO(), &service, metav1.CreateOptions{})
 	if err != nil {
 		fmt.Printf("Failed to create ksvc %s in namespace %s : %s\n", service.GetName(), service.GetNamespace(), err)
 	}
@@ -195,7 +196,7 @@ func createKSVC(ns string, index int) (string, string) {
 func checkServiceStatusReady(ns, name string) error {
 	start := time.Now()
 	for time.Now().Sub(start) < timeout {
-		svc, _ := ksvcClient.Services(ns).Get(name, metav1.GetOptions{})
+		svc, _ := ksvcClient.Services(ns).Get(context.TODO(), name, metav1.GetOptions{})
 		conditions := svc.Status.Conditions
 		for i := 0; i < len(conditions); i++ {
 			if conditions[i].Type == knativeapis.ConditionReady && conditions[i].IsTrue() {

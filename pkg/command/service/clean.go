@@ -15,6 +15,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -77,13 +78,13 @@ kperf service clean --nsprefix testns/ --ns nsname
 			}
 			nsNameList := []string{}
 			if ns != "" {
-				nss, err := p.ClientSet.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+				nss, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
 				nsNameList = append(nsNameList, nss.Name)
 			} else if nsPrefix != "" {
-				nsList, err := p.ClientSet.CoreV1().Namespaces().List(metav1.ListOptions{})
+				nsList, err := p.ClientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 				if err != nil {
 					return err
 				}
@@ -112,7 +113,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 			}
 			matchedNsNameList := [][2]string{}
 			for i := 0; i < len(nsNameList); i++ {
-				svcList, err := ksvcClient.Services(nsNameList[i]).List(metav1.ListOptions{})
+				svcList, err := ksvcClient.Services(nsNameList[i]).List(context.TODO(), metav1.ListOptions{})
 				if err == nil {
 					for j := 0; j < len(svcList.Items); j++ {
 						if strings.HasPrefix(svcList.Items[j].Name, svcPrefix) {
@@ -141,7 +142,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 
 func cleanKsvc(ns, name string) {
 	fmt.Printf("Delete ksvc %s in namespace %s\n", ns, name)
-	err = ksvcClient.Services(ns).Delete(name, &metav1.DeleteOptions{})
+	err = ksvcClient.Services(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil {
 		fmt.Printf("Failed to delete ksvc %s in namespace %s\n", name, ns)
 	}
