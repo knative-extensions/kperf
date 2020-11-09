@@ -15,6 +15,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -116,7 +117,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 				for i := start; i <= end; i++ {
 					svcNsName := fmt.Sprintf("%s-%s", svcNsPrefix, strconv.Itoa(i))
 					svcList := &servingv1api.ServiceList{}
-					if svcList, err = servingClient.Services(svcNsName).List(metav1.ListOptions{}); err != nil {
+					if svcList, err = servingClient.Services(svcNsName).List(context.TODO(), metav1.ListOptions{}); err != nil {
 						return fmt.Errorf("failed to list service under namespace %s error:%v", svcNsName, err)
 					}
 
@@ -160,11 +161,11 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 						}
 						svc := j[0]
 						svcNs := j[1]
-						svcIns, err := servingClient.Services(svcNs).Get(svc, metav1.GetOptions{})
+						svcIns, err := servingClient.Services(svcNs).Get(context.TODO(), svc, metav1.GetOptions{})
 						if err != nil {
 							fmt.Errorf("failed to get Knative Service %s\n", err)
 						}
-						if !svcIns.Status.IsReady() {
+						if !svcIns.IsReady() {
 							fmt.Printf("service %s/%s not ready and skip measuring\n", svc, svcNs)
 							notReadyCount = notReadyCount + 1
 							group.Done()
@@ -179,7 +180,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 						svcRoutesReadyDuration = svcRoutesReady.Sub(svcCreatedTime.Time)
 						svcReadyDuration = svcRoutesReady.Sub(svcCreatedTime.Time)
 
-						cfgIns, err := servingClient.Configurations(svcNs).Get(svc, metav1.GetOptions{})
+						cfgIns, err := servingClient.Configurations(svcNs).Get(context.TODO(), svc, metav1.GetOptions{})
 						if err != nil {
 							fmt.Errorf("failed to get Configuration and skip measuring %s\n", err)
 							notReadyCount = notReadyCount + 1
@@ -188,7 +189,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 						}
 						revisionName := cfgIns.Status.LatestReadyRevisionName
 
-						revisionIns, err := servingClient.Revisions(svcNs).Get(revisionName, metav1.GetOptions{})
+						revisionIns, err := servingClient.Revisions(svcNs).Get(context.TODO(), revisionName, metav1.GetOptions{})
 						if err != nil {
 							fmt.Errorf("failed to get Revision and skip measuring %s\n", err)
 							notReadyCount = notReadyCount + 1
@@ -202,7 +203,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 						label := fmt.Sprintf("serving.knative.dev/revision=%s", revisionName)
 						podList := &corev1.PodList{}
-						if podList, err = client.CoreV1().Pods(svcNs).List(metav1.ListOptions{LabelSelector: label}); err != nil {
+						if podList, err = client.CoreV1().Pods(svcNs).List(context.TODO(), metav1.ListOptions{LabelSelector: label}); err != nil {
 							fmt.Errorf("list Pods of revision[%s] error :%v", revisionName, err)
 							notReadyCount = notReadyCount + 1
 							group.Done()
@@ -210,7 +211,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 						}
 
 						deploymentName := revisionName + "-deployment"
-						deploymentIns, err := client.AppsV1().Deployments(svcNs).Get(deploymentName, metav1.GetOptions{})
+						deploymentIns, err := client.AppsV1().Deployments(svcNs).Get(context.TODO(), deploymentName, metav1.GetOptions{})
 						if err != nil {
 							fmt.Errorf("failed to find deployment of revision[%s] error:%v", revisionName, err)
 							notReadyCount = notReadyCount + 1
@@ -268,7 +269,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 						}
 						// TODO: Need to figure out a better way to measure PA time as its status keeps changing even after service creation.
 
-						ingressIns, err := nwclient.Ingresses(svcNs).Get(svc, metav1.GetOptions{})
+						ingressIns, err := nwclient.Ingresses(svcNs).Get(context.TODO(), svc, metav1.GetOptions{})
 						if err != nil {
 							fmt.Errorf("failed to get Ingress %s\n", err)
 							notReadyCount = notReadyCount + 1

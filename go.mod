@@ -3,35 +3,34 @@ module knative.dev/kperf
 go 1.14
 
 require (
-	github.com/kr/text v0.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/montanaflynn/stats v0.6.3
-	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	github.com/pelletier/go-toml v1.8.0 // indirect
-	github.com/spf13/cobra v0.0.6
-	github.com/spf13/viper v1.6.2
-	github.com/zhanggbj/kperf v0.0.0-20200824145203-df0304cc49b0
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
-	k8s.io/api v0.18.1
-	k8s.io/apimachinery v0.18.1
-	k8s.io/client-go v12.0.0+incompatible
+	github.com/spf13/cast v1.3.1 // indirect
+	github.com/spf13/cobra v1.0.1-0.20200715031239-b95db644ed1c
+	github.com/spf13/jwalterweatherman v1.1.0 // indirect
+	github.com/spf13/viper v1.7.0
+	gopkg.in/ini.v1 v1.52.0 // indirect
+	k8s.io/api v0.18.8
+	k8s.io/apimachinery v0.18.8
+	k8s.io/client-go v11.0.1-0.20190805182717-6502b5e7b1b5+incompatible
 	k8s.io/kubernetes v1.15.4
-	knative.dev/networking v0.0.0-20200703165942-2f7b2a7eca36
-	knative.dev/pkg v0.0.0-20200702222342-ea4d6e985ba0
-	knative.dev/serving v0.15.2
+	knative.dev/networking v0.0.0-20201103163404-b9f80f4537af
+	knative.dev/pkg v0.0.0-20201103163404-5514ab0c1fdf
+	knative.dev/serving v0.18.1-0.20201106011207-d0773356e613
 )
 
 // Pinned to kubernetes-1.15.4
 replace (
-	k8s.io/api => k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20190918201827-3de75813f604
-	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20190817020851-f2f3a405f61d
+	k8s.io/api => k8s.io/api v0.18.8
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.8
+	k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20190918200908-1e17798da8c1
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.0.0-20190918202139-0b14c719ca62
-	k8s.io/client-go => k8s.io/client-go v0.0.0-20190918200256-06eb1244587a
+	k8s.io/client-go => k8s.io/client-go v0.18.8
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.0.0-20190918203125-ae665f80358a
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.0.0-20190918202959-c340507a5d48
-	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20190612205613-18da4a14b22b
+	k8s.io/code-generator => k8s.io/code-generator v0.18.8
 	k8s.io/component-base => k8s.io/component-base v0.0.0-20190918200425-ed2f0867c778
 	k8s.io/cri-api => k8s.io/cri-api v0.0.0-20190817025403-3ae76f584e79
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.0.0-20190918203248-97c07dcbb623
