@@ -41,17 +41,6 @@ import (
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
 )
 
-var (
-	svcPrefix, svcRange, svcName, svcNamespace, svcNsRange, svcNsPrefix string
-	svcConfigurationsReadySum, svcRoutesReadyReadySum, svcReadySum, minDomainReadySum, maxDomainReadySum,
-	revisionReadySum, podAutoscalerReadySum, ingressReadyReadySum, ingressNetworkConfiguredSum,
-	ingressLoadBalancerReadySum, podScheduledSum, containersReadySum, queueProxyStartedSum,
-	userContrainerStartedSum, deploymentCreatedSum float64
-	verbose                                              bool
-	readyCount, notReadyCount, notFoundCount, measureJob int
-	lock                                                 sync.Mutex
-)
-
 func NewServiceMeasureCommand(p *pkg.PerfParams) *cobra.Command {
 	serviceMeasureCommand := &cobra.Command{
 		Use:   "measure",
@@ -59,8 +48,8 @@ func NewServiceMeasureCommand(p *pkg.PerfParams) *cobra.Command {
 		Long: `Measure Knative service creation time
 
 For example:
-# To measure a Codeengine service creation time running currently with 20 jobs
-kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
+# To measure a Codeengine service creation time running currently with 20 concurent jobs
+kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrency 20
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Flags().NFlag() == 0 {
@@ -87,7 +76,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 				for i := start; i <= end; i++ {
 					sName := fmt.Sprintf("%s-%s", svcPrefix, strconv.Itoa(i))
-					svcNamespacedName = append(svcNamespacedName, []string{sName, svcNamespace})
+					svcNamespacedName = append(svcNamespacedName, []string{sName, ns})
 				}
 			}
 
@@ -96,10 +85,10 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 				return fmt.Errorf("failed to create serving client%s\n", err)
 			}
 
-			if cmd.Flags().Changed("nsrange") && cmd.Flags().Changed("nsprefix") {
-				r := strings.Split(svcNsRange, ",")
+			if cmd.Flags().Changed("namespace-range") && cmd.Flags().Changed("namespace-prefix") {
+				r := strings.Split(nsRange, ",")
 				if len(r) != 2 {
-					return fmt.Errorf("expected nsrange like 1,500, given %s\n", svcNsRange)
+					return fmt.Errorf("expected namespace-range like 1,500, given %s\n", nsRange)
 				}
 
 				start, err := strconv.Atoi(r[0])
@@ -111,7 +100,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 					return err
 				}
 				for i := start; i <= end; i++ {
-					svcNsName := fmt.Sprintf("%s-%s", svcNsPrefix, strconv.Itoa(i))
+					svcNsName := fmt.Sprintf("%s-%s", nsPrefix, strconv.Itoa(i))
 					svcList := &servingv1api.ServiceList{}
 					if svcList, err = servingClient.Services(svcNsName).List(context.TODO(), metav1.ListOptions{}); err != nil {
 						return fmt.Errorf("failed to list service under namespace %s error:%v", svcNsName, err)
@@ -140,7 +129,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 			svcChannel := make(chan []string)
 			group := sync.WaitGroup{}
 
-			for i := 0; i < measureJob; i++ {
+			for i := 0; i < concurrency; i++ {
 				go func() {
 					var (
 						svcConfigurationsReadyDuration, svcReadyDuration, svcRoutesReadyDuration, podScheduledDuration,
@@ -148,13 +137,13 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 					)
 					for j := range svcChannel {
 						if len(j) != 2 {
-							fmt.Errorf("lack of service name or service namespace and skip")
+							fmt.Printf("lack of service name or service namespace and skip")
 						}
 						svc := j[0]
 						svcNs := j[1]
 						svcIns, err := servingClient.Services(svcNs).Get(context.TODO(), svc, metav1.GetOptions{})
 						if err != nil {
-							fmt.Errorf("failed to get Knative Service %s\n", err)
+							fmt.Printf("failed to get Knative Service %s\n", err)
 						}
 						if !svcIns.IsReady() {
 							fmt.Printf("service %s/%s not ready and skip measuring\n", svc, svcNs)
@@ -173,7 +162,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 						cfgIns, err := servingClient.Configurations(svcNs).Get(context.TODO(), svc, metav1.GetOptions{})
 						if err != nil {
-							fmt.Errorf("failed to get Configuration and skip measuring %s\n", err)
+							fmt.Printf("failed to get Configuration and skip measuring %s\n", err)
 							notReadyCount = notReadyCount + 1
 							group.Done()
 							continue
@@ -182,7 +171,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 						revisionIns, err := servingClient.Revisions(svcNs).Get(context.TODO(), revisionName, metav1.GetOptions{})
 						if err != nil {
-							fmt.Errorf("failed to get Revision and skip measuring %s\n", err)
+							fmt.Printf("failed to get Revision and skip measuring %s\n", err)
 							notReadyCount = notReadyCount + 1
 							group.Done()
 							continue
@@ -194,8 +183,13 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 						label := fmt.Sprintf("serving.knative.dev/revision=%s", revisionName)
 						podList := &corev1.PodList{}
+<<<<<<< HEAD
 						if podList, err = p.ClientSet.CoreV1().Pods(svcNs).List(context.TODO(), metav1.ListOptions{LabelSelector: label}); err != nil {
 							fmt.Errorf("list Pods of revision[%s] error :%v", revisionName, err)
+=======
+						if podList, err = client.CoreV1().Pods(svcNs).List(context.TODO(), metav1.ListOptions{LabelSelector: label}); err != nil {
+							fmt.Printf("list Pods of revision[%s] error :%v", revisionName, err)
+>>>>>>> As a Kperf developer, I want to refine service generate/measure flags, code comments and etc
 							notReadyCount = notReadyCount + 1
 							group.Done()
 							continue
@@ -204,7 +198,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 						deploymentName := revisionName + "-deployment"
 						deploymentIns, err := p.ClientSet.AppsV1().Deployments(svcNs).Get(context.TODO(), deploymentName, metav1.GetOptions{})
 						if err != nil {
-							fmt.Errorf("failed to find deployment of revision[%s] error:%v", revisionName, err)
+							fmt.Printf("failed to find deployment of revision[%s] error:%v", revisionName, err)
 							notReadyCount = notReadyCount + 1
 							group.Done()
 							continue
@@ -220,7 +214,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 							podCreatedTime = pod.GetCreationTimestamp().Rfc3339Copy()
 							present, PodScheduledCdt := podutil.GetPodCondition(&pod.Status, corev1.PodScheduled)
 							if present == -1 {
-								fmt.Errorf("failed to find Pod Condition PodScheduled and skip measuring")
+								fmt.Printf("failed to find Pod Condition PodScheduled and skip measuring")
 								notReadyCount = notReadyCount + 1
 								group.Done()
 								continue
@@ -228,7 +222,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 							podScheduledTime = PodScheduledCdt.LastTransitionTime.Rfc3339Copy()
 							present, containersReadyCdt := podutil.GetPodCondition(&pod.Status, corev1.ContainersReady)
 							if present == -1 {
-								fmt.Errorf("failed to find Pod Condition ContainersReady and skip measuring")
+								fmt.Printf("failed to find Pod Condition ContainersReady and skip measuring")
 								notReadyCount = notReadyCount + 1
 								group.Done()
 								continue
@@ -239,7 +233,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 							queueProxyStatus, found := podutil.GetContainerStatus(pod.Status.ContainerStatuses, "queue-proxy")
 							if !found {
-								fmt.Errorf("failed to get queue-proxy container status and skip, error:%v", err)
+								fmt.Printf("failed to get queue-proxy container status and skip, error:%v", err)
 								notReadyCount = notReadyCount + 1
 								group.Done()
 								continue
@@ -248,7 +242,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 							userContrainerStatus, found := podutil.GetContainerStatus(pod.Status.ContainerStatuses, "user-container")
 							if !found {
-								fmt.Errorf("failed to get user-container container status and skip, error:%v", err)
+								fmt.Printf("failed to get user-container container status and skip, error:%v", err)
 								notReadyCount = notReadyCount + 1
 								group.Done()
 								continue
@@ -262,7 +256,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 						ingressIns, err := nwclient.Ingresses(svcNs).Get(context.TODO(), svc, metav1.GetOptions{})
 						if err != nil {
-							fmt.Errorf("failed to get Ingress %s\n", err)
+							fmt.Printf("failed to get Ingress %s\n", err)
 							notReadyCount = notReadyCount + 1
 							group.Done()
 							continue
@@ -466,21 +460,21 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 				rawPath := fmt.Sprintf("/tmp/%s_%s", current.Format("20060102150405"), "raw_ksvc_creation_time.csv")
 				err = utils.GenerateCSVFile(rawPath, rawRows)
 				if err != nil {
-					fmt.Errorf("failed to generate raw timestamp file and skip %s\n", err)
+					fmt.Printf("failed to generate raw timestamp file and skip %s\n", err)
 				}
 				fmt.Printf("Raw Timestamp saved in CSV file %s\n", rawPath)
 
 				csvPath := fmt.Sprintf("/tmp/%s_%s", current.Format("20060102150405"), "ksvc_creation_time.csv")
 				err = utils.GenerateCSVFile(csvPath, rows)
 				if err != nil {
-					fmt.Errorf("failed to generate CSV file and skip %s\n", err)
+					fmt.Printf("failed to generate CSV file and skip %s\n", err)
 				}
 
 				fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
 				htmlPath := fmt.Sprintf("/tmp/%s_%s", current.Format("20060102150405"), "ksvc_creation_time.html")
 				err = utils.GenerateHTMLFile(csvPath, htmlPath)
 				if err != nil {
-					fmt.Errorf("failed to generate HTML file and skip %s\n", err)
+					fmt.Printf("failed to generate HTML file and skip %s\n", err)
 				}
 				fmt.Printf("Visualized measurement saved in HTML file %s\n", htmlPath)
 			} else {
@@ -494,12 +488,12 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 	}
 
 	serviceMeasureCommand.Flags().StringVarP(&svcRange, "range", "r", "", "Desired service range")
-	serviceMeasureCommand.Flags().StringVarP(&svcNamespace, "namespace", "n", "", "Service namespace")
-	serviceMeasureCommand.Flags().StringVarP(&svcPrefix, "prefix", "p", "", "Service name prefix")
+	serviceMeasureCommand.Flags().StringVarP(&ns, "namespace", "ns", "", "Service namespace")
+	serviceMeasureCommand.Flags().StringVarP(&svcPrefix, "svc-prefix", "sp", "", "Service name prefix")
 	serviceMeasureCommand.Flags().BoolVarP(&verbose, "verbose", "v", false, "Service verbose result")
-	serviceMeasureCommand.Flags().StringVarP(&svcNsRange, "nsrange", "", "", "Service namespace range")
-	serviceMeasureCommand.Flags().StringVarP(&svcNsPrefix, "nsprefix", "", "", "Service namespace prefix")
-	serviceMeasureCommand.Flags().IntVarP(&measureJob, "job", "j", 10, "Service measurement job")
+	serviceMeasureCommand.Flags().StringVarP(&nsRange, "namespace-range", "nr", "", "Service namespace range")
+	serviceMeasureCommand.Flags().StringVarP(&nsPrefix, "namespace-prefix", "np", "", "Service namespace prefix")
+	serviceMeasureCommand.Flags().IntVarP(&concurrency, "concurrency", "c", 10, "Number of workers to do measurement job")
 	return serviceMeasureCommand
 }
 

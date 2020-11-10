@@ -37,15 +37,7 @@ import (
 	"knative.dev/kperf/pkg/generator"
 )
 
-var (
-	count, interval, batch, concurrency, minScale, maxScale int
-	nsPrefix, nsRange, ns                                   string
-	svcNamePrefixDefault                                    string = "testksvc"
-	checkReady                                              bool
-	timeout                                                 time.Duration
-	ksvcClient                                              *servingv1client.ServingV1Client
-	err                                                     error
-)
+var ksvcClient *servingv1client.ServingV1Client
 
 func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
 	ksvcGenCommand := &cobra.Command{
@@ -55,7 +47,7 @@ func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
 
 For example:
 # To generate ksvc workload
-kperf service generate —n 500 —interval 20 —batch 20 --min-scale 0 --max-scale 5 (--nsprefix testns/ --ns nsname)
+kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max-scale 5 (--namespace-prefix testns/ --namespace nsname)
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var nsRangeMap map[string]bool = map[string]bool{}
@@ -118,7 +110,7 @@ kperf service generate —n 500 —interval 20 —batch 20 --min-scale 0 --max-s
 					return fmt.Errorf("no namespace found with prefix %s", nsPrefix)
 				}
 			} else {
-				return fmt.Errorf("both ns and nsPrefix are empty")
+				return fmt.Errorf("both namespace and namespace-prefix are empty")
 			}
 			if checkReady {
 				generator.NewBatchGenerator(time.Duration(interval)*time.Second, count, batch, concurrency, nsNameList, createKSVC, checkServiceStatusReady, p).Generate()
@@ -129,25 +121,23 @@ kperf service generate —n 500 —interval 20 —batch 20 --min-scale 0 --max-s
 			return nil
 		},
 	}
-	// count, interval, batch, minScale, maxScale int
 	ksvcGenCommand.Flags().IntVarP(&count, "number", "n", 0, "Total number of ksvc to be created")
-	ksvcGenCommand.MarkFlagRequired("count")
+	ksvcGenCommand.MarkFlagRequired("number")
 	ksvcGenCommand.Flags().IntVarP(&interval, "interval", "i", 0, "Interval for each batch generation")
 	ksvcGenCommand.MarkFlagRequired("interval")
 	ksvcGenCommand.Flags().IntVarP(&batch, "batch", "b", 0, "Number of ksvc each time to be created")
 	ksvcGenCommand.MarkFlagRequired("batch")
 	ksvcGenCommand.Flags().IntVarP(&concurrency, "concurrency", "c", 10, "Number of multiple ksvcs to make at a time")
-	// ksvcGenCommand.MarkFlagRequired("concurrency")
-	ksvcGenCommand.Flags().IntVarP(&minScale, "minScale", "", 0, "For autoscaling.knative.dev/minScale")
-	ksvcGenCommand.MarkFlagRequired("minScale")
-	ksvcGenCommand.Flags().IntVarP(&maxScale, "maxScale", "", 0, "For autoscaling.knative.dev/minScale")
-	ksvcGenCommand.MarkFlagRequired("minScale")
+	ksvcGenCommand.Flags().IntVarP(&minScale, "min-scale", "", 0, "For autoscaling.knative.dev/minScale")
+	ksvcGenCommand.MarkFlagRequired("min-scale")
+	ksvcGenCommand.Flags().IntVarP(&maxScale, "max-scale", "", 0, "For autoscaling.knative.dev/minScale")
+	ksvcGenCommand.MarkFlagRequired("max-scale")
 
-	ksvcGenCommand.Flags().StringVarP(&nsPrefix, "nsPrefix", "p", "", "Namespace prefix. The ksvc will be created in the namespaces with the prefix")
-	ksvcGenCommand.Flags().StringVarP(&nsRange, "nsRange", "", "", "")
-	ksvcGenCommand.Flags().StringVarP(&ns, "ns", "", "", "Namespace name. The ksvc will be created in the namespace")
+	ksvcGenCommand.Flags().StringVarP(&nsPrefix, "namespace-prefix", "np", "", "Namespace prefix. The ksvc will be created in the namespaces with the prefix")
+	ksvcGenCommand.Flags().StringVarP(&nsRange, "namespace-range", "nr", "", "")
+	ksvcGenCommand.Flags().StringVarP(&ns, "namespace", "ns", "", "Namespace name. The ksvc will be created in the namespace")
 
-	ksvcGenCommand.Flags().StringVarP(&svcPrefix, "svcPrefix", "", "testksvc", "ksvc name prefix. The ksvcs will be svcPrefix1,svcPrefix2,svcPrefix3......")
+	ksvcGenCommand.Flags().StringVarP(&svcPrefix, "svc-prefix", "sp", "testksvc", "ksvc name prefix. The ksvcs will be svcPrefix1,svcPrefix2,svcPrefix3......")
 	ksvcGenCommand.Flags().BoolVarP(&checkReady, "wait", "", false, "whether wait the previous ksvc to be ready")
 	ksvcGenCommand.Flags().DurationVarP(&timeout, "timeout", "", 10*time.Minute, "duration to wait for previous ksvc to be ready")
 

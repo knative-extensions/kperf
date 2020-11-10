@@ -40,7 +40,7 @@ func NewServiceCleanCommand(p *pkg.PerfParams) *cobra.Command {
 
 For example:
 # To clean ksvc workload
-kperf service clean --nsprefix testns/ --ns nsname
+kperf service clean --namespace-prefix testns/ --namespace nsname
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var nsRangeMap map[string]bool = map[string]bool{}
@@ -104,7 +104,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 					return fmt.Errorf("no namespace found with prefix %s", nsPrefix)
 				}
 			} else {
-				return errors.New("both ns and nsPrefix are empty")
+				return errors.New("both namespace and namespace-prefix are empty")
 			}
 			matchedNsNameList := [][2]string{}
 			for i := 0; i < len(nsNameList); i++ {
@@ -126,10 +126,10 @@ kperf service clean --nsprefix testns/ --ns nsname
 		},
 	}
 
-	ksvcCleanCommand.Flags().StringVarP(&nsPrefix, "nsPrefix", "p", "", "Namespace prefix. The ksvc in namespaces with the prefix will be cleaned.")
-	ksvcCleanCommand.Flags().StringVarP(&nsRange, "nsRange", "", "", "")
-	ksvcCleanCommand.Flags().StringVarP(&ns, "ns", "n", "", "Namespace name. The ksvc in the namespace will be cleaned.")
-	ksvcCleanCommand.Flags().StringVarP(&svcPrefix, "svcPrefix", "", "testksvc", "ksvc name prefix. The ksvcs will be svcPrefix1,svcPrefix2,svcPrefix3......")
+	ksvcCleanCommand.Flags().StringVarP(&nsPrefix, "namespace-prefix", "np", "", "Namespace prefix. The ksvc in namespaces with the prefix will be cleaned.")
+	ksvcCleanCommand.Flags().StringVarP(&nsRange, "namespace-range", "nr", "", "")
+	ksvcCleanCommand.Flags().StringVarP(&ns, "namespace", "ns", "", "Namespace name. The ksvc in the namespace will be cleaned.")
+	ksvcCleanCommand.Flags().StringVarP(&svcPrefix, "svc-prefix", "sp", "testksvc", "ksvc name prefix. The ksvcs will be svcPrefix1,svcPrefix2,svcPrefix3......")
 	ksvcCleanCommand.Flags().IntVarP(&concurrency, "concurrency", "c", 10, "Number of multiple ksvcs to make at a time")
 
 	return ksvcCleanCommand
