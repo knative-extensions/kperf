@@ -14,23 +14,64 @@
 package service
 
 import (
-	"sync"
 	"time"
 )
 
-var (
-	count, interval, batch, concurrency, minScale, maxScale int
-	nsPrefix, nsRange, ns                                   string
-	svcPrefix, svcRange, svcName                            string
-	svcNamePrefixDefault                                    string = "testksvc"
-	checkReady                                              bool
-	timeout                                                 time.Duration
-	svcConfigurationsReadySum, svcRoutesReadyReadySum, svcReadySum, minDomainReadySum, maxDomainReadySum,
-	revisionReadySum, podAutoscalerReadySum, ingressReadyReadySum, ingressNetworkConfiguredSum,
-	ingressLoadBalancerReadySum, podScheduledSum, containersReadySum, queueProxyStartedSum,
-	userContrainerStartedSum, deploymentCreatedSum float64
-	readyCount, notReadyCount, notFoundCount, measureJob int
-	lock                                                 sync.Mutex
-	err                                                  error
-	verbose                                              bool
-)
+const svcNamePrefixDefault string = "testksvc"
+
+type generateArgs struct {
+	number      int
+	interval    int
+	batch       int
+	concurrency int
+	minScale    int
+	maxScale    int
+
+	namespacePrefix string
+	namespaceRange  string
+	namespace       string
+	svcPrefix       string
+	svcRange        string
+	svcName         string
+
+	checkReady bool
+	timeout    time.Duration
+}
+
+type cleanArgs struct {
+	namespacePrefix string
+	namespaceRange  string
+	namespace       string
+	svcPrefix       string
+	concurrency     int
+}
+type measureArgs struct {
+	svcRange        string
+	namespace       string
+	svcPrefix       string
+	namespaceRange  string
+	namespacePrefix string
+	concurrency     int
+
+	svcConfigurationsReadySum   float64
+	svcRoutesReadyReadySum      float64
+	svcReadySum                 float64
+	minDomainReadySum           float64
+	maxDomainReadySum           float64
+	revisionReadySum            float64
+	podAutoscalerReadySum       float64
+	ingressReadyReadySum        float64
+	ingressNetworkConfiguredSum float64
+	ingressLoadBalancerReadySum float64
+	podScheduledSum             float64
+	containersReadySum          float64
+	queueProxyStartedSum        float64
+	userContrainerStartedSum    float64
+	deploymentCreatedSum        float64
+
+	readyCount    int
+	notReadyCount int
+	notFoundCount int
+
+	verbose bool
+}

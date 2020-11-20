@@ -29,10 +29,10 @@ import (
 
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/generator"
-	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 )
 
 func NewServiceCleanCommand(p *pkg.PerfParams) *cobra.Command {
+	cleanArgs := cleanArgs{}
 	ksvcCleanCommand := &cobra.Command{
 		Use:   "clean",
 		Short: "clean ksvc",
@@ -40,14 +40,14 @@ func NewServiceCleanCommand(p *pkg.PerfParams) *cobra.Command {
 
 For example:
 # To clean ksvc workload
-kperf service clean --namespace-prefix testns/ --namespace nsname
+kperf service clean --namespace-prefix testns / --namespace nsname
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var nsRangeMap map[string]bool = map[string]bool{}
-			if nsPrefix != "" {
-				r := strings.Split(nsRange, ",")
+			var namespaceRangeMap map[string]bool = map[string]bool{}
+			if cleanArgs.namespacePrefix != "" {
+				r := strings.Split(cleanArgs.namespaceRange, ",")
 				if len(r) != 2 {
-					fmt.Printf("Expected Range like 1,500, given %s\n", nsRange)
+					fmt.Printf("Expected Range like 1,500, given %s\n", cleanArgs.namespaceRange)
 					os.Exit(1)
 				}
 				start, err := strconv.Atoi(r[0])
@@ -60,7 +60,7 @@ kperf service clean --namespace-prefix testns/ --namespace nsname
 				}
 				if start >= 0 && end >= 0 && start <= end {
 					for i := start; i <= end; i++ {
-						nsRangeMap[fmt.Sprintf("%s%d", nsPrefix, i)] = true
+						namespaceRangeMap[fmt.Sprintf("%s%d", cleanArgs.namespacePrefix, i)] = true
 					}
 				} else {
 					return fmt.Errorf("failed to parse namespace range %s\n", err)
@@ -72,36 +72,36 @@ kperf service clean --namespace-prefix testns/ --namespace nsname
 				return err
 			}
 			nsNameList := []string{}
-			if ns != "" {
-				nss, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
+			if cleanArgs.namespace != "" {
+				nss, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), cleanArgs.namespace, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
 				nsNameList = append(nsNameList, nss.Name)
-			} else if nsPrefix != "" {
+			} else if cleanArgs.namespacePrefix != "" {
 				nsList, err := p.ClientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 				if err != nil {
 					return err
 				}
 				if len(nsList.Items) == 0 {
-					return fmt.Errorf("no namespace found with prefix %s", nsPrefix)
+					return fmt.Errorf("no namespace found with prefix %s", cleanArgs.namespacePrefix)
 				}
-				if len(nsRangeMap) >= 0 {
+				if len(namespaceRangeMap) >= 0 {
 					for i := 0; i < len(nsList.Items); i++ {
-						if _, exists := nsRangeMap[nsList.Items[i].Name]; exists {
+						if _, exists := namespaceRangeMap[nsList.Items[i].Name]; exists {
 							nsNameList = append(nsNameList, nsList.Items[i].Name)
 						}
 					}
 				} else {
 					for i := 0; i < len(nsList.Items); i++ {
-						if strings.HasPrefix(nsList.Items[i].Name, nsPrefix) {
+						if strings.HasPrefix(nsList.Items[i].Name, cleanArgs.namespacePrefix) {
 							nsNameList = append(nsNameList, nsList.Items[i].Name)
 						}
 					}
 				}
 
 				if len(nsNameList) == 0 {
-					return fmt.Errorf("no namespace found with prefix %s", nsPrefix)
+					return fmt.Errorf("no namespace found with prefix %s", cleanArgs.namespacePrefix)
 				}
 			} else {
 				return errors.New("both namespace and namespace-prefix are empty")
@@ -111,14 +111,14 @@ kperf service clean --namespace-prefix testns/ --namespace nsname
 				svcList, err := ksvcClient.Services(nsNameList[i]).List(context.TODO(), metav1.ListOptions{})
 				if err == nil {
 					for j := 0; j < len(svcList.Items); j++ {
-						if strings.HasPrefix(svcList.Items[j].Name, svcPrefix) {
+						if strings.HasPrefix(svcList.Items[j].Name, cleanArgs.svcPrefix) {
 							matchedNsNameList = append(matchedNsNameList, [2]string{nsNameList[i], svcList.Items[j].Name})
 						}
 					}
 				}
 			}
 			if len(matchedNsNameList) > 0 {
-				generator.NewBatchCleaner(matchedNsNameList, concurrency, ksvcClient, cleanKsvc).Clean()
+				generator.NewBatchCleaner(matchedNsNameList, cleanArgs.concurrency, cleanKsvc).Clean()
 			} else {
 				fmt.Println("No service found for cleaning")
 			}
@@ -126,19 +126,19 @@ kperf service clean --namespace-prefix testns/ --namespace nsname
 		},
 	}
 
-	ksvcCleanCommand.Flags().StringVarP(&nsPrefix, "namespace-prefix", "np", "", "Namespace prefix. The ksvc in namespaces with the prefix will be cleaned.")
-	ksvcCleanCommand.Flags().StringVarP(&nsRange, "namespace-range", "nr", "", "")
-	ksvcCleanCommand.Flags().StringVarP(&ns, "namespace", "ns", "", "Namespace name. The ksvc in the namespace will be cleaned.")
-	ksvcCleanCommand.Flags().StringVarP(&svcPrefix, "svc-prefix", "sp", "testksvc", "ksvc name prefix. The ksvcs will be svcPrefix1,svcPrefix2,svcPrefix3......")
-	ksvcCleanCommand.Flags().IntVarP(&concurrency, "concurrency", "c", 10, "Number of multiple ksvcs to make at a time")
+	ksvcCleanCommand.Flags().StringVarP(&cleanArgs.namespacePrefix, "namespace-prefix", "", "", "Namespace prefix. The ksvc in namespaces with the prefix will be cleaned.")
+	ksvcCleanCommand.Flags().StringVarP(&cleanArgs.namespaceRange, "namespace-range", "", "", "")
+	ksvcCleanCommand.Flags().StringVarP(&cleanArgs.namespace, "namespace", "", "", "Namespace name. The ksvc in the namespace will be cleaned.")
+	ksvcCleanCommand.Flags().StringVarP(&cleanArgs.svcPrefix, "svc-prefix", "", "testksvc", "ksvc name prefix. The ksvcs will be svcPrefix1,svcPrefix2,svcPrefix3......")
+	ksvcCleanCommand.Flags().IntVarP(&cleanArgs.concurrency, "concurrency", "c", 10, "Number of multiple ksvcs to make at a time")
 
 	return ksvcCleanCommand
 }
 
-func cleanKsvc(ksvcClient *servingv1client.ServingV1Client, ns, name string) {
-	fmt.Printf("Delete ksvc %s in namespace %s\n", ns, name)
-	err = ksvcClient.Services(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
+func cleanKsvc(namespace, name string) {
+	fmt.Printf("Delete ksvc %s in namespace %s\n", name, namespace)
+	err := ksvcClient.Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil {
-		fmt.Printf("Failed to delete ksvc %s in namespace %s\n", name, ns)
+		fmt.Printf("Failed to delete ksvc %s in namespace %s\n", name, namespace)
 	}
 }
