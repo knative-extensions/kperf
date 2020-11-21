@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -39,7 +38,7 @@ func NewServiceCleanCommand(p *pkg.PerfParams) *cobra.Command {
 		Long: `clean ksvc workload
 
 For example:
-# To clean ksvc workload
+# To clean Knative Service workload
 kperf service clean --namespace-prefix testns / --namespace nsname
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -47,8 +46,7 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 			if cleanArgs.namespacePrefix != "" {
 				r := strings.Split(cleanArgs.namespaceRange, ",")
 				if len(r) != 2 {
-					fmt.Printf("Expected Range like 1,500, given %s\n", cleanArgs.namespaceRange)
-					os.Exit(1)
+					return fmt.Errorf("expected range like 1,500, given %s\n", cleanArgs.namespaceRange)
 				}
 				start, err := strconv.Atoi(r[0])
 				if err != nil {
@@ -63,7 +61,7 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 						namespaceRangeMap[fmt.Sprintf("%s-%d", cleanArgs.namespacePrefix, i)] = true
 					}
 				} else {
-					return fmt.Errorf("failed to parse namespace range %s\n", err)
+					return fmt.Errorf("failed to parse namespace range %s\n", cleanArgs.namespaceRange)
 				}
 			}
 

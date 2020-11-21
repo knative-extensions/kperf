@@ -28,9 +28,9 @@ import (
 type PerfParams struct {
 	KubeCfgPath         string
 	ClientConfig        clientcmd.ClientConfig
-	ClientSet           *kubernetes.Clientset
-	NewServingClient    func() (*servingv1client.ServingV1Client, error)
-	NewNetworkingClient func() (*networkingv1alpha1.NetworkingV1alpha1Client, error)
+	ClientSet           kubernetes.Interface
+	NewServingClient    func() (servingv1client.ServingV1Interface, error)
+	NewNetworkingClient func() (networkingv1alpha1.NetworkingV1alpha1Interface, error)
 }
 
 func (params *PerfParams) Initialize() error {
@@ -55,7 +55,7 @@ func (params *PerfParams) Initialize() error {
 	return nil
 }
 
-func (params *PerfParams) newServingClient() (*servingv1client.ServingV1Client, error) {
+func (params *PerfParams) newServingClient() (servingv1client.ServingV1Interface, error) {
 	restConfig, err := params.RestConfig()
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (params *PerfParams) newServingClient() (*servingv1client.ServingV1Client, 
 	return client, nil
 }
 
-func (params *PerfParams) newNetworkingClient() (*networkingv1alpha1.NetworkingV1alpha1Client, error) {
+func (params *PerfParams) newNetworkingClient() (networkingv1alpha1.NetworkingV1alpha1Interface, error) {
 	restConfig, err := params.RestConfig()
 	if err != nil {
 		return nil, err

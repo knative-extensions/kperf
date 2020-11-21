@@ -17,11 +17,11 @@ package service
 import (
 	"context"
 	"fmt"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +49,7 @@ func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
 		Long: `generate Knative Service workload
 For example:
 # To generate Knative Service workload
-kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max-scale 5 (--namespace-prefix testns/ --namespace nsname)
+kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale 5 (--namespace-prefix testns/ --namespace nsname)
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
@@ -65,8 +65,7 @@ kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max
 			} else if generateArgs.namespacePrefix != "" {
 				r := strings.Split(generateArgs.namespaceRange, ",")
 				if len(r) != 2 {
-					fmt.Printf("expected Range like 1,500, given %s\n", generateArgs.namespaceRange)
-					os.Exit(1)
+					return fmt.Errorf("expected range like 1,500, given %s\n", generateArgs.namespaceRange)
 				}
 				start, err := strconv.Atoi(r[0])
 				if err != nil {
@@ -87,9 +86,6 @@ kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max
 				nsNameList = append(nsNameList, generateArgs.namespace)
 			}
 
-			if len(nsNameList) == 0 {
-				return fmt.Errorf("no namespace found with prefix %s", generateArgs.namespacePrefix)
-			}
 			// Check if namespace exists, in NOT, return error
 			for _, ns := range nsNameList {
 				_, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})

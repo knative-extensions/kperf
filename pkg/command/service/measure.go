@@ -50,7 +50,7 @@ func NewServiceMeasureCommand(p *pkg.PerfParams) *cobra.Command {
 		Long: `Measure Knative service creation time
 
 For example:
-# To measure a Codeengine service creation time running currently with 20 concurent jobs
+# To measure a Knative Service creation time running currently with 20 concurent jobs
 kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrency 20
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {

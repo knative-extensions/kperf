@@ -16,9 +16,10 @@ package core
 
 import (
 	"fmt"
+	"os"
+
 	"knative.dev/kperf/pkg/command/service"
 	"knative.dev/kperf/pkg/command/version"
-	"os"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
