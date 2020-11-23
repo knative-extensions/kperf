@@ -40,22 +40,6 @@ go_build() {
   go build -mod=mod -ldflags "$(build_flags $(basedir))" -o kperf ./cmd/...
 }
 
-go_test() {
-  local red=""
-  local reset=""
-  # Use color only when a terminal is set
-  if [ -t 1 ]; then
-    red="[31m"
-    reset="[39m"
-  fi
-
-  echo "🧪 ${X}Test"
-  if ! go test -v ./pkg/...; then
-    echo "🔥 ${red}Failure${reset}"
-    exit 1
-  fi
-}
-
 check_license() {
   echo "⚖️ ${S}License"
   local required_keywords=("Authors" "Apache License" "LICENSE-2.0")
