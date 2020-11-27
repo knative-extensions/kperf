@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/zyjiaobj/kperf/branch/master/graph/badge.svg?token=N77G9OJIBA)](https://codecov.io/gh/zyjiaobj/kperf)
 
-A Knative Load Test Tool
+A Knative Load Test Tool haha
 
 **Please NOTE this project is under rapid development**.
 Kperf is designed for Knative Load test. It helps to generate workload like Knative services and 
