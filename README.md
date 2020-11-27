@@ -1,4 +1,7 @@
 # kperf
+
+[![codecov](https://codecov.io/gh/zyjiaobj/kperf/branch/master/graph/badge.svg?token=N77G9OJIBA)](https://codecov.io/gh/zyjiaobj/kperf)
+
 A Knative Load Test Tool
 
 **Please NOTE this project is under rapid development**.
