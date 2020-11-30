@@ -15,17 +15,22 @@ package pkg
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"os"
-	"path/filepath"
+	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
+	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 )
 
 type PerfParams struct {
-	KubeCfgPath  string
-	ClientConfig clientcmd.ClientConfig
-	ClientSet    *kubernetes.Clientset
+	KubeCfgPath         string
+	ClientConfig        clientcmd.ClientConfig
+	ClientSet           *kubernetes.Clientset
+	NewServingClient    func() (*servingv1client.ServingV1Client, error)
+	NewNetworkingClient func() (*networkingv1alpha1.NetworkingV1alpha1Client, error)
 }
 
 func (params *PerfParams) Initialize() error {
@@ -41,7 +46,39 @@ func (params *PerfParams) Initialize() error {
 			os.Exit(1)
 		}
 	}
+	if params.NewServingClient == nil {
+		params.NewServingClient = params.newServingClient
+	}
+	if params.NewNetworkingClient == nil {
+		params.NewNetworkingClient = params.newNetworkingClient
+	}
 	return nil
+}
+
+func (params *PerfParams) newServingClient() (*servingv1client.ServingV1Client, error) {
+	restConfig, err := params.RestConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := servingv1client.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+func (params *PerfParams) newNetworkingClient() (*networkingv1alpha1.NetworkingV1alpha1Client, error) {
+	restConfig, err := params.RestConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := networkingv1alpha1.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 // RestConfig returns REST config, which can be to use to create specific clientset

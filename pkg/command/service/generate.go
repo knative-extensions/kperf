@@ -82,11 +82,6 @@ kperf service generate —n 500 —interval 20 —batch 20 --min-scale 0 --max-s
 				}
 			}
 
-			restConfig, err := p.RestConfig()
-			if err != nil {
-				return err
-			}
-			ksvcClient, err = servingv1client.NewForConfig(restConfig)
 			if err != nil {
 				return err
 			}
@@ -126,9 +121,9 @@ kperf service generate —n 500 —interval 20 —batch 20 --min-scale 0 --max-s
 				return fmt.Errorf("both ns and nsPrefix are empty")
 			}
 			if checkReady {
-				generator.NewBatchGenerator(time.Duration(interval)*time.Second, count, batch, concurrency, nsNameList, createKSVC, checkServiceStatusReady).Generate()
+				generator.NewBatchGenerator(time.Duration(interval)*time.Second, count, batch, concurrency, nsNameList, createKSVC, checkServiceStatusReady, p).Generate()
 			} else {
-				generator.NewBatchGenerator(time.Duration(interval)*time.Second, count, batch, concurrency, nsNameList, createKSVC, func(ns, name string) error { return nil }).Generate()
+				generator.NewBatchGenerator(time.Duration(interval)*time.Second, count, batch, concurrency, nsNameList, createKSVC, func(ns, name string) error { return nil }, p).Generate()
 			}
 
 			return nil
@@ -159,7 +154,7 @@ kperf service generate —n 500 —interval 20 —batch 20 --min-scale 0 --max-s
 	return ksvcGenCommand
 }
 
-func createKSVC(ns string, index int) (string, string) {
+func createKSVC(p *pkg.PerfParams, ns string, index int) (string, string) {
 	service := servingv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%d", svcPrefix, index),
@@ -187,12 +182,17 @@ func createKSVC(ns string, index int) (string, string) {
 		},
 	}
 	fmt.Printf("Creating ksvc %s in namespace %s\n", service.GetName(), service.GetNamespace())
-	_, err := ksvcClient.Services(ns).Create(context.TODO(), &service, metav1.CreateOptions{})
+	ksvcClient, err := p.NewServingClient()
+	if err != nil {
+		fmt.Printf("Failed to create serving client: %s\n", err)
+	}
+	_, err = ksvcClient.Services(ns).Create(context.TODO(), &service, metav1.CreateOptions{})
 	if err != nil {
 		fmt.Printf("Failed to create ksvc %s in namespace %s : %s\n", service.GetName(), service.GetNamespace(), err)
 	}
 	return service.GetNamespace(), service.GetName()
 }
+
 func checkServiceStatusReady(ns, name string) error {
 	start := time.Now()
 	for time.Now().Sub(start) < timeout {
@@ -206,5 +206,4 @@ func checkServiceStatusReady(ns, name string) error {
 	}
 	fmt.Printf("Error: ksvc %s in namespace %s is not ready after %s\n", name, ns, timeout)
 	return fmt.Errorf("ksvc %s in namespace %s is not ready after %s ", name, ns, timeout)
-
 }

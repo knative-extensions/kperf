@@ -25,12 +25,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
-	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
-
 	"github.com/spf13/cobra"
 
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/generator"
+	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 )
 
 func NewServiceCleanCommand(p *pkg.PerfParams) *cobra.Command {
@@ -68,11 +67,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 				}
 			}
 
-			restConfig, err := p.RestConfig()
-			if err != nil {
-				return err
-			}
-			ksvcClient, err = servingv1client.NewForConfig(restConfig)
+			ksvcClient, err := p.NewServingClient()
 			if err != nil {
 				return err
 			}
@@ -123,7 +118,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 				}
 			}
 			if len(matchedNsNameList) > 0 {
-				generator.NewBatchCleaner(matchedNsNameList, concurrency, cleanKsvc).Clean()
+				generator.NewBatchCleaner(matchedNsNameList, concurrency, ksvcClient, cleanKsvc).Clean()
 			} else {
 				fmt.Println("No service found for cleaning")
 			}
@@ -140,7 +135,7 @@ kperf service clean --nsprefix testns/ --ns nsname
 	return ksvcCleanCommand
 }
 
-func cleanKsvc(ns, name string) {
+func cleanKsvc(ksvcClient *servingv1client.ServingV1Client, ns, name string) {
 	fmt.Printf("Delete ksvc %s in namespace %s\n", ns, name)
 	err = ksvcClient.Services(ns).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	if err != nil {
