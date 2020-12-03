@@ -25,7 +25,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"knative.dev/kperf/pkg/command/utils"
 
 	"knative.dev/kperf/pkg"
@@ -38,10 +37,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	networkingv1api "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 	servingv1api "knative.dev/serving/pkg/apis/serving/v1"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
-	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 )
 
 var (
@@ -94,8 +91,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 				}
 			}
 
-			cfg, _ := p.RestConfig()
-			servingClient, err := servingv1client.NewForConfig(cfg)
+			servingClient, err := p.NewServingClient()
 			if err != nil {
 				return fmt.Errorf("failed to create serving client%s\n", err)
 			}
@@ -136,14 +132,9 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 			svcReadyTime := make([]float64, 0)
 
-			client, err := kubernetes.NewForConfig(cfg)
+			nwclient, err := p.NewNetworkingClient()
 			if err != nil {
-				return fmt.Errorf("failed to create k8s client%s\n", err)
-			}
-
-			nwclient, err := networkingv1alpha1.NewForConfig(cfg)
-			if err != nil {
-				return fmt.Errorf("failed to create serving client%s\n", err)
+				return fmt.Errorf("failed to create networking client%s\n", err)
 			}
 
 			svcChannel := make(chan []string)
@@ -203,7 +194,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 
 						label := fmt.Sprintf("serving.knative.dev/revision=%s", revisionName)
 						podList := &corev1.PodList{}
-						if podList, err = client.CoreV1().Pods(svcNs).List(context.TODO(), metav1.ListOptions{LabelSelector: label}); err != nil {
+						if podList, err = p.ClientSet.CoreV1().Pods(svcNs).List(context.TODO(), metav1.ListOptions{LabelSelector: label}); err != nil {
 							fmt.Errorf("list Pods of revision[%s] error :%v", revisionName, err)
 							notReadyCount = notReadyCount + 1
 							group.Done()
@@ -211,7 +202,7 @@ kperf service measure --perfix svc --range 1,200 --namespace ns --job 20
 						}
 
 						deploymentName := revisionName + "-deployment"
-						deploymentIns, err := client.AppsV1().Deployments(svcNs).Get(context.TODO(), deploymentName, metav1.GetOptions{})
+						deploymentIns, err := p.ClientSet.AppsV1().Deployments(svcNs).Get(context.TODO(), deploymentName, metav1.GetOptions{})
 						if err != nil {
 							fmt.Errorf("failed to find deployment of revision[%s] error:%v", revisionName, err)
 							notReadyCount = notReadyCount + 1

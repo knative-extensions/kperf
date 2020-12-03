@@ -17,9 +17,11 @@ package generator
 import (
 	"os"
 	"time"
+
+	"knative.dev/kperf/pkg"
 )
 
-type Generator func(string, int) (string, string)
+type Generator func(*pkg.PerfParams, string, int) (string, string)
 type PostGenerator func(string, string) error
 
 type BatchGenerator struct {
@@ -31,6 +33,7 @@ type BatchGenerator struct {
 	namespaceList     []string
 	generateFunc      Generator
 	postGeneratorFunc PostGenerator
+	params            *pkg.PerfParams
 
 	indexChan     chan int
 	finishedChan  chan int
@@ -38,7 +41,7 @@ type BatchGenerator struct {
 	doneChan      chan bool
 }
 
-func NewBatchGenerator(interval time.Duration, count, batch int, concurrency int, namespaceList []string, generator Generator, postGenerator PostGenerator) *BatchGenerator {
+func NewBatchGenerator(interval time.Duration, count, batch int, concurrency int, namespaceList []string, generator Generator, postGenerator PostGenerator, p *pkg.PerfParams) *BatchGenerator {
 	return &BatchGenerator{
 		interval:          interval,
 		count:             count,
@@ -48,6 +51,7 @@ func NewBatchGenerator(interval time.Duration, count, batch int, concurrency int
 		namespaceList:     namespaceList,
 		generateFunc:      generator,
 		postGeneratorFunc: postGenerator,
+		params:            p,
 
 		indexChan:     make(chan int, batch*5),
 		finishedChan:  make(chan int, batch*5),
@@ -78,6 +82,7 @@ func (bg *BatchGenerator) Generate() {
 	}
 
 }
+
 func (bg *BatchGenerator) doGenerate() {
 	for {
 		select {
@@ -85,7 +90,7 @@ func (bg *BatchGenerator) doGenerate() {
 			return
 		case index := <-bg.indexChan:
 			ns := bg.namespaceList[index%len(bg.namespaceList)]
-			ns, name := bg.generateFunc(ns, index)
+			ns, name := bg.generateFunc(bg.params, ns, index)
 			if bg.postGeneratorFunc(ns, name) != nil {
 				os.Exit(1)
 			}
