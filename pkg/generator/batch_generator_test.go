@@ -16,6 +16,7 @@ package generator_test
 
 import (
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -25,43 +26,64 @@ import (
 
 func TestBatchGenerator(t *testing.T) {
 
+	var generateFuncCaled uint64
+	var postGeneratorFuncCalled uint64
+
 	generateFunc := func(ns string, index int) (string, string) {
+		atomic.AddUint64(&generateFuncCaled, 1)
 		return ns, fmt.Sprintf("%s-%d", ns, index)
 	}
 	postGeneratorFunc := func(ns, name string) error {
+		atomic.AddUint64(&postGeneratorFuncCalled, 1)
 		return nil
 	}
 
-	t.Run("no need to create ksvc", func(t *testing.T) {
+	t.Run("should complete immediately since 0 ksvc is required to be created", func(t *testing.T) {
+		generateFuncCaled = 0
+		postGeneratorFuncCalled = 0
 		start := time.Now().Unix()
 		generator.NewBatchGenerator(time.Duration(1)*time.Second, 0, 2, 2, []string{"ns1", "ns2"}, generateFunc, postGeneratorFunc).Generate()
 		duration := time.Now().Unix() - start
 		// should complete immediately
 		assert.Assert(t, duration < 1)
+		assert.Assert(t, generateFuncCaled == 0)
+		assert.Assert(t, postGeneratorFuncCalled == 0)
 	})
 
 	t.Run("should complete in 4s", func(t *testing.T) {
+		generateFuncCaled = 0
+		postGeneratorFuncCalled = 0
 		start := time.Now().Unix()
 		generator.NewBatchGenerator(time.Duration(1)*time.Second, 8, 2, 2, []string{"ns1", "ns2"}, generateFunc, postGeneratorFunc).Generate()
 		duration := time.Now().Unix() - start
 		// should complete in count/batch = 4 seconds
 		assert.Assert(t, duration >= 4 && duration <= 5)
+		assert.Assert(t, generateFuncCaled == 8)
+		assert.Assert(t, postGeneratorFuncCalled == 8)
 	})
 
 	t.Run("should complete in 2s", func(t *testing.T) {
+		generateFuncCaled = 0
+		postGeneratorFuncCalled = 0
 		start := time.Now().Unix()
 		generator.NewBatchGenerator(time.Duration(1)*time.Second, 8, 4, 2, []string{"ns1", "ns2"}, generateFunc, postGeneratorFunc).Generate()
 		duration := time.Now().Unix() - start
 		// should complete in count/batch = 2 seconds
 		assert.Assert(t, duration >= 2 && duration <= 3)
+		assert.Assert(t, generateFuncCaled == 8)
+		assert.Assert(t, postGeneratorFuncCalled == 8)
 	})
 
 	t.Run("should complete in 1s", func(t *testing.T) {
+		generateFuncCaled = 0
+		postGeneratorFuncCalled = 0
 		start := time.Now().Unix()
 		generator.NewBatchGenerator(time.Duration(1)*time.Second, 8, 8, 16, []string{"ns1", "ns2"}, generateFunc, postGeneratorFunc).Generate()
 		duration := time.Now().Unix() - start
 		// should complete in count/batch = 1 second
 		assert.Assert(t, duration >= 1 && duration <= 2)
+		assert.Assert(t, generateFuncCaled == 8)
+		assert.Assert(t, postGeneratorFuncCalled == 8)
 	})
 
 }
