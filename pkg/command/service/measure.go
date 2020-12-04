@@ -110,7 +110,9 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 
 					if len(svcList.Items) > 0 {
 						for _, svc := range svcList.Items {
-							svcNamespacedName = append(svcNamespacedName, []string{svc.Name, svcNsName})
+							if strings.HasPrefix(svc.Name, measureArgs.svcPrefix) {
+								svcNamespacedName = append(svcNamespacedName, []string{svc.Name, svcNsName})
+							}
 						}
 					} else {
 						fmt.Printf("no service found under namespace %s and skip\n", svcNsName)

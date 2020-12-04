@@ -75,6 +75,10 @@ kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max
 					return errors.New("failed to parse namespace range")
 				}
 			}
+			ksvcClient, err := p.NewServingClient()
+			if err != nil {
+				return err
+			}
 			nsNameList := []string{}
 			if generateArgs.namespace != "" {
 				nss, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), generateArgs.namespace, metav1.GetOptions{})

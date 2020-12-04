@@ -60,7 +60,7 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 				}
 				if start >= 0 && end >= 0 && start <= end {
 					for i := start; i <= end; i++ {
-						namespaceRangeMap[fmt.Sprintf("%s%d", cleanArgs.namespacePrefix, i)] = true
+						namespaceRangeMap[fmt.Sprintf("%s-%d", cleanArgs.namespacePrefix, i)] = true
 					}
 				} else {
 					return fmt.Errorf("failed to parse namespace range %s\n", err)
@@ -107,6 +107,13 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 				return errors.New("both namespace and namespace-prefix are empty")
 			}
 			matchedNsNameList := [][2]string{}
+			cleanKsvc := func(namespace, name string) {
+				fmt.Printf("Delete ksvc %s in namespace %s\n", name, namespace)
+				err := ksvcClient.Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+				if err != nil {
+					fmt.Printf("Failed to delete ksvc %s in namespace %s\n", name, namespace)
+				}
+			}
 			for i := 0; i < len(nsNameList); i++ {
 				svcList, err := ksvcClient.Services(nsNameList[i]).List(context.TODO(), metav1.ListOptions{})
 				if err == nil {
@@ -133,12 +140,4 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 	ksvcCleanCommand.Flags().IntVarP(&cleanArgs.concurrency, "concurrency", "c", 10, "Number of multiple ksvcs to make at a time")
 
 	return ksvcCleanCommand
-}
-
-func cleanKsvc(namespace, name string) {
-	fmt.Printf("Delete ksvc %s in namespace %s\n", name, namespace)
-	err := ksvcClient.Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
-	if err != nil {
-		fmt.Printf("Failed to delete ksvc %s in namespace %s\n", name, namespace)
-	}
 }
