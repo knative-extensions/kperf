@@ -31,7 +31,7 @@ Note: [go-bindata](https://github.com/go-bindata/go-bindata) is required in the 
 ### As a Knative developer, I want to generate Knative Service concurrently for test
 ```
 # Generate total 30 knative service, for each 15 seconds create 10 ksvc with 5 concurrency in namespace test1, test2 and test3, and the ksvc names are ktest1, ktest2.....ktest29.
-$ kperf service generate -n 30 -b 10 -c 5 -i 15 --nsPrefix test --nsRange 1,3 --svcPrefix ktest --maxScale 1 --minScale 1
+$ kperf service generate -n 30 -b 10 -c 5 -i 15 --namespace-prefix test --namespace-range 1,3 --svc-prefix ktest --max-scale 1 --min-scale 1
 
 Creating ksvc ktestsss0 in namespace test1
 Creating ksvc ktestsss1 in namespace test2
@@ -41,7 +41,7 @@ Creating ksvc ktestsss29 in namespace test3
 ```
 ```
 # Generate total 30 knative service, for each 15 seconds create 10 ksvc with 1 concurrency in namespace test1, test2 and test3, and the ksvc names are ktest1, ktest2.....ktest29. The generation will wait the previous genreated service to be ready for most 10 seconds.
-$ kperf service generate -n 30 -b 10 -c 5 -i 15 --nsPrefix test --nsRange 1,3 --svcPrefix ktest --wait --timeout 10s --maxScale 1 --minScale 1
+$ kperf service generate -n 30 -b 10 -c 5 -i 15 --namespace-prefix test --namespace-range 1,3 --svc-prefix ktest --wait --timeout 10s --max-scale 1 --min-scale 1
 
 Creating ksvc ktestsss0 in namespace test1
 Creating ksvc ktestsss1 in namespace test2
@@ -53,7 +53,7 @@ Creating ksvc ktestsss29 in namespace test3
 ### As a Knative developer, I want to clean Knative Service generated for test
 ```
 # Delete all ksvc with name prefix ktest in namespaces with name prefix test and index 1,2,3
-$ kperf service clean --nsPrefix test --nsRange 1,3 --svcPrefix ktest
+$ kperf service clean --namespace-prefix test --namespace-range 1,3 --svc-prefix ktest
 
 Delete ksvc ktestsss0 in namespace test1
 Delete ksvc ktestsss12 in namespace test1

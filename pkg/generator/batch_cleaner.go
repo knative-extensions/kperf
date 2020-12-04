@@ -14,16 +14,13 @@
 
 package generator
 
-import (
-	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
-)
+// func Clean do the clean action for resource with name in ns
+type Clean func(ns, name string)
 
-type Clean func(ksvcClient *servingv1client.ServingV1Client, ns, name string)
-
+// BatchCleaner executes cleanFunc with number of concurrency goroutines. If concurrency is less or equal than 0, it is set to 1.
 type BatchCleaner struct {
 	namespaceNameList [][2]string
 	concurrency       int
-	ksvcClient        *servingv1client.ServingV1Client
 	cleanFunc         Clean
 
 	doneChan          chan bool
@@ -32,12 +29,14 @@ type BatchCleaner struct {
 	finishedCount     int
 }
 
-func NewBatchCleaner(namespaceNameList [][2]string, concurrency int, ksvcClient *servingv1client.ServingV1Client, cleanFunc Clean) *BatchCleaner {
+func NewBatchCleaner(namespaceNameList [][2]string, concurrency int, cleanFunc Clean) *BatchCleaner {
+	if concurrency <= 0 {
+		concurrency = 1
+	}
 	return &BatchCleaner{
 		namespaceNameList: namespaceNameList,
 		concurrency:       concurrency,
 		namespaceNameChan: make(chan [2]string, len(namespaceNameList)),
-		ksvcClient:        ksvcClient,
 		cleanFunc:         cleanFunc,
 
 		doneChan:      make(chan bool),
@@ -65,7 +64,7 @@ func (bc *BatchCleaner) doClean() {
 		case <-bc.doneChan:
 			return
 		case nsname := <-bc.namespaceNameChan:
-			bc.cleanFunc(bc.ksvcClient, nsname[0], nsname[1])
+			bc.cleanFunc(nsname[0], nsname[1])
 			bc.finishedChan <- 1
 		}
 	}

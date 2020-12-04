@@ -21,9 +21,16 @@ import (
 	"knative.dev/kperf/pkg"
 )
 
-type Generator func(*pkg.PerfParams, string, int) (string, string)
+// func Generator do the generate action in namespace ns with the index as the suffix of the resource name
+// it returns the name and namespace of the generated resource
+type Generator func(ns string, index int) (string, string)
+
+// func PostGenerator is executed after Generator has been executed.
+// if the error is not nil, the whole generate process will exit
 type PostGenerator func(string, string) error
 
+// BatchGenerator helps generate `count` of resource with `concurrency` number of gorutines. It executes `generateFunc` `batch` times
+// per time, and between each batch, it stop for `interval` time.
 type BatchGenerator struct {
 	interval          time.Duration
 	count             int
@@ -41,7 +48,7 @@ type BatchGenerator struct {
 	doneChan      chan bool
 }
 
-func NewBatchGenerator(interval time.Duration, count, batch int, concurrency int, namespaceList []string, generator Generator, postGenerator PostGenerator, p *pkg.PerfParams) *BatchGenerator {
+func NewBatchGenerator(interval time.Duration, count, batch int, concurrency int, namespaceList []string, generator Generator, postGenerator PostGenerator) *BatchGenerator {
 	return &BatchGenerator{
 		interval:          interval,
 		count:             count,
@@ -51,7 +58,6 @@ func NewBatchGenerator(interval time.Duration, count, batch int, concurrency int
 		namespaceList:     namespaceList,
 		generateFunc:      generator,
 		postGeneratorFunc: postGenerator,
-		params:            p,
 
 		indexChan:     make(chan int, batch*5),
 		finishedChan:  make(chan int, batch*5),
@@ -90,7 +96,7 @@ func (bg *BatchGenerator) doGenerate() {
 			return
 		case index := <-bg.indexChan:
 			ns := bg.namespaceList[index%len(bg.namespaceList)]
-			ns, name := bg.generateFunc(bg.params, ns, index)
+			ns, name := bg.generateFunc(ns, index)
 			if bg.postGeneratorFunc(ns, name) != nil {
 				os.Exit(1)
 			}
