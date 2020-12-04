@@ -67,6 +67,10 @@ func NewBatchGenerator(interval time.Duration, count, batch int, concurrency int
 }
 
 func (bg *BatchGenerator) Generate() {
+	// avoid the blocked channel
+	if bg.count == 0 {
+		return
+	}
 	ticker := time.NewTicker(bg.interval)
 	defer ticker.Stop()
 	go bg.checkFinished()

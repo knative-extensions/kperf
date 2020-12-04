@@ -47,6 +47,11 @@ func NewBatchCleaner(namespaceNameList [][2]string, concurrency int, cleanFunc C
 
 func (bc *BatchCleaner) Clean() {
 
+	// avoid the blocked channel
+	if len(bc.namespaceNameList) == 0 {
+		return
+	}
+
 	go bc.checkFinished()
 	for i := 0; i < bc.concurrency; i++ {
 		go bc.doClean()
