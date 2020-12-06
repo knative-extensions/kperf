@@ -29,7 +29,6 @@ import (
 )
 
 func TestBatchGeneratorExit(t *testing.T) {
-
 	count := 8
 	failIndex := 3
 	generateFunc := func(ns string, index int) (string, string) {

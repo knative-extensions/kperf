@@ -24,31 +24,29 @@ import (
 )
 
 func TestBatchCleaner(t *testing.T) {
-
-	var cleanFuncCaled uint64
+	var cleanFuncCalled uint64
 	cleanFunc := func(ns, name string) {
-		atomic.AddUint64(&cleanFuncCaled, 1)
+		atomic.AddUint64(&cleanFuncCalled, 1)
 		time.Sleep(1 * time.Second)
 	}
 
 	t.Run("empty kn service list", func(t *testing.T) {
-		cleanFuncCaled = 0
+		cleanFuncCalled = 0
 		start := time.Now().Unix()
 		generator.NewBatchCleaner([][2]string{}, 2, cleanFunc).Clean()
 		duration := time.Now().Unix() - start
 		// should complete immediately
 		assert.Assert(t, duration < 1)
-		assert.Assert(t, cleanFuncCaled == 0)
+		assert.Assert(t, cleanFuncCalled == 0)
 	})
 
 	t.Run("nonempty kn service list", func(t *testing.T) {
-		cleanFuncCaled = 0
+		cleanFuncCalled = 0
 		start := time.Now().Unix()
 		generator.NewBatchCleaner([][2]string{{"ns-1", "ksvc-1"}}, 2, cleanFunc).Clean()
 		duration := time.Now().Unix() - start
 		// should complete in 1 second
 		assert.Assert(t, duration >= 1 && duration <= 2)
-		assert.Assert(t, cleanFuncCaled == 1)
+		assert.Assert(t, cleanFuncCalled == 1)
 	})
-
 }

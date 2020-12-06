@@ -25,7 +25,6 @@ import (
 )
 
 func TestBatchGenerator(t *testing.T) {
-
 	var generateFuncCaled uint64
 	var postGeneratorFuncCalled uint64
 
@@ -85,5 +84,4 @@ func TestBatchGenerator(t *testing.T) {
 		assert.Assert(t, generateFuncCaled == 8)
 		assert.Assert(t, postGeneratorFuncCalled == 8)
 	})
-
 }
