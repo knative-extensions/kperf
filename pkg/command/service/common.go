@@ -52,7 +52,9 @@ type measureArgs struct {
 	namespaceRange  string
 	namespacePrefix string
 	concurrency     int
-
+	verbose         bool
+}
+type measureResult struct {
 	svcConfigurationsReadySum   float64
 	svcRoutesReadyReadySum      float64
 	svcReadySum                 float64
@@ -73,5 +75,5 @@ type measureArgs struct {
 	notReadyCount int
 	notFoundCount int
 
-	verbose bool
+	svcReadyTime []float64
 }
