@@ -338,8 +338,8 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						currentMeasureResult.containersReadySum += containersReadyDuration.Seconds()
 						currentMeasureResult.queueProxyStartedSum += queueProxyStartedDuration.Seconds()
 						currentMeasureResult.userContrainerStartedSum += userContrainerStartedDuration.Seconds()
-						currentMeasureResult.svcRoutesReadyReadySum += svcRoutesReadyDuration.Seconds()
-						currentMeasureResult.ingressReadyReadySum += ingressReadyDuration.Seconds()
+						currentMeasureResult.svcRoutesReadySum += svcRoutesReadyDuration.Seconds()
+						currentMeasureResult.ingressReadySum += ingressReadyDuration.Seconds()
 						currentMeasureResult.ingressNetworkConfiguredSum += ingressNetworkConfiguredDuration.Seconds()
 						currentMeasureResult.ingressLoadBalancerReadySum += ingressLoadBalancerReadyDuration.Seconds()
 						currentMeasureResult.svcReadySum += svcReadyDuration.Seconds()
@@ -370,10 +370,10 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				measureFinalResult.containersReadySum += workerMeasureResults[i].containersReadySum
 				measureFinalResult.queueProxyStartedSum += workerMeasureResults[i].queueProxyStartedSum
 				measureFinalResult.userContrainerStartedSum += workerMeasureResults[i].userContrainerStartedSum
-				measureFinalResult.svcRoutesReadyReadySum += workerMeasureResults[i].svcRoutesReadyReadySum
-				measureFinalResult.ingressReadyReadySum += workerMeasureResults[i].ingressReadyReadySum
+				measureFinalResult.svcRoutesReadySum += workerMeasureResults[i].svcRoutesReadySum
+				measureFinalResult.ingressReadySum += workerMeasureResults[i].ingressReadySum
 				measureFinalResult.ingressNetworkConfiguredSum += workerMeasureResults[i].ingressNetworkConfiguredSum
-				measureFinalResult.ingressLoadBalancerReadySum += workerMeasureResults[i].ingressNetworkConfiguredSum
+				measureFinalResult.ingressLoadBalancerReadySum += workerMeasureResults[i].ingressLoadBalancerReadySum
 				measureFinalResult.svcReadyTime = append(measureFinalResult.svcReadyTime, workerMeasureResults[i].svcReadyTime...)
 				measureFinalResult.svcReadySum += workerMeasureResults[i].svcReadySum
 				measureFinalResult.readyCount += workerMeasureResults[i].readyCount
@@ -416,8 +416,8 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				fmt.Printf("  Average: %fs\n", float64(measureFinalResult.revisionReadySum)/float64(measureFinalResult.readyCount))
 
 				fmt.Printf("  - Service Deployment Created Duration:\n")
-				fmt.Printf("    Total: %fs\n", float64(measureFinalResult.revisionReadySum))
-				fmt.Printf("    Average: %fs\n", float64(measureFinalResult.revisionReadySum)/float64(measureFinalResult.readyCount))
+				fmt.Printf("    Total: %fs\n", float64(measureFinalResult.deploymentCreatedSum))
+				fmt.Printf("    Average: %fs\n", float64(measureFinalResult.deploymentCreatedSum)/float64(measureFinalResult.readyCount))
 
 				fmt.Printf("    - Service Pod Scheduled Duration:\n")
 				fmt.Printf("      Total: %fs\n", float64(measureFinalResult.podScheduledSum))
@@ -436,12 +436,12 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				fmt.Printf("        Average: %fs\n", float64(measureFinalResult.userContrainerStartedSum)/float64(measureFinalResult.readyCount))
 
 				fmt.Printf("\nService Route Ready Duration:\n")
-				fmt.Printf("Total: %fs\n", float64(measureFinalResult.svcRoutesReadyReadySum))
-				fmt.Printf("Average: %fs\n", float64(measureFinalResult.svcRoutesReadyReadySum)/float64(measureFinalResult.readyCount))
+				fmt.Printf("Total: %fs\n", float64(measureFinalResult.svcRoutesReadySum))
+				fmt.Printf("Average: %fs\n", float64(measureFinalResult.svcRoutesReadySum)/float64(measureFinalResult.readyCount))
 
 				fmt.Printf("- Service Ingress Ready Duration:\n")
-				fmt.Printf("  Total: %fs\n", float64(measureFinalResult.ingressReadyReadySum))
-				fmt.Printf("  Average: %fs\n", float64(measureFinalResult.ingressReadyReadySum)/float64(measureFinalResult.readyCount))
+				fmt.Printf("  Total: %fs\n", float64(measureFinalResult.ingressReadySum))
+				fmt.Printf("  Average: %fs\n", float64(measureFinalResult.ingressReadySum)/float64(measureFinalResult.readyCount))
 
 				fmt.Printf("  - Service Ingress Network Configured Duration:\n")
 				fmt.Printf("    Total: %fs\n", float64(measureFinalResult.ingressNetworkConfiguredSum))
