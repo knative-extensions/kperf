@@ -52,15 +52,17 @@ type measureArgs struct {
 	namespaceRange  string
 	namespacePrefix string
 	concurrency     int
-
+	verbose         bool
+}
+type measureResult struct {
 	svcConfigurationsReadySum   float64
-	svcRoutesReadyReadySum      float64
+	svcRoutesReadySum           float64
 	svcReadySum                 float64
 	minDomainReadySum           float64
 	maxDomainReadySum           float64
 	revisionReadySum            float64
 	podAutoscalerReadySum       float64
-	ingressReadyReadySum        float64
+	ingressReadySum             float64
 	ingressNetworkConfiguredSum float64
 	ingressLoadBalancerReadySum float64
 	podScheduledSum             float64
@@ -73,5 +75,5 @@ type measureArgs struct {
 	notReadyCount int
 	notFoundCount int
 
-	verbose bool
+	svcReadyTime []float64
 }

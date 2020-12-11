@@ -17,8 +17,6 @@ package generator
 import (
 	"os"
 	"time"
-
-	"knative.dev/kperf/pkg"
 )
 
 // func Generator do the generate action in namespace ns with the index as the suffix of the resource name
@@ -40,7 +38,6 @@ type BatchGenerator struct {
 	namespaceList     []string
 	generateFunc      Generator
 	postGeneratorFunc PostGenerator
-	params            *pkg.PerfParams
 
 	indexChan     chan int
 	finishedChan  chan int
