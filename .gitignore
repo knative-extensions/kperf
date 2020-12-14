@@ -1,0 +1,49 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, build with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+cover.html
+
+# kperf binary itself, if you want to `go build cmd/kperf` in the top dir.
+kperf
+
+# template bind data
+**/htmltemplatebindata.go
+
+# vendor
+vendor
+
+# emacs tempfiles
+\#*
+*~
+
+# vim swap
+[._]*.s[a-w][a-z].
+[._]s[a-w][a-z].
+
+# session
+Session.vim
+
+# temporary
+.netrwhist
+*~
+
+# auto-generated tag files
+tags
+
+# IntelliJ IDE specific
+.idea
+
+# VSCode specific
+.vscode
+
+# Operating system temporary files
+.DS_Store

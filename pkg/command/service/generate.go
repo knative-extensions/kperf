@@ -16,8 +16,8 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"os"
 	"strconv"
 	"strings"
@@ -31,6 +31,7 @@ import (
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"knative.dev/kperf/pkg"
@@ -44,19 +45,27 @@ func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
 
 	ksvcGenCommand := &cobra.Command{
 		Use:   "generate",
-		Short: "generate ksvc",
-		Long: `generate ksvc workload
-
+		Short: "generate Knative Service",
+		Long: `generate Knative Service workload
 For example:
-# To generate ksvc workload
+# To generate Knative Service workload
 kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max-scale 5 (--namespace-prefix testns/ --namespace nsname)
 `,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			flags := cmd.Flags()
+			if flags.Changed("namespace-prefix") && flags.Changed("namespace") {
+				return errors.New("expected either namespace with prefix & range or only namespace name")
+			}
+			return nil
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var namespaceRangeMap map[string]bool = map[string]bool{}
-			if generateArgs.namespacePrefix != "" {
+			nsNameList := []string{}
+			if generateArgs.namespacePrefix == "" && generateArgs.namespace == "" {
+				nsNameList = []string{"default"}
+			} else if generateArgs.namespacePrefix != "" {
 				r := strings.Split(generateArgs.namespaceRange, ",")
 				if len(r) != 2 {
-					fmt.Printf("Expected Range like 1,500, given %s\n", generateArgs.namespaceRange)
+					fmt.Printf("expected Range like 1,500, given %s\n", generateArgs.namespaceRange)
 					os.Exit(1)
 				}
 				start, err := strconv.Atoi(r[0])
@@ -69,50 +78,31 @@ kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max
 				}
 				if start > 0 && end > 0 && start <= end {
 					for i := start; i <= end; i++ {
-						namespaceRangeMap[fmt.Sprintf("%s-%d", generateArgs.namespacePrefix, i)] = true
+						nsNameList = append(nsNameList, fmt.Sprintf("%s-%d", generateArgs.namespacePrefix, i))
 					}
 				} else {
 					return errors.New("failed to parse namespace range")
 				}
+			} else if generateArgs.namespace != "" {
+				nsNameList = append(nsNameList, generateArgs.namespace)
 			}
+
+			if len(nsNameList) == 0 {
+				return fmt.Errorf("no namespace found with prefix %s", generateArgs.namespacePrefix)
+			}
+			// Check if namespace exists, in NOT, return error
+			for _, ns := range nsNameList {
+				_, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
+				if err != nil && apierrors.IsNotFound(err) {
+					return errors.Errorf("namespace %s not found, please create one", ns)
+				} else if err != nil {
+					return errors.Wrap(err, "failed to get namespace")
+				}
+			}
+
 			ksvcClient, err := p.NewServingClient()
 			if err != nil {
 				return err
-			}
-			nsNameList := []string{}
-			if generateArgs.namespace != "" {
-				nss, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), generateArgs.namespace, metav1.GetOptions{})
-				if err != nil {
-					return err
-				}
-				nsNameList = append(nsNameList, nss.Name)
-			} else if generateArgs.namespacePrefix != "" {
-				nsList, err := p.ClientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
-				if err != nil {
-					return err
-				}
-				if len(nsList.Items) == 0 {
-					return fmt.Errorf("no namespace found with prefix %s", generateArgs.namespacePrefix)
-				}
-				if len(namespaceRangeMap) >= 0 {
-					for i := 0; i < len(nsList.Items); i++ {
-						if _, exists := namespaceRangeMap[nsList.Items[i].Name]; exists {
-							nsNameList = append(nsNameList, nsList.Items[i].Name)
-						}
-					}
-				} else {
-					for i := 0; i < len(nsList.Items); i++ {
-						if strings.HasPrefix(nsList.Items[i].Name, generateArgs.namespacePrefix) {
-							nsNameList = append(nsNameList, nsList.Items[i].Name)
-						}
-					}
-				}
-
-				if len(nsNameList) == 0 {
-					return fmt.Errorf("no namespace found with prefix %s", generateArgs.namespacePrefix)
-				}
-			} else {
-				return fmt.Errorf("both namespace and namespace-prefix are empty")
 			}
 			createKSVCFunc := func(ns string, index int) (string, string) {
 				service := servingv1.Service{
@@ -141,10 +131,10 @@ kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max
 						},
 					},
 				}
-				fmt.Printf("Creating ksvc %s in namespace %s\n", service.GetName(), service.GetNamespace())
+				fmt.Printf("Creating Knative Service %s in namespace %s\n", service.GetName(), service.GetNamespace())
 				_, err := ksvcClient.Services(ns).Create(context.TODO(), &service, metav1.CreateOptions{})
 				if err != nil {
-					fmt.Printf("Failed to create ksvc %s in namespace %s : %s\n", service.GetName(), service.GetNamespace(), err)
+					fmt.Printf("failed to create Knative Service %s in namespace %s : %s\n", service.GetName(), service.GetNamespace(), err)
 				}
 				return service.GetNamespace(), service.GetName()
 			}
@@ -159,8 +149,8 @@ kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max
 						}
 					}
 				}
-				fmt.Printf("Error: ksvc %s in namespace %s is not ready after %s\n", name, ns, generateArgs.timeout)
-				return fmt.Errorf("ksvc %s in namespace %s is not ready after %s ", name, ns, generateArgs.timeout)
+				fmt.Printf("Error: Knative Service %s in namespace %s is not ready after %s\n", name, ns, generateArgs.timeout)
+				return errors.Errorf("Knative Service %s in namespace %s is not ready after %s ", name, ns, generateArgs.timeout)
 
 			}
 			if generateArgs.checkReady {
@@ -172,25 +162,23 @@ kperf service generate —n 500 —-interval 20 —-batch 20 --min-scale 0 --max
 			return nil
 		},
 	}
-	ksvcGenCommand.Flags().IntVarP(&generateArgs.number, "number", "n", 0, "Total number of ksvc to be created")
+	ksvcGenCommand.Flags().IntVarP(&generateArgs.number, "number", "n", 0, "Total number of Knative Service to be created")
 	ksvcGenCommand.MarkFlagRequired("number")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.interval, "interval", "i", 0, "Interval for each batch generation")
 	ksvcGenCommand.MarkFlagRequired("interval")
-	ksvcGenCommand.Flags().IntVarP(&generateArgs.batch, "batch", "b", 0, "Number of ksvc each time to be created")
+	ksvcGenCommand.Flags().IntVarP(&generateArgs.batch, "batch", "b", 0, "Number of Knative Service each time to be created")
 	ksvcGenCommand.MarkFlagRequired("batch")
-	ksvcGenCommand.Flags().IntVarP(&generateArgs.concurrency, "concurrency", "c", 10, "Number of multiple ksvcs to make at a time")
+	ksvcGenCommand.Flags().IntVarP(&generateArgs.concurrency, "concurrency", "c", 10, "Number of multiple Knative Services to make at a time")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.minScale, "min-scale", "", 0, "For autoscaling.knative.dev/minScale")
-	ksvcGenCommand.MarkFlagRequired("min-scale")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.maxScale, "max-scale", "", 0, "For autoscaling.knative.dev/minScale")
-	ksvcGenCommand.MarkFlagRequired("max-scale")
 
-	ksvcGenCommand.Flags().StringVarP(&generateArgs.namespacePrefix, "namespace-prefix", "", "", "Namespace prefix. The ksvc will be created in the namespaces with the prefix")
+	ksvcGenCommand.Flags().StringVarP(&generateArgs.namespacePrefix, "namespace-prefix", "", "", "Namespace prefix. The Knative Services will be created in the namespaces with the prefix")
 	ksvcGenCommand.Flags().StringVarP(&generateArgs.namespaceRange, "namespace-range", "", "", "")
-	ksvcGenCommand.Flags().StringVarP(&generateArgs.namespace, "namespace", "", "", "Namespace name. The ksvc will be created in the namespace")
+	ksvcGenCommand.Flags().StringVarP(&generateArgs.namespace, "namespace", "", "", "Namespace name. The Knative Services will be created in the namespace")
 
-	ksvcGenCommand.Flags().StringVarP(&generateArgs.svcPrefix, "svc-prefix", "", "testksvc", "ksvc name prefix. The ksvcs will be svcPrefix1,svcPrefix2,svcPrefix3......")
-	ksvcGenCommand.Flags().BoolVarP(&generateArgs.checkReady, "wait", "", false, "whether wait the previous ksvc to be ready")
-	ksvcGenCommand.Flags().DurationVarP(&generateArgs.timeout, "timeout", "", 10*time.Minute, "duration to wait for previous ksvc to be ready")
+	ksvcGenCommand.Flags().StringVarP(&generateArgs.svcPrefix, "svc-prefix", "", "ksvc", "Knative Service name prefix. The Knative Services will be ksvc-1,ksvc-2,ksvc-3 and etc.")
+	ksvcGenCommand.Flags().BoolVarP(&generateArgs.checkReady, "wait", "", false, "Whether to wait the previous Knative Service to be ready")
+	ksvcGenCommand.Flags().DurationVarP(&generateArgs.timeout, "timeout", "", 10*time.Minute, "Duration to wait for previous Knative Service to be ready")
 
 	return ksvcGenCommand
 }
