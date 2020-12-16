@@ -92,7 +92,7 @@
             for (var group in legendGroupMap) {
                 mySelectTools['mySelectGroup' + group] = {
                     show: true,
-                    title: group, //'select ' + group,
+                    title: group, //'select ' + group
                     icon: legendIcons[legendGroupMap[group]],
                     onclick: function (parma, e, name) {
                         var group = name.replace('mySelectGroup', '', 1)
@@ -145,8 +145,7 @@
                     formatter: function (params) {
                         var content = params[0].axisValue + '<br/>'
                         params.forEach(item => {
-                            var icon = '<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="12" height="12">' +
-                                '<path stroke="' + item.color + '" fill="' + item.color + '" d="' + legendIcons[legendGroupMap[legendMap[item.seriesName]]].replace('path://', '') + '"/></g></svg>'
+                            var icon = '<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="12" height="12"><path stroke="' + item.color + '" fill="' + item.color + '" d="' + legendIcons[legendGroupMap[legendMap[item.seriesName]]].replace('path://', '') + '"/></g></svg>'
                             content += icon + ' ' + item.seriesName + ': ' + item.value + '<br/>'
                         });
                         return content;
@@ -261,7 +260,7 @@
                         chartOption = getChartFromCSV(chartDomId, file.name, this.result)
                         chart.clear()
                         chart.setOption(chartOption.config)
-                        $("#canvas-perf-detail-table").html("<tbody>" + chartOption.table + "</tbody>")
+                        $("#perf-detail-table").html("<tbody>" + chartOption.table + "</tbody>")
                     }
                     reader.readAsText(file);
                 } else {
@@ -273,6 +272,8 @@
     <style type="text/css">
         body {
             font-size: 14px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 30px;
         }
 
         table {
@@ -280,35 +281,32 @@
             border-collapse: collapse;
         }
 
-        table td,
-        table th {
+        table th,
+        table td {
             border: 1px solid #dee2e6;
             text-align: center;
-            padding: .75rem;
+            padding: .25rem;
         }
 
         .perf-title {
             font-size: 16px;
             font-weight: bold;
-            margin: 5px;
-            margin-left: 0;
-        }
-
-        .perf-file {
-            width: 45%;
-            margin: 10px 20px 10px 20px;
             display: inline-block;
         }
 
-        .perf-file input {
-            width: 100%;
+        #perf-detail-canvas {
+            height: 500px;
         }
 
-        #canvas-perf-detail {
-            width: 90%;
-            height: 500px;
-            margin: 20px;
-            margin-top: 0px;
+        #perf-detail-table {
+            font-size: 12px;
+        }
+
+        .perf-table-description th,
+        .perf-table-description td {
+            border: 0;
+            text-align: left;
+            padding: .5rem;
         }
     </style>
 </head>
@@ -319,16 +317,93 @@
         <input type="file" onchange="jsReadFiles(this.files)" />
     </div>
     <div class="perf-container">
-        <div id="canvas-perf-detail"></div>
-        <table id="canvas-perf-detail-table"></table>
+        <div id="perf-detail-canvas"></div>
+        <table id="perf-detail-table"></table>
     </div>
+    <br />
+    <hr />
+    <h3>Benchmark Details</h3>
+    <table class="perf-table-description">
+        <tbody>
+            <tr>
+                <th>Project Name</th>
+                <td>Knative</td>
+            </tr>
+            <tr>
+                <th>Benchmark Name</th>
+                <td>Knative service creation</td>
+            </tr>
+            <tr>
+                <th>Description</th>
+                <td>Measure knative service creation latency</td>
+            </tr>
+            <!-- <tr>
+                <th>Benchmark Key</th>
+                <td></td>
+            </tr> -->
+        </tbody>
+    </table>
+    <br />
+    <hr />
+    <h3>Charting Tips</h3>
+    <table class="perf-table-description">
+        <tbody>
+            <tr>
+                <th>Select Data Source</th>
+                <td>Choose another CSV file from local to be rendered in the page.</td>
+            </tr>
+            <tr>
+                <th>Value</th>
+                <td>Hover on the chart area to see detailed metric values under the same x axis.</td>
+            </tr>
+            <tr>
+                <th>Legend</th>
+                <td>Click on the legend to show/hide the metric line/bar in the chart.</td>
+            </tr>
+            <tr>
+                <th>Toolbox: Select All</th>
+                <td>Click on 'select all' icon of the toolbox to show all of the metric lines/bars in the chart.</td>
+            </tr>
+            <tr>
+                <th>Toolbox: Unselect All</th>
+                <td>Click on 'unselect all' icon of the toolbox to hide all of the metric lines/bars in the chart.</td>
+            </tr>
+            <tr>
+                <th>Toolbox: Select Group</th>
+                <td>Click on any 'group' icon of the toolbox to show the metric lines/bars under the target group in the
+                    chart and hide others.</td>
+            </tr>
+            <tr>
+                <th>Toolbox: Switch Chart Type</th>
+                <td>Switch chart types between line <-> bar, staked bar <-> unstacked bar, tiled line <-> untiled line
+                                and etc.
+                </td>
+            </tr>
+            <tr>
+                <th>Toolbox: Data Zoom</th>
+                <td>Enable to select a specific area to be zoomed in/out.</td>
+            </tr>
+            <tr>
+                <th>Toolbox: Restore</th>
+                <td>Restore to initial chart configuration after switching chart type, data zooming and etc.</td>
+            </tr>
+            <tr>
+                <th>Toolbox: Data View</th>
+                <td>Display raw data in current chart and update chart after being edited.</td>
+            </tr>
+            <tr>
+                <th>Toolbox: Save as Image</th>
+                <td>Save current chart view as an image.</td>
+            </tr>
+        </tbody>
+    </table>
     <script>
         var csvResult = "{{.Data}}"
-        var chartDomId = "canvas-perf-detail"
+        var chartDomId = "perf-detail-canvas"
         var chartOption = getChartFromCSV(chartDomId, "", csvResult)
         var chart = echarts.init(document.getElementById(chartDomId), "light")
         chart.setOption(chartOption.config)
-        $("#canvas-perf-detail-table").html("<tbody>" + chartOption.table + "</tbody>")
+        $("#perf-detail-table").html("<tbody>" + chartOption.table + "</tbody>")
     </script>
 </body>
 
