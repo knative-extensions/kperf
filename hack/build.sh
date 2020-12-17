@@ -49,5 +49,5 @@ source ${BASE_DIR}/hack/build-funcs.sh
 
 check_license
 go_fmt
-go_test
 go_build
+go_test
