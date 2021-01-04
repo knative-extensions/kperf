@@ -3,6 +3,8 @@ module knative.dev/kperf
 go 1.14
 
 require (
+	bou.ke/monkey v1.0.2
+	github.com/PuerkitoBio/goquery v1.6.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/montanaflynn/stats v0.6.3
 	github.com/pelletier/go-toml v1.8.0 // indirect

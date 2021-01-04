@@ -12,26 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package service
+package testutil
 
 import (
+	"bytes"
+
 	"github.com/spf13/cobra"
-	"knative.dev/kperf/pkg"
 )
 
-// domainCmd represents the domain command
-func NewServiceCmd(p *pkg.PerfParams) *cobra.Command {
-	var serviceCmd = &cobra.Command{
-		Use:   "service",
-		Short: "Knative service load test",
-		Long: `Knative service load test and measurement. For example:
+// ExecuteCommandC execute cobra.command and catch the output
+func ExecuteCommandC(root *cobra.Command, args ...string) (c *cobra.Command, output string, err error) {
+	buf := new(bytes.Buffer)
+	root.SetOut(buf)
+	root.SetErr(buf)
+	root.SetArgs(args)
+	c, err = root.ExecuteC()
+	return c, buf.String(), err
+}
 
-kperf service measure --range 1,10, --name perf - to measure 10 Knative service named perf-x in perf-x namespace`,
-	}
-	serviceCmd.AddCommand(NewServiceMeasureCommand(p))
-	serviceCmd.AddCommand(NewServiceGenerateCommand(p))
-	serviceCmd.AddCommand(NewServiceCleanCommand(p))
-
-	serviceCmd.InitDefaultHelpCmd()
-	return serviceCmd
+// ExecuteCommand similar to ExecuteCommandC but does not return *cobra.Command
+func ExecuteCommand(root *cobra.Command, args ...string) (output string, err error) {
+	_, o, err := ExecuteCommandC(root, args...)
+	return o, err
 }
