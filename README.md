@@ -46,7 +46,7 @@ for name in {1..10};do kubectl create ns test-$name;done
 ### generate Knative Service deployment load
 ```shell script
 # Generate total 30 knative service, for each 15 seconds create 10 ksvc with 5 concurrency in namespace test-1, test-2
-# and test-33, and the ksvc names are ktest-0, ktest-1.....ktest-29.
+# and test-3, and the ksvc names are ktest-0, ktest-1.....ktest-29.
 $ kperf service generate -n 30 -b 10 -c 5 -i 15 --namespace-prefix test --namespace-range 1,3 --svc-prefix ktest --max-scale 1 --min-scale 1
 
 Creating ksvc ktest-0 in namespace test-1
