@@ -26,6 +26,9 @@ import (
 	"knative.dev/kperf/pkg/testutil"
 	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 	fakenetworkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake"
+	autoscalingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
+	autoscalingv1fake "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1/fake"
+
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 	servingv1fake "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1/fake"
 )
@@ -69,6 +72,11 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 			},
 		}
 		client := k8sfake.NewSimpleClientset(ns)
+		fakeAutoscaling := &autoscalingv1fake.FakeAutoscalingV1alpha1{Fake: &clienttesting.Fake{}}
+		autoscalingClient := func() (autoscalingv1client.AutoscalingV1alpha1Interface, error) {
+			return fakeAutoscaling, nil
+		}
+
 		fakeServing := &servingv1fake.FakeServingV1{Fake: &clienttesting.Fake{}}
 		servingClient := func() (servingv1client.ServingV1Interface, error) {
 			return fakeServing, nil
@@ -80,9 +88,10 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:           client,
-			NewServingClient:    servingClient,
-			NewNetworkingClient: networkingClient,
+			ClientSet:            client,
+			NewAutoscalingClient: autoscalingClient,
+			NewServingClient:     servingClient,
+			NewNetworkingClient:  networkingClient,
 		}
 
 		cmd := NewServiceMeasureCommand(p)
@@ -98,6 +107,11 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		}
 
 		client := k8sfake.NewSimpleClientset(ns)
+		fakeAutoscaling := &autoscalingv1fake.FakeAutoscalingV1alpha1{Fake: &clienttesting.Fake{}}
+		autoscalingClient := func() (autoscalingv1client.AutoscalingV1alpha1Interface, error) {
+			return fakeAutoscaling, nil
+		}
+
 		fakeServing := &servingv1fake.FakeServingV1{Fake: &clienttesting.Fake{}}
 		servingClient := func() (servingv1client.ServingV1Interface, error) {
 			return fakeServing, nil
@@ -109,9 +123,10 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:           client,
-			NewServingClient:    servingClient,
-			NewNetworkingClient: networkingClient,
+			ClientSet:            client,
+			NewAutoscalingClient: autoscalingClient,
+			NewServingClient:     servingClient,
+			NewNetworkingClient:  networkingClient,
 		}
 
 		cmd := NewServiceMeasureCommand(p)

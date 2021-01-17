@@ -22,15 +22,17 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
+	autoscalingv1alpha1 "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 )
 
 type PerfParams struct {
-	KubeCfgPath         string
-	ClientConfig        clientcmd.ClientConfig
-	ClientSet           kubernetes.Interface
-	NewServingClient    func() (servingv1client.ServingV1Interface, error)
-	NewNetworkingClient func() (networkingv1alpha1.NetworkingV1alpha1Interface, error)
+	KubeCfgPath          string
+	ClientConfig         clientcmd.ClientConfig
+	ClientSet            kubernetes.Interface
+	NewAutoscalingClient func() (autoscalingv1alpha1.AutoscalingV1alpha1Interface, error)
+	NewServingClient     func() (servingv1client.ServingV1Interface, error)
+	NewNetworkingClient  func() (networkingv1alpha1.NetworkingV1alpha1Interface, error)
 }
 
 func (params *PerfParams) Initialize() error {
@@ -46,6 +48,9 @@ func (params *PerfParams) Initialize() error {
 			os.Exit(1)
 		}
 	}
+	if params.NewAutoscalingClient == nil {
+		params.NewAutoscalingClient = params.newAutoscalingClient
+	}
 	if params.NewServingClient == nil {
 		params.NewServingClient = params.newServingClient
 	}
@@ -53,6 +58,18 @@ func (params *PerfParams) Initialize() error {
 		params.NewNetworkingClient = params.newNetworkingClient
 	}
 	return nil
+}
+
+func (params *PerfParams) newAutoscalingClient() (autoscalingv1alpha1.AutoscalingV1alpha1Interface, error) {
+	restConfig, err := params.RestConfig()
+	if err != nil {
+		return nil, err
+	}
+	client, err := autoscalingv1alpha1.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
 }
 
 func (params *PerfParams) newServingClient() (servingv1client.ServingV1Interface, error) {
