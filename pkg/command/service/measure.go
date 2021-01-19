@@ -164,7 +164,6 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 							fmt.Printf("failed to get Knative Service %s\n", err)
 							if strings.Contains(err.Error(), "not found") {
 								currentMeasureResult.notFoundCount++
-								fmt.Println(currentMeasureResult.notFoundCount)
 								workerMeasureResults[index] = currentMeasureResult
 								group.Done()
 								continue

@@ -99,7 +99,7 @@ $ kperf service measure --namespace ktest-1 --svc-prefix ktest --range 0,9  --ve
 [Verbose] Service ktest-0: Overall Service Ready Duration is 54s/54.000000s
 ......
 -------- Measurement --------
-Total: 10 | Ready: 10 Fail: 0 NotFound: 0 
+Total: 10 | Ready: 10 NotReady: 0 NotFound: 0 Fail: 0
 Service Configuration Duration:
 Total: 251.000000s
 Average: 25.100000s
@@ -149,7 +149,7 @@ Average: 31.000000s
 
 -----------------------------
 Overall Service Ready Measurement:
-Total: 10 | Ready: 10 (100.00%)  Fail: 0 (0.00%)  NotFound: 0 (0.00%) 
+Total: 10 | Ready: 10 (100.00%)  NotReady: 0 (0.00%)  NotFound: 0 (0.00%) Fail: 0 (0.00%)
 Total: 310.000000s
 Average: 31.000000s
 Median: 28.000000s
