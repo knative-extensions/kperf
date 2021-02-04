@@ -80,76 +80,102 @@ Here is a figure of different resources generated for a Knative Service(assuming
 **Example 1 Measure Services (for eg. range 1,500)for load test under a specific namespace**
 
 ```shell script
-$ kperf service measure -n ktest-1 --svc-prefix ktest --range 101,110 --verbose
-[Verbose] Service ktest-101: Service Configuration Ready Duration is 5s/5.000000s
-[Verbose] Service ktest-101: - Service Revision Ready Duration is 5s/5.000000s
-[Verbose] Service ktest-101:   - Service Deployment Created Duration is 2s/2.000000s
-[Verbose] Service ktest-101:     - Service Pod Scheduled Duration is 0s/0.000000s
-[Verbose] Service ktest-101:     - Service Pod Containers Ready Duration is 0s/0.000000s
-[Verbose] Service ktest-101:       - Service Pod queue-proxy Started Duration is 0s/0.000000s
-[Verbose] Service ktest-101:       - Service Pod user-container Started Duration is 0s/0.000000s
-[Verbose] Service ktest-101: Service Route Ready Duration is 7s/7.000000s
-[Verbose] Service ktest-101: - Service Ingress Ready Duration is 2s/2.000000s
-[Verbose] Service ktest-101:   - Service Ingress Network Configured Duration is 0s/0.000000s
-[Verbose] Service ktest-101:   - Service Ingress LoadBalancer Ready Duration is 2s/2.000000s
-[Verbose] Service ktest-101: Overall Service Ready Duration is 7s/7.000000s
+$ kperf service measure --namespace ktest-1 --svc-prefix ktest --range 0,9  --verbose
+[Verbose] Service ktest-0: Service Configuration Ready Duration is 52s/52.000000s
+[Verbose] Service ktest-0: - Service Revision Ready Duration is 52s/52.000000s
+[Verbose] Service ktest-0:   - Service Deployment Created Duration is 14s/14.000000s
+[Verbose] Service ktest-0:     - Service Pod Scheduled Duration is 0s/0.000000s
+[Verbose] Service ktest-0:     - Service Pod Containers Ready Duration is 16s/16.000000s
+[Verbose] Service ktest-0:       - Service Pod queue-proxy Started Duration is 11s/11.000000s
+[Verbose] Service ktest-0:       - Service Pod user-container Started Duration is 9s/9.000000s
+[Verbose] Service ktest-0:   - Service PodAutoscaler Active Duration is 37s/37.000000s
+[Verbose] Service ktest-0:     - Service ServerlessService Ready Duration is 17s/17.000000s
+[Verbose] Service ktest-0:       - Service ServerlessService ActivatorEndpointsPopulated Duration is 0s/0.000000s
+[Verbose] Service ktest-0:       - Service ServerlessService EndpointsPopulated Duration is 17s/17.000000s
+[Verbose] Service ktest-0: Service Route Ready Duration is 54s/54.000000s
+[Verbose] Service ktest-0: - Service Ingress Ready Duration is 2s/2.000000s
+[Verbose] Service ktest-0:   - Service Ingress Network Configured Duration is 0s/0.000000s
+[Verbose] Service ktest-0:   - Service Ingress LoadBalancer Ready Duration is 2s/2.000000s
+[Verbose] Service ktest-0: Overall Service Ready Duration is 54s/54.000000s
+......
 -------- Measurement --------
-Ready: 10 Fail: 0
+Total: 10 | Ready: 10 NotReady: 0 NotFound: 0 Fail: 0
 Service Configuration Duration:
-Total: 138.000000s
-Average: 13.800000s
+Total: 251.000000s
+Average: 25.100000s
 - Service Revision Duration:
-  Total: 135.000000s
-  Average: 13.500000s
+  Total: 248.000000s
+  Average: 24.800000s
   - Service Deployment Created Duration:
-    Total: 135.000000s
-    Average: 13.500000s
+    Total: 91.000000s
+    Average: 9.100000s
     - Service Pod Scheduled Duration:
       Total: 0.000000s
       Average: 0.000000s
     - Service Pod Containers Ready Duration:
-      Total: 0.000000s
-      Average: 0.000000s
+      Total: 111.000000s
+      Average: 11.100000s
       - Service Pod queue-proxy Started Duration:
-        Total: 0.000000s
-        Average: 0.000000s
+        Total: 53.000000s
+        Average: 5.300000s
       - Service Pod user-container Started Duration:
-        Total: 0.000000s
-        Average: 0.000000s
+        Total: 40.000000s
+        Average: 4.000000s
+  - Service PodAutoscaler Active Duration:
+    Total: 152.000000s
+    Average: 15.200000s
+    - Service ServerlessService Ready Duration:
+      Total: 100.000000s
+      Average: 10.000000s
+      - Service ServerlessService ActivatorEndpointsPopulated Duration:
+        Total: 1.000000s
+        Average: 0.100000s
+      - Service ServerlessService EndpointsPopulated Duration:
+        Total: 100.000000s
+        Average: 10.000000s
 
 Service Route Ready Duration:
-Total: 167.000000s
-Average: 16.700000s
+Total: 310.000000s
+Average: 31.000000s
 - Service Ingress Ready Duration:
-  Total: 26.000000s
-  Average: 2.600000s
+  Total: 57.000000s
+  Average: 5.700000s
   - Service Ingress Network Configured Duration:
     Total: 0.000000s
     Average: 0.000000s
   - Service Ingress LoadBalancer Ready Duration:
-    Total: 26.000000s
-    Average: 2.600000s
+    Total: 57.000000s
+    Average: 5.700000s
 
 -----------------------------
 Overall Service Ready Measurement:
-Ready: 10 Fail: 0
-Total: 167.000000s
-Average: 16.700000s
-Measurement saved in CSV file /tmp/20200710182129_ksvc_creation_time.csv
-Visualized measurement saved in HTML file /tmp/20200710182129_ksvc_creation_time.html
+Total: 10 | Ready: 10 (100.00%)  NotReady: 0 (0.00%)  NotFound: 0 (0.00%) Fail: 0 (0.00%)
+Total: 310.000000s
+Average: 31.000000s
+Median: 28.000000s
+Min: 16.000000s
+Max: 54.000000s
+Percentile50: 27.000000s
+Percentile90: 49.000000s
+Percentile95: 51.500000s
+Percentile98: 51.500000s
+Percentile99: 51.500000s
+Raw Timestamp saved in CSV file /tmp/20210117104747_raw_ksvc_creation_time.csv
+Measurement saved in CSV file /tmp/20210117104747_ksvc_creation_time.csv
+Visualized measurement saved in HTML file /tmp/20210117104747_ksvc_creation_time.html
 
-$ cat /tmp/20200710182129_ksvc_creation_time.csv                                         
-  svc_name,svc_namespace,configuration_ready,revision_ready,deployment_created,pod_scheduled,containers_ready,queue-proxy_started,user-container_started,route_ready,ingress_ready,ingress_config_ready,ingress_lb_ready,overall_ready
-  ktest-101,ktest-1,5,5,2,0,0,0,0,7,2,0,2,7
-  ktest-102,ktest-1,8,8,2,0,0,0,0,10,2,0,2,10
-  ktest-103,ktest-1,43,42,1,0,0,0,0,47,3,0,3,47
-  ktest-104,ktest-1,16,16,3,0,0,0,0,18,2,0,2,18
-  ktest-105,ktest-1,8,7,1,0,0,0,0,10,2,0,2,10
-  ktest-106,ktest-1,8,8,2,0,0,0,0,11,3,0,3,11
-  ktest-107,ktest-1,12,12,1,0,0,0,0,16,3,0,3,16
-  ktest-108,ktest-1,11,11,2,0,0,0,0,15,4,0,4,15
-  ktest-109,ktest-1,13,13,2,0,0,0,0,15,2,0,2,15
-  ktest-110,ktest-1,14,13,1,0,0,0,0,18,3,0,3,18
+$ cat /tmp/20210117104747_ksvc_creation_time.csv                                        
+svc_name,svc_namespace,configuration_ready,revision_ready,deployment_created,pod_scheduled,containers_ready,queue-proxy_started,user-container_started,route_ready,kpa_active,sks_ready,sks_activator_endpoints_populated,sks_endpoints_populated,ingress_ready,ingress_config_ready,ingress_lb_ready,overall_ready
+ktest-0,ktest-1,52,52,14,0,16,11,9,54,37,17,0,17,2,0,2,54
+ktest-1,ktest-1,25,25,12,0,13,8,5,32,13,12,1,12,7,0,7,32
+ktest-2,ktest-1,20,20,13,0,6,3,2,25,7,5,0,5,4,0,4,25
+ktest-3,ktest-1,22,22,14,0,6,2,2,27,7,4,0,4,5,0,5,27
+ktest-4,ktest-1,47,47,9,0,20,11,9,49,37,18,0,18,2,0,2,49
+ktest-5,ktest-1,21,20,9,0,11,2,1,29,11,9,0,9,7,0,7,29
+ktest-6,ktest-1,24,24,8,0,15,8,6,32,15,14,0,14,8,0,8,32
+ktest-7,ktest-1,14,14,8,0,4,2,2,21,5,3,0,3,7,0,7,21
+ktest-8,ktest-1,17,16,2,0,14,4,2,25,14,13,0,13,8,0,8,25
+ktest-9,ktest-1,9,8,2,0,6,2,2,16,6,5,0,5,7,0,7,16
 ```
 
 ### Clean Knative Service generated for test

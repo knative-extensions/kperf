@@ -55,25 +55,29 @@ type measureArgs struct {
 	verbose         bool
 }
 type measureResult struct {
-	svcConfigurationsReadySum   float64
-	svcRoutesReadySum           float64
-	svcReadySum                 float64
-	minDomainReadySum           float64
-	maxDomainReadySum           float64
-	revisionReadySum            float64
-	podAutoscalerReadySum       float64
-	ingressReadySum             float64
-	ingressNetworkConfiguredSum float64
-	ingressLoadBalancerReadySum float64
-	podScheduledSum             float64
-	containersReadySum          float64
-	queueProxyStartedSum        float64
-	userContrainerStartedSum    float64
-	deploymentCreatedSum        float64
+	svcConfigurationsReadySum         float64
+	svcRoutesReadySum                 float64
+	svcReadySum                       float64
+	minDomainReadySum                 float64
+	maxDomainReadySum                 float64
+	revisionReadySum                  float64
+	kpaActiveSum                      float64
+	sksReadySum                       float64
+	sksActivatorEndpointsPopulatedSum float64
+	sksEndpointsPopulatedSum          float64
+	ingressReadySum                   float64
+	ingressNetworkConfiguredSum       float64
+	ingressLoadBalancerReadySum       float64
+	podScheduledSum                   float64
+	containersReadySum                float64
+	queueProxyStartedSum              float64
+	userContrainerStartedSum          float64
+	deploymentCreatedSum              float64
 
 	readyCount    int
 	notReadyCount int
 	notFoundCount int
+	failCount     int
 
 	svcReadyTime []float64
 }
