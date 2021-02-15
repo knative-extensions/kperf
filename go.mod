@@ -4,15 +4,12 @@ go 1.14
 
 require (
 	bou.ke/monkey v1.0.2
-	github.com/PuerkitoBio/goquery v1.6.0 // indirect
-	github.com/kevinburke/go-bindata v3.22.0+incompatible // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/montanaflynn/stats v0.6.3
 	github.com/pelletier/go-toml v1.8.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.6.2
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gotest.tools v2.2.0+incompatible
 	k8s.io/api v0.18.8
 	k8s.io/apimachinery v0.18.8
