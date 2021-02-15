@@ -17,7 +17,6 @@ require (
 	k8s.io/api v0.18.8
 	k8s.io/apimachinery v0.18.8
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/kubernetes v1.15.4
 	knative.dev/networking v0.0.0-20201103163404-b9f80f4537af
 	knative.dev/pkg v0.0.0-20201103163404-5514ab0c1fdf
 	knative.dev/serving v0.18.1-0.20201106011207-d0773356e613
