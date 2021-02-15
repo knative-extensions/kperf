@@ -35,7 +35,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 
 	corev1 "k8s.io/api/core/v1"
-	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	networkingv1api "knative.dev/networking/pkg/apis/networking/v1alpha1"
 	autoscalingv1api "knative.dev/serving/pkg/apis/autoscaling/v1alpha1"
 	servingv1api "knative.dev/serving/pkg/apis/serving/v1"
@@ -241,7 +240,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						if len(podList.Items) > 0 {
 							pod := podList.Items[0]
 							podCreatedTime = pod.GetCreationTimestamp().Rfc3339Copy()
-							present, PodScheduledCdt := podutil.GetPodCondition(&pod.Status, corev1.PodScheduled)
+							present, PodScheduledCdt := getPodCondition(&pod.Status, corev1.PodScheduled)
 							if present == -1 {
 								fmt.Printf("failed to find Pod Condition PodScheduled and skip measuring")
 								currentMeasureResult.notReadyCount++
@@ -250,7 +249,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 								continue
 							}
 							podScheduledTime = PodScheduledCdt.LastTransitionTime.Rfc3339Copy()
-							present, containersReadyCdt := podutil.GetPodCondition(&pod.Status, corev1.ContainersReady)
+							present, containersReadyCdt := getPodCondition(&pod.Status, corev1.ContainersReady)
 							if present == -1 {
 								fmt.Printf("failed to find Pod Condition ContainersReady and skip measuring")
 								currentMeasureResult.notReadyCount++
@@ -262,7 +261,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 							podScheduledDuration = podScheduledTime.Sub(podCreatedTime.Time)
 							containersReadyDuration = containersReadyTime.Sub(podCreatedTime.Time)
 
-							queueProxyStatus, found := podutil.GetContainerStatus(pod.Status.ContainerStatuses, "queue-proxy")
+							queueProxyStatus, found := getContainerStatus(pod.Status.ContainerStatuses, "queue-proxy")
 							if !found {
 								fmt.Printf("failed to get queue-proxy container status and skip, error:%v", err)
 								currentMeasureResult.notReadyCount++
@@ -272,7 +271,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 							}
 							queueProxyStartedTime = queueProxyStatus.State.Running.StartedAt.Rfc3339Copy()
 
-							userContrainerStatus, found := podutil.GetContainerStatus(pod.Status.ContainerStatuses, "user-container")
+							userContrainerStatus, found := getContainerStatus(pod.Status.ContainerStatuses, "user-container")
 							if !found {
 								fmt.Printf("failed to get user-container container status and skip, error:%v", err)
 								currentMeasureResult.notReadyCount++
@@ -642,4 +641,30 @@ func sortSlice(rows [][]string) {
 		indexb, _ := strconv.ParseInt(b[1], 10, 64)
 		return indexa < indexb
 	})
+}
+
+// getPodCondition extracts the provided condition from the given status and returns that.
+// Returns nil and -1 if the condition is not present, and the index of the located condition.
+func getPodCondition(status *corev1.PodStatus, conditionType corev1.PodConditionType) (int, *corev1.PodCondition) {
+	if status == nil {
+		return -1, nil
+	}
+	for i := range status.Conditions {
+		if status.Conditions[i].Type == conditionType {
+			return i, &status.Conditions[i]
+		}
+	}
+	return -1, nil
+}
+
+// getPodCondition extracts the provided condition from the given status and returns that.
+// Returns nil and -1 if the condition is not present, and the index of the located condition.
+func getContainerStatus(status []corev1.ContainerStatus, name string) (*corev1.ContainerStatus, bool) {
+	for i := range status {
+		s := &status[i]
+		if s.Name == name {
+			return s, true
+		}
+	}
+	return nil, false
 }
