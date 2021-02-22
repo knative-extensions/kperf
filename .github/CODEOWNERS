@@ -1,0 +1,6 @@
+# Default owners are Productivity WG leads, kperf owners and TOC
+* @knative-sandbox/technical-oversight-committee
+* @knative-sandbox/knative-release-leads
+* @knative-sandbox/productivity-wg-leads
+# Last match takes precedence for reviews
+* @knative-sandbox/kperf-approvers
