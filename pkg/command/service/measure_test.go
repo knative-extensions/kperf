@@ -140,3 +140,60 @@ func TestSortSlice(t *testing.T) {
 	sortSlice(rows)
 	assert.DeepEqual(t, [][]string{{"test-1"}, {"test-2"}}, rows)
 }
+
+func TestGetPodCondition(t *testing.T) {
+	t.Run("get pod condition when pod is scheduled", func(t *testing.T) {
+		podCondition := &corev1.PodCondition{
+			Type: corev1.PodScheduled,
+		}
+		podStatus := &corev1.PodStatus{
+			Conditions: []corev1.PodCondition{
+				*podCondition,
+			},
+		}
+		i, condition := getPodCondition(podStatus, corev1.PodScheduled)
+		assert.Equal(t, 0, i)
+		assert.Equal(t, corev1.PodScheduled, condition.Type)
+	})
+
+	t.Run("get pod condition when pod isn't scheduled", func(t *testing.T) {
+		podCondition := &corev1.PodCondition{
+			Type: corev1.PodInitialized,
+		}
+		podStatus := &corev1.PodStatus{
+			Conditions: []corev1.PodCondition{
+				*podCondition,
+			},
+		}
+		i, condition := getPodCondition(podStatus, corev1.PodScheduled)
+		assert.Equal(t, -1, i)
+		assert.Equal(t, (*corev1.PodCondition)(nil), condition)
+	})
+
+	t.Run("get pod condition when pod status is nil", func(t *testing.T) {
+		podCondition := (*corev1.PodCondition)(nil)
+		i, condition := getPodCondition(nil, corev1.PodScheduled)
+		assert.Equal(t, -1, i)
+		assert.Equal(t, podCondition, condition)
+	})
+}
+
+func TestGetContainerStatus(t *testing.T) {
+	t.Run("get container status seccussfully", func(t *testing.T) {
+		var containerStatus []corev1.ContainerStatus
+		container := corev1.ContainerStatus{
+			Name: "user-container",
+		}
+		containerStatus = append(containerStatus, container)
+		s, status := getContainerStatus(containerStatus, "user-container")
+		assert.Equal(t, container.Name, s.Name)
+		assert.Equal(t, true, status)
+	})
+
+	t.Run("get container status when the condition is not present", func(t *testing.T) {
+		var containerStatus []corev1.ContainerStatus
+		s, status := getContainerStatus(containerStatus, "queue-proxy")
+		assert.Equal(t, (*corev1.ContainerStatus)(nil), s)
+		assert.Equal(t, false, status)
+	})
+}
