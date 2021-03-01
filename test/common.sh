@@ -25,5 +25,5 @@ function basedir() {
 
 # Environment variable which can be used my plugins
 export BASE_DIR=$(basedir)
-export TEST_INFRA_SCRIPTS="$BASE_DIR/test/test-infra"
+export TEST_INFRA_SCRIPTS="$BASE_DIR/vendor/knative.dev/hack"
 export KPERF_HACK_SCRIPTS="$BASE_DIR/hack"
