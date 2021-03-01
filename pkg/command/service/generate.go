@@ -16,6 +16,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -31,7 +32,6 @@ import (
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"knative.dev/kperf/pkg"
@@ -90,9 +90,9 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 			for _, ns := range nsNameList {
 				_, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
 				if err != nil && apierrors.IsNotFound(err) {
-					return errors.Errorf("namespace %s not found, please create one", ns)
+					return fmt.Errorf("namespace %s not found, please create one", ns)
 				} else if err != nil {
-					return errors.Wrap(err, "failed to get namespace")
+					return fmt.Errorf("failed to get namespace: %w", err)
 				}
 			}
 
@@ -146,7 +146,7 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 					}
 				}
 				fmt.Printf("Error: Knative Service %s in namespace %s is not ready after %s\n", name, ns, generateArgs.timeout)
-				return errors.Errorf("Knative Service %s in namespace %s is not ready after %s ", name, ns, generateArgs.timeout)
+				return fmt.Errorf("Knative Service %s in namespace %s is not ready after %s ", name, ns, generateArgs.timeout)
 
 			}
 			if generateArgs.checkReady {
