@@ -75,7 +75,7 @@ function check_license() {
 
   local check_output=$(mktemp /tmp/${PLUGIN}-licence-check.XXXXXX)
   for ext in "${extensions_to_check[@]}"; do
-    find . -name "*.$ext" -a \! -path "./vendor/*" -a \! -path "./.*" -a \! -path "./pkg/command/utils/htmltemplatebindata.go" -print0 |
+    find . -name "*.$ext" -a \! -path "./vendor/*" -a \! -path "./.*" -a \! -path "./pkg/command/utils/htmltemplatebindata.go" -a \! -path "./third_party/*" -print0 |
       while IFS= read -r -d '' path; do
         for rword in "${required_keywords[@]}"; do
           if ! grep -q "$rword" "$path"; then
