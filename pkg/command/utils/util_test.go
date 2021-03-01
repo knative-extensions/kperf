@@ -25,7 +25,7 @@ import (
 
 	"bou.ke/monkey"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func TestGenerateCSVFile(t *testing.T) {
