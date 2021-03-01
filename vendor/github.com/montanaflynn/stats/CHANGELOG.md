@@ -1,4 +1,50 @@
 
+<a name="v0.6.5"></a>
+## [v0.6.5](https://github.com/montanaflynn/stats/compare/v0.6.4...v0.6.5) (2021-02-21)
+
+### Add
+
+* Add Float64Data.Quartiles documentation
+
+
+<a name="v0.6.4"></a>
+## [v0.6.4](https://github.com/montanaflynn/stats/compare/v0.6.3...v0.6.4) (2021-02-21)
+
+### Add
+
+* Add Quartiles method to Float64Data type (issue [#60](https://github.com/montanaflynn/stats/issues/60))
+
+### Fix
+
+* Fix make release changelog command and add changelog history
+* Fix failing tests due to precision errors on arm64 ([#58](https://github.com/montanaflynn/stats/issues/58))
+
+### Update
+
+* Update changelog with v0.6.4 changes
+* Update README.md links to CHANGELOG.md and DOCUMENTATION.md
+* Update README.md and Makefile with new release commands
+* Update changelog with v0.6.4 changes
+* Update examples directory to include a README.md used for synopsis
+* Update go.mod to include go version where modules are enabled by default
+* Update changelog with v0.6.3 changes
+
+
+<a name="v0.6.3"></a>
+## [v0.6.3](https://github.com/montanaflynn/stats/compare/v0.6.2...v0.6.3) (2020-02-18)
+
+### Add
+
+* Add creating and committing changelog to Makefile release directive
+* Add release-notes.txt and .chglog directory to .gitignore
+
+### Update
+
+* Update exported tests to use import for better example documentation
+* Update documentation using godoc2md
+* Update changelog with v0.6.2 release
+
+
 <a name="v0.6.2"></a>
 ## [v0.6.2](https://github.com/montanaflynn/stats/compare/v0.6.1...v0.6.2) (2020-02-18)
 

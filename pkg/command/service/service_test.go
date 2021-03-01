@@ -17,7 +17,7 @@ package service
 import (
 	"testing"
 
-	"gotest.tools/assert"
+	"gotest.tools/v3/assert"
 )
 
 func TestNewServiceCmd(t *testing.T) {
