@@ -17,8 +17,6 @@ import (
 	"time"
 )
 
-const svcNamePrefixDefault string = "testksvc"
-
 type generateArgs struct {
 	number      int
 	interval    int
@@ -31,8 +29,6 @@ type generateArgs struct {
 	namespaceRange  string
 	namespace       string
 	svcPrefix       string
-	svcRange        string
-	svcName         string
 
 	checkReady bool
 	timeout    time.Duration
@@ -58,8 +54,6 @@ type measureResult struct {
 	svcConfigurationsReadySum         float64
 	svcRoutesReadySum                 float64
 	svcReadySum                       float64
-	minDomainReadySum                 float64
-	maxDomainReadySum                 float64
 	revisionReadySum                  float64
 	kpaActiveSum                      float64
 	sksReadySum                       float64

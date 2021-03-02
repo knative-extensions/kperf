@@ -36,6 +36,7 @@ func TestGenerateCSVFile(t *testing.T) {
 		assert.NilError(t, err)
 
 		file, err := os.Open(path)
+		assert.NilError(t, err)
 		defer file.Close()
 		buffer := make([]byte, 20)
 		_, err = file.Read(buffer)

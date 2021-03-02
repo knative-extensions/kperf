@@ -107,13 +107,10 @@ func (bg *BatchGenerator) doGenerate() {
 }
 
 func (bg *BatchGenerator) checkFinished() {
-	for {
-		select {
-		case <-bg.finishedChan:
-			bg.finishedCount++
-			if bg.finishedCount >= bg.count {
-				close(bg.doneChan)
-			}
+	for range bg.finishedChan {
+		bg.finishedCount++
+		if bg.finishedCount >= bg.count {
+			close(bg.doneChan)
 		}
 	}
 }

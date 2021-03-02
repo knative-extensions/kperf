@@ -30,15 +30,12 @@ import (
 
 	knativeapis "knative.dev/pkg/apis"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
-	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 
 	"github.com/spf13/cobra"
 
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/generator"
 )
-
-var ksvcClient *servingv1client.ServingV1Client
 
 func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
 	generateArgs := generateArgs{}
@@ -136,7 +133,7 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 			}
 			checkServiceStatusReadyFunc := func(ns, name string) error {
 				start := time.Now()
-				for time.Now().Sub(start) < generateArgs.timeout {
+				for time.Since(start) < generateArgs.timeout {
 					svc, _ := ksvcClient.Services(ns).Get(context.TODO(), name, metav1.GetOptions{})
 					conditions := svc.Status.Conditions
 					for i := 0; i < len(conditions); i++ {

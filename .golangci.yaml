@@ -1,0 +1,16 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - prealloc
+    - unconvert
+    - unparam
+  disable:
+    - errcheck
+
+issues:
+  exclude-rules:
+    - path: test # Excludes /test, *_test.go etc.
+      linters:
+        - unparam
