@@ -73,13 +73,10 @@ func (bc *BatchCleaner) doClean() {
 }
 
 func (bc *BatchCleaner) checkFinished() {
-	for {
-		select {
-		case <-bc.finishedChan:
-			bc.finishedCount++
-			if bc.finishedCount >= len(bc.namespaceNameList) {
-				close(bc.doneChan)
-			}
+	for range bc.finishedChan {
+		bc.finishedCount++
+		if bc.finishedCount >= len(bc.namespaceNameList) {
+			close(bc.doneChan)
 		}
 	}
 }

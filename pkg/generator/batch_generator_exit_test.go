@@ -51,11 +51,8 @@ func TestBatchGeneratorExit(t *testing.T) {
 	start := time.Now().Unix()
 	err := cmd.Run()
 	duration := time.Now().Unix() - start
-	// Cast the error as *exec.ExitError and compare the result
-	e, ok := err.(*exec.ExitError)
-	expectedErrorString := "exit status 1"
-	assert.Equal(t, ok, true)
-	assert.ErrorContains(t, e, expectedErrorString)
+	assert.ErrorType(t, err, &exec.ExitError{})
+	assert.ErrorContains(t, err, "exit status 1")
 	// should complete ahead of scheduled 4 (count/batch) seconds
 	assert.Assert(t, duration < 4)
 }
