@@ -15,6 +15,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -195,5 +196,135 @@ func TestGetContainerStatus(t *testing.T) {
 		s, status := getContainerStatus(containerStatus, "queue-proxy")
 		assert.Equal(t, (*corev1.ContainerStatus)(nil), s)
 		assert.Equal(t, false, status)
+	})
+}
+
+func TestGetKnativeVersion(t *testing.T) {
+	t.Run("get knative serving and eventing version", func(t *testing.T) {
+		servingNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "knative-serving",
+				Labels: map[string]string{"serving.knative.dev/release": "v0.20.0"},
+			},
+		}
+		eventingNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "knative-eventing",
+				Labels: map[string]string{"eventing.knative.dev/release": "v0.20.0"},
+			},
+		}
+		client := k8sfake.NewSimpleClientset(servingNs, eventingNs)
+
+		p := &pkg.PerfParams{
+			ClientSet: client,
+		}
+		version := getKnativeVersion(p)
+		assert.Equal(t, "0.20.0", version["serving"])
+		assert.Equal(t, "0.20.0", version["eventing"])
+	})
+
+	t.Run("failed to get knative serving and eventing version", func(t *testing.T) {
+		client := k8sfake.NewSimpleClientset()
+		fakeServing := &servingv1fake.FakeServingV1{Fake: &client.Fake}
+		servingClient := func() (servingv1client.ServingV1Interface, error) {
+			return fakeServing, nil
+		}
+
+		p := &pkg.PerfParams{
+			ClientSet:        client,
+			NewServingClient: servingClient,
+		}
+		version := getKnativeVersion(p)
+		assert.Equal(t, "Unknown", version["serving"])
+		assert.Equal(t, "Unknown", version["eventing"])
+	})
+}
+
+func TestGetIngressController(t *testing.T) {
+	t.Run("get knative ingress controller with version", func(t *testing.T) {
+		servingNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "knative-serving",
+			},
+		}
+
+		istioNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "istio-system",
+			},
+		}
+
+		client := k8sfake.NewSimpleClientset(servingNs, istioNs)
+		p := &pkg.PerfParams{
+			ClientSet: client,
+		}
+
+		configMapKnative := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "config-network",
+			},
+			Data: map[string]string{"ingress.class": "istio.ingress.networking.knative.dev"},
+		}
+		p.ClientSet.CoreV1().ConfigMaps("knative-serving").Create(context.TODO(), configMapKnative, metav1.CreateOptions{})
+
+		configMapIstio := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "istio",
+				Labels: map[string]string{"operator.istio.io/version": "1.7.3"},
+			},
+			Data: map[string]string{"ingress.class": "istio.ingress.networking.knative.dev"},
+		}
+		p.ClientSet.CoreV1().ConfigMaps("istio-system").Create(context.TODO(), configMapIstio, metav1.CreateOptions{})
+
+		ingressController := getIngressController(p)
+		assert.Equal(t, "Istio", ingressController["ingressController"])
+		assert.Equal(t, "1.7.3", ingressController["version"])
+	})
+
+	t.Run("get knative ingress controller without version", func(t *testing.T) {
+		servingNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "knative-serving",
+			},
+		}
+
+		client := k8sfake.NewSimpleClientset(servingNs)
+		p := &pkg.PerfParams{
+			ClientSet: client,
+		}
+		configMapKnative := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "config-network",
+			},
+			Data: map[string]string{"ingress.class": "istio.ingress.networking.knative.dev"},
+		}
+		p.ClientSet.CoreV1().ConfigMaps("knative-serving").Create(context.TODO(), configMapKnative, metav1.CreateOptions{})
+
+		ingressController := getIngressController(p)
+		assert.Equal(t, "Istio", ingressController["ingressController"])
+		assert.Equal(t, "Unknown", ingressController["version"])
+	})
+
+	t.Run("get unknown knative ingress controller", func(t *testing.T) {
+		servingNs := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "knative-serving",
+			},
+		}
+
+		client := k8sfake.NewSimpleClientset(servingNs)
+		p := &pkg.PerfParams{
+			ClientSet: client,
+		}
+		configMapKnative := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "config-network",
+			},
+		}
+		p.ClientSet.CoreV1().ConfigMaps("knative-serving").Create(context.TODO(), configMapKnative, metav1.CreateOptions{})
+
+		ingressController := getIngressController(p)
+		assert.Equal(t, "Unknown", ingressController["ingressController"])
+		assert.Equal(t, "Unknown", ingressController["version"])
 	})
 }
