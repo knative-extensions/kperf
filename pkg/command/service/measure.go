@@ -27,6 +27,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/kperf/pkg/command/utils"
 
+	"encoding/json"
+
 	"knative.dev/kperf/pkg"
 
 	"github.com/montanaflynn/stats"
@@ -151,7 +153,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 					for j := range svcChannel {
 						if len(j) != 2 {
 							fmt.Printf("lack of service name or service namespace and skip")
-							currentMeasureResult.failCount++
+							currentMeasureResult.Service.FailCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -162,12 +164,12 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						if err != nil {
 							fmt.Printf("failed to get Knative Service %s\n", err)
 							if strings.Contains(err.Error(), "not found") {
-								currentMeasureResult.notFoundCount++
+								currentMeasureResult.Service.NotFoundCount++
 								workerMeasureResults[index] = currentMeasureResult
 								group.Done()
 								continue
 							} else {
-								currentMeasureResult.failCount++
+								currentMeasureResult.Service.FailCount++
 								workerMeasureResults[index] = currentMeasureResult
 								group.Done()
 								continue
@@ -175,7 +177,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						}
 						if !svcIns.IsReady() {
 							fmt.Printf("service %s/%s not ready and skip measuring\n", svc, svcNs)
-							currentMeasureResult.notReadyCount++
+							currentMeasureResult.Service.NotReadyCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -192,7 +194,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						cfgIns, err := servingClient.Configurations(svcNs).Get(context.TODO(), svc, metav1.GetOptions{})
 						if err != nil {
 							fmt.Printf("failed to get Configuration and skip measuring %s\n", err)
-							currentMeasureResult.notReadyCount++
+							currentMeasureResult.Service.NotReadyCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -202,7 +204,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						revisionIns, err := servingClient.Revisions(svcNs).Get(context.TODO(), revisionName, metav1.GetOptions{})
 						if err != nil {
 							fmt.Printf("failed to get Revision and skip measuring %s\n", err)
-							currentMeasureResult.notReadyCount++
+							currentMeasureResult.Service.NotReadyCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -216,7 +218,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						podList, err := p.ClientSet.CoreV1().Pods(svcNs).List(context.TODO(), metav1.ListOptions{LabelSelector: label})
 						if err != nil {
 							fmt.Printf("list Pods of revision[%s] error :%v", revisionName, err)
-							currentMeasureResult.notReadyCount++
+							currentMeasureResult.Service.NotReadyCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -226,7 +228,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						deploymentIns, err := p.ClientSet.AppsV1().Deployments(svcNs).Get(context.TODO(), deploymentName, metav1.GetOptions{})
 						if err != nil {
 							fmt.Printf("failed to find deployment of revision[%s] error:%v", revisionName, err)
-							currentMeasureResult.notReadyCount++
+							currentMeasureResult.Service.NotReadyCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -243,7 +245,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 							present, PodScheduledCdt := getPodCondition(&pod.Status, corev1.PodScheduled)
 							if present == -1 {
 								fmt.Printf("failed to find Pod Condition PodScheduled and skip measuring")
-								currentMeasureResult.notReadyCount++
+								currentMeasureResult.Service.NotReadyCount++
 								workerMeasureResults[index] = currentMeasureResult
 								group.Done()
 								continue
@@ -252,7 +254,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 							present, containersReadyCdt := getPodCondition(&pod.Status, corev1.ContainersReady)
 							if present == -1 {
 								fmt.Printf("failed to find Pod Condition ContainersReady and skip measuring")
-								currentMeasureResult.notReadyCount++
+								currentMeasureResult.Service.NotReadyCount++
 								workerMeasureResults[index] = currentMeasureResult
 								group.Done()
 								continue
@@ -264,7 +266,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 							queueProxyStatus, found := getContainerStatus(pod.Status.ContainerStatuses, "queue-proxy")
 							if !found {
 								fmt.Printf("failed to get queue-proxy container status and skip, error:%v", err)
-								currentMeasureResult.notReadyCount++
+								currentMeasureResult.Service.NotReadyCount++
 								workerMeasureResults[index] = currentMeasureResult
 								group.Done()
 								continue
@@ -274,7 +276,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 							userContrainerStatus, found := getContainerStatus(pod.Status.ContainerStatuses, "user-container")
 							if !found {
 								fmt.Printf("failed to get user-container container status and skip, error:%v", err)
-								currentMeasureResult.notReadyCount++
+								currentMeasureResult.Service.NotReadyCount++
 								workerMeasureResults[index] = currentMeasureResult
 								group.Done()
 								continue
@@ -289,7 +291,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						kpaIns, err := autoscalingClient.PodAutoscalers(svcNs).Get(context.TODO(), revisionName, metav1.GetOptions{})
 						if err != nil {
 							fmt.Printf("failed to get PodAutoscaler %s\n", err)
-							currentMeasureResult.notReadyCount++
+							currentMeasureResult.Service.NotReadyCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -301,7 +303,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						sksIns, err := nwclient.ServerlessServices(svcNs).Get(context.TODO(), revisionName, metav1.GetOptions{})
 						if err != nil {
 							fmt.Printf("failed to get ServerlessService %s\n", err)
-							currentMeasureResult.notReadyCount++
+							currentMeasureResult.Service.NotReadyCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -317,7 +319,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						ingressIns, err := nwclient.Ingresses(svcNs).Get(context.TODO(), svc, metav1.GetOptions{})
 						if err != nil {
 							fmt.Printf("failed to get Ingress %s\n", err)
-							currentMeasureResult.notReadyCount++
+							currentMeasureResult.Service.NotReadyCount++
 							workerMeasureResults[index] = currentMeasureResult
 							group.Done()
 							continue
@@ -330,7 +332,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 						ingressReadyDuration := ingressLoadBalancerReadyTime.Sub(ingressCreatedTime.Time)
 
 						lock.Lock()
-						currentMeasureResult.readyCount++
+						currentMeasureResult.Service.ReadyCount++
 						rows = append(rows, []string{svc, svcNs,
 							fmt.Sprintf("%d", int(svcConfigurationsReadyDuration.Seconds())),
 							fmt.Sprintf("%d", int(revisionReadyDuration.Seconds())),
@@ -459,10 +461,10 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				measureFinalResult.ingressLoadBalancerReadySum += workerMeasureResults[i].ingressLoadBalancerReadySum
 				measureFinalResult.svcReadyTime = append(measureFinalResult.svcReadyTime, workerMeasureResults[i].svcReadyTime...)
 				measureFinalResult.svcReadySum += workerMeasureResults[i].svcReadySum
-				measureFinalResult.readyCount += workerMeasureResults[i].readyCount
-				measureFinalResult.notReadyCount += workerMeasureResults[i].notReadyCount
-				measureFinalResult.notFoundCount += workerMeasureResults[i].notFoundCount
-				measureFinalResult.failCount += workerMeasureResults[i].failCount
+				measureFinalResult.Service.ReadyCount += workerMeasureResults[i].Service.ReadyCount
+				measureFinalResult.Service.NotReadyCount += workerMeasureResults[i].Service.NotReadyCount
+				measureFinalResult.Service.NotFoundCount += workerMeasureResults[i].Service.NotFoundCount
+				measureFinalResult.Service.FailCount += workerMeasureResults[i].Service.FailCount
 			}
 
 			sortSlice(rows)
@@ -493,112 +495,135 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				"ingress_created",
 				"ingress_config_ready",
 				"ingress_lb_ready"}}, rawRows...)
-			total := measureFinalResult.readyCount + measureFinalResult.notReadyCount + measureFinalResult.notFoundCount + measureFinalResult.failCount
+			total := measureFinalResult.Service.ReadyCount + measureFinalResult.Service.NotReadyCount + measureFinalResult.Service.NotFoundCount + measureFinalResult.Service.FailCount
+
 			knativeVersion := getKnativeVersion(p)
 			ingressInfo := getIngressController(p)
-			if measureFinalResult.readyCount > 0 {
+			measureFinalResult.KnativeInfo.ServingVersion = knativeVersion["serving"]
+			measureFinalResult.KnativeInfo.EventingVersion = knativeVersion["eventing"]
+			measureFinalResult.KnativeInfo.IngressController = ingressInfo["ingressController"]
+			measureFinalResult.KnativeInfo.IngressVersion = ingressInfo["version"]
+
+			if measureFinalResult.Service.ReadyCount > 0 {
 				fmt.Printf("-------- Measurement --------\n")
 				fmt.Printf("Basic Information:\n")
 				fmt.Printf("  - Knative Versions:\n")
-				fmt.Printf("    Serving: %v\n", knativeVersion["serving"])
-				fmt.Printf("    Eventing: %v\n", knativeVersion["eventing"])
+				fmt.Printf("    Serving: %v\n", measureFinalResult.KnativeInfo.ServingVersion)
+				fmt.Printf("    Eventing: %v\n", measureFinalResult.KnativeInfo.EventingVersion)
 				fmt.Printf("  - Ingress Information:\n")
-				fmt.Printf("    Controller: %v\n", ingressInfo["ingressController"])
-				fmt.Printf("    Version: %v\n", ingressInfo["version"])
-				fmt.Printf("Total: %d | Ready: %d NotReady: %d NotFound: %d Fail: %d\n", total, measureFinalResult.readyCount, measureFinalResult.notReadyCount, measureFinalResult.notFoundCount, measureFinalResult.failCount)
+				fmt.Printf("    Controller: %v\n", measureFinalResult.KnativeInfo.IngressController)
+				fmt.Printf("    Version: %v\n", measureFinalResult.KnativeInfo.IngressVersion)
+				fmt.Printf("Total: %d | Ready: %d NotReady: %d NotFound: %d Fail: %d\n", total, measureFinalResult.Service.ReadyCount, measureFinalResult.Service.NotReadyCount, measureFinalResult.Service.NotFoundCount, measureFinalResult.Service.FailCount)
 				fmt.Printf("Service Configuration Duration:\n")
 				fmt.Printf("Total: %fs\n", measureFinalResult.svcConfigurationsReadySum)
-				fmt.Printf("Average: %fs\n", measureFinalResult.svcConfigurationsReadySum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageSvcConfigurationReadySum = measureFinalResult.svcConfigurationsReadySum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("Average: %fs\n", measureFinalResult.Result.AverageSvcConfigurationReadySum)
 
 				fmt.Printf("- Service Revision Duration:\n")
 				fmt.Printf("  Total: %fs\n", measureFinalResult.revisionReadySum)
-				fmt.Printf("  Average: %fs\n", measureFinalResult.revisionReadySum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageRevisionReadySum = measureFinalResult.revisionReadySum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("  Average: %fs\n", measureFinalResult.Result.AverageRevisionReadySum)
 
 				fmt.Printf("  - Service Deployment Created Duration:\n")
 				fmt.Printf("    Total: %fs\n", measureFinalResult.deploymentCreatedSum)
-				fmt.Printf("    Average: %fs\n", measureFinalResult.deploymentCreatedSum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageDeploymentCreatedSum = measureFinalResult.deploymentCreatedSum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("    Average: %fs\n", measureFinalResult.Result.AverageDeploymentCreatedSum)
 
 				fmt.Printf("    - Service Pod Scheduled Duration:\n")
 				fmt.Printf("      Total: %fs\n", measureFinalResult.podScheduledSum)
-				fmt.Printf("      Average: %fs\n", measureFinalResult.podScheduledSum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AveragePodScheduledSum = measureFinalResult.podScheduledSum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("      Average: %fs\n", measureFinalResult.Result.AveragePodScheduledSum)
 
 				fmt.Printf("    - Service Pod Containers Ready Duration:\n")
 				fmt.Printf("      Total: %fs\n", measureFinalResult.containersReadySum)
-				fmt.Printf("      Average: %fs\n", measureFinalResult.containersReadySum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageContainersReadySum = measureFinalResult.containersReadySum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("      Average: %fs\n", measureFinalResult.Result.AverageContainersReadySum)
 
 				fmt.Printf("      - Service Pod queue-proxy Started Duration:\n")
 				fmt.Printf("        Total: %fs\n", measureFinalResult.queueProxyStartedSum)
-				fmt.Printf("        Average: %fs\n", measureFinalResult.queueProxyStartedSum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageQueueProxyStartedSum = measureFinalResult.queueProxyStartedSum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("        Average: %fs\n", measureFinalResult.Result.AverageQueueProxyStartedSum)
 
 				fmt.Printf("      - Service Pod user-container Started Duration:\n")
 				fmt.Printf("        Total: %fs\n", measureFinalResult.userContrainerStartedSum)
-				fmt.Printf("        Average: %fs\n", measureFinalResult.userContrainerStartedSum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageUserContrainerStartedSum = measureFinalResult.userContrainerStartedSum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("        Average: %fs\n", measureFinalResult.Result.AverageUserContrainerStartedSum)
 
 				fmt.Printf("  - Service PodAutoscaler Active Duration:\n")
 				fmt.Printf("    Total: %fs\n", measureFinalResult.kpaActiveSum)
-				fmt.Printf("    Average: %fs\n", measureFinalResult.kpaActiveSum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageKpaActiveSum = measureFinalResult.kpaActiveSum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("    Average: %fs\n", measureFinalResult.Result.AverageKpaActiveSum)
 
 				fmt.Printf("    - Service ServerlessService Ready Duration:\n")
 				fmt.Printf("      Total: %fs\n", measureFinalResult.sksReadySum)
-				fmt.Printf("      Average: %fs\n", measureFinalResult.sksReadySum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageSksReadySum = measureFinalResult.sksReadySum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("      Average: %fs\n", measureFinalResult.Result.AverageSksReadySum)
 
 				fmt.Printf("      - Service ServerlessService ActivatorEndpointsPopulated Duration:\n")
 				fmt.Printf("        Total: %fs\n", measureFinalResult.sksActivatorEndpointsPopulatedSum)
-				fmt.Printf("        Average: %fs\n", measureFinalResult.sksActivatorEndpointsPopulatedSum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageSksActivatorEndpointsPopulatedSum = measureFinalResult.sksActivatorEndpointsPopulatedSum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("        Average: %fs\n", measureFinalResult.Result.AverageSksActivatorEndpointsPopulatedSum)
 
 				fmt.Printf("      - Service ServerlessService EndpointsPopulated Duration:\n")
 				fmt.Printf("        Total: %fs\n", measureFinalResult.sksEndpointsPopulatedSum)
-				fmt.Printf("        Average: %fs\n", measureFinalResult.sksEndpointsPopulatedSum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageSksEndpointsPopulatedSum = measureFinalResult.sksEndpointsPopulatedSum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("        Average: %fs\n", measureFinalResult.Result.AverageSksEndpointsPopulatedSum)
 
 				fmt.Printf("\nService Route Ready Duration:\n")
 				fmt.Printf("Total: %fs\n", measureFinalResult.svcRoutesReadySum)
-				fmt.Printf("Average: %fs\n", measureFinalResult.svcRoutesReadySum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageSvcRoutesReadySum = measureFinalResult.svcRoutesReadySum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("Average: %fs\n", measureFinalResult.Result.AverageSvcRoutesReadySum)
 
 				fmt.Printf("- Service Ingress Ready Duration:\n")
 				fmt.Printf("  Total: %fs\n", measureFinalResult.ingressReadySum)
-				fmt.Printf("  Average: %fs\n", measureFinalResult.ingressReadySum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageIngressReadySum = measureFinalResult.ingressReadySum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("  Average: %fs\n", measureFinalResult.Result.AverageIngressReadySum)
 
 				fmt.Printf("  - Service Ingress Network Configured Duration:\n")
 				fmt.Printf("    Total: %fs\n", measureFinalResult.ingressNetworkConfiguredSum)
-				fmt.Printf("    Average: %fs\n", measureFinalResult.ingressNetworkConfiguredSum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageIngressNetworkConfiguredSum = measureFinalResult.ingressNetworkConfiguredSum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("    Average: %fs\n", measureFinalResult.Result.AverageIngressNetworkConfiguredSum)
 
 				fmt.Printf("  - Service Ingress LoadBalancer Ready Duration:\n")
 				fmt.Printf("    Total: %fs\n", measureFinalResult.ingressLoadBalancerReadySum)
-				fmt.Printf("    Average: %fs\n", measureFinalResult.ingressLoadBalancerReadySum/float64(measureFinalResult.readyCount))
+				measureFinalResult.Result.AverageIngressLoadBalancerReadySum = measureFinalResult.ingressLoadBalancerReadySum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("    Average: %fs\n", measureFinalResult.Result.AverageIngressLoadBalancerReadySum)
 
 				fmt.Printf("\n-----------------------------\n")
 				fmt.Printf("Overall Service Ready Measurement:\n")
 				fmt.Printf("Total: %d | Ready: %d (%.2f%s)  NotReady: %d (%.2f%s)  NotFound: %d (%.2f%s)  Fail: %d (%.2f%s) \n", total,
-					measureFinalResult.readyCount, float64(measureFinalResult.readyCount)/float64(total)*100, "%",
-					measureFinalResult.notReadyCount, float64(measureFinalResult.notReadyCount)/float64(total)*100, "%",
-					measureFinalResult.notFoundCount, float64(measureFinalResult.notFoundCount)/float64(total)*100, "%",
-					measureFinalResult.failCount, float64(measureFinalResult.failCount)/float64(total)*100, "%")
-				fmt.Printf("Total: %fs\n", measureFinalResult.svcReadySum)
-				fmt.Printf("Average: %fs\n", measureFinalResult.svcReadySum/float64(measureFinalResult.readyCount))
+					measureFinalResult.Service.ReadyCount, float64(measureFinalResult.Service.ReadyCount)/float64(total)*100, "%",
+					measureFinalResult.Service.NotReadyCount, float64(measureFinalResult.Service.NotReadyCount)/float64(total)*100, "%",
+					measureFinalResult.Service.NotFoundCount, float64(measureFinalResult.Service.NotFoundCount)/float64(total)*100, "%",
+					measureFinalResult.Service.FailCount, float64(measureFinalResult.Service.FailCount)/float64(total)*100, "%")
+				measureFinalResult.Result.OverallTotal = measureFinalResult.svcReadySum
+				fmt.Printf("Total: %fs\n", measureFinalResult.Result.OverallTotal)
+				measureFinalResult.Result.OverallAverage = measureFinalResult.svcReadySum / float64(measureFinalResult.Service.ReadyCount)
+				fmt.Printf("Average: %fs\n", measureFinalResult.Result.OverallAverage)
 
-				median, _ := stats.Median(measureFinalResult.svcReadyTime)
-				fmt.Printf("Median: %fs\n", median)
+				measureFinalResult.Result.OverallMedian, _ = stats.Median(measureFinalResult.svcReadyTime)
+				fmt.Printf("Median: %fs\n", measureFinalResult.Result.OverallMedian)
 
-				min, _ := stats.Min(measureFinalResult.svcReadyTime)
-				fmt.Printf("Min: %fs\n", min)
+				measureFinalResult.Result.OverallMin, _ = stats.Min(measureFinalResult.svcReadyTime)
+				fmt.Printf("Min: %fs\n", measureFinalResult.Result.OverallMin)
 
-				max, _ := stats.Max(measureFinalResult.svcReadyTime)
-				fmt.Printf("Max: %fs\n", max)
+				measureFinalResult.Result.OverallMax, _ = stats.Max(measureFinalResult.svcReadyTime)
+				fmt.Printf("Max: %fs\n", measureFinalResult.Result.OverallMax)
 
-				p50, _ := stats.Percentile(measureFinalResult.svcReadyTime, 50)
-				fmt.Printf("Percentile50: %fs\n", p50)
+				measureFinalResult.Result.P50, _ = stats.Percentile(measureFinalResult.svcReadyTime, 50)
+				fmt.Printf("Percentile50: %fs\n", measureFinalResult.Result.P50)
 
-				p90, _ := stats.Percentile(measureFinalResult.svcReadyTime, 90)
-				fmt.Printf("Percentile90: %fs\n", p90)
+				measureFinalResult.Result.P90, _ = stats.Percentile(measureFinalResult.svcReadyTime, 90)
+				fmt.Printf("Percentile90: %fs\n", measureFinalResult.Result.P90)
 
-				p95, _ := stats.Percentile(measureFinalResult.svcReadyTime, 95)
-				fmt.Printf("Percentile95: %fs\n", p95)
+				measureFinalResult.Result.P95, _ = stats.Percentile(measureFinalResult.svcReadyTime, 95)
+				fmt.Printf("Percentile95: %fs\n", measureFinalResult.Result.P95)
 
-				p98, _ := stats.Percentile(measureFinalResult.svcReadyTime, 98)
-				fmt.Printf("Percentile98: %fs\n", p98)
+				measureFinalResult.Result.P98, _ = stats.Percentile(measureFinalResult.svcReadyTime, 98)
+				fmt.Printf("Percentile98: %fs\n", measureFinalResult.Result.P98)
 
-				p99, _ := stats.Percentile(measureFinalResult.svcReadyTime, 99)
-				fmt.Printf("Percentile99: %fs\n", p99)
+				measureFinalResult.Result.P99, _ = stats.Percentile(measureFinalResult.svcReadyTime, 99)
+				fmt.Printf("Percentile99: %fs\n", measureFinalResult.Result.P99)
 
 				current := time.Now()
 				rawPath := fmt.Sprintf("/tmp/%s_%s", current.Format("20060102150405"), "raw_ksvc_creation_time.csv")
@@ -613,8 +638,19 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				if err != nil {
 					fmt.Printf("failed to generate CSV file and skip %s\n", err)
 				}
-
 				fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
+
+				jsonPath := fmt.Sprintf("/tmp/%s_%s", current.Format("20060102150405"), "ksvc_creation_time.json")
+				jsonData, err := json.Marshal(measureFinalResult)
+				if err != nil {
+					fmt.Printf("failed to generate json data and skip %s\n", err)
+				}
+				err = utils.GenerateJSONFile(jsonData, jsonPath)
+				if err != nil {
+					fmt.Printf("failed to generate json file and skip %s\n", err)
+				}
+				fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
+
 				htmlPath := fmt.Sprintf("/tmp/%s_%s", current.Format("20060102150405"), "ksvc_creation_time.html")
 				err = utils.GenerateHTMLFile(csvPath, htmlPath)
 				if err != nil {
@@ -625,13 +661,13 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				fmt.Printf("-----------------------------\n")
 				fmt.Printf("Basic Information:\n")
 				fmt.Printf("  - Knative Versions:\n")
-				fmt.Printf("    Serving: %v\n", knativeVersion["serving"])
-				fmt.Printf("    Eventing: %v\n", knativeVersion["eventing"])
+				fmt.Printf("    Serving: %v\n", measureFinalResult.KnativeInfo.ServingVersion)
+				fmt.Printf("    Eventing: %v\n", measureFinalResult.KnativeInfo.EventingVersion)
 				fmt.Printf("  - Ingress Information:\n")
-				fmt.Printf("    Controller: %v\n", ingressInfo["ingressController"])
-				fmt.Printf("    Version: %v\n", ingressInfo["version"])
+				fmt.Printf("    Controller: %v\n", measureFinalResult.KnativeInfo.IngressController)
+				fmt.Printf("    Version: %v\n", measureFinalResult.KnativeInfo.IngressVersion)
 				fmt.Printf("Service Ready Measurement:\n")
-				fmt.Printf("Total: %d | Ready: %d NotReady: %d NotFound: %d Fail: %d\n", total, measureFinalResult.readyCount, measureFinalResult.notReadyCount, measureFinalResult.notFoundCount, measureFinalResult.failCount)
+				fmt.Printf("Total: %d | Ready: %d NotReady: %d NotFound: %d Fail: %d\n", total, measureFinalResult.Service.ReadyCount, measureFinalResult.Service.NotReadyCount, measureFinalResult.Service.NotFoundCount, measureFinalResult.Service.FailCount)
 			}
 
 			return nil

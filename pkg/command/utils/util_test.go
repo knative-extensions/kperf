@@ -16,8 +16,10 @@ package utils
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -104,5 +106,40 @@ func TestGenerateHTMLFile(t *testing.T) {
 		targetHTML := "/tmp/test.html"
 		err := GenerateHTMLFile(sourceCSV, targetHTML)
 		assert.ErrorContains(t, err, "failed to load asset")
+	})
+}
+
+func TestGenerateJSONFile(t *testing.T) {
+	t.Run("generate JSON file successfully", func(t *testing.T) {
+		type Test struct {
+			Name string
+			Age  int
+		}
+		cat := Test{
+			Name: "Cat",
+			Age:  2,
+		}
+		data, _ := json.Marshal(cat)
+		path := "/tmp/test.json"
+		err := GenerateJSONFile(data, path)
+		assert.NilError(t, err)
+		fileData, err := ioutil.ReadFile(path)
+		assert.NilError(t, err)
+		assert.Equal(t, string(fileData), "{\"Name\":\"Cat\",\"Age\":2}")
+	})
+
+	t.Run("return error if path is not available", func(t *testing.T) {
+		type Test struct {
+			Name string
+			Age  int
+		}
+		cat := Test{
+			Name: "Cat",
+			Age:  2,
+		}
+		data, _ := json.Marshal(cat)
+		path := "/tmp"
+		err := GenerateJSONFile(data, path)
+		assert.ErrorContains(t, err, "failed to create json file open /tmp: is a directory")
 	})
 }
