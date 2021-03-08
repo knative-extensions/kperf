@@ -57,3 +57,18 @@ func GenerateHTMLFile(sourceCSV string, targetHTML string) error {
 		"Data": string(data),
 	})
 }
+
+func GenerateJSONFile(jsonData []byte, targetJSON string) error {
+	jsonFile, err := os.OpenFile(targetJSON, os.O_WRONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to create json file %s", err)
+	}
+	defer jsonFile.Close()
+
+	_, err = jsonFile.Write(jsonData)
+	if err != nil {
+		fmt.Println("failed to write json data", err)
+		return err
+	}
+	return nil
+}

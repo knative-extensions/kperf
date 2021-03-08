@@ -41,6 +41,7 @@ type cleanArgs struct {
 	svcPrefix       string
 	concurrency     int
 }
+
 type measureArgs struct {
 	svcRange        string
 	namespace       string
@@ -50,6 +51,7 @@ type measureArgs struct {
 	concurrency     int
 	verbose         bool
 }
+
 type measureResult struct {
 	svcConfigurationsReadySum         float64
 	svcRoutesReadySum                 float64
@@ -67,11 +69,50 @@ type measureResult struct {
 	queueProxyStartedSum              float64
 	userContrainerStartedSum          float64
 	deploymentCreatedSum              float64
+	Result                            result
+	Service                           serviceCount
+	svcReadyTime                      []float64
+	KnativeInfo                       knativeInfo
+}
 
-	readyCount    int
-	notReadyCount int
-	notFoundCount int
-	failCount     int
+type serviceCount struct {
+	ReadyCount    int `json:"Ready"`
+	NotReadyCount int `json:"NotReady"`
+	NotFoundCount int `json:"NotFound"`
+	FailCount     int `json:"Fail"`
+}
 
-	svcReadyTime []float64
+type knativeInfo struct {
+	ServingVersion    string
+	EventingVersion   string
+	IngressController string
+	IngressVersion    string
+}
+
+type result struct {
+	AverageSvcConfigurationReadySum          float64 `json:"AverageConfigurationDuration"`
+	AverageRevisionReadySum                  float64 `json:"AverageRevisionDuration"`
+	AverageDeploymentCreatedSum              float64 `json:"AverageDeploymentDuration"`
+	AveragePodScheduledSum                   float64 `json:"AveragePodScheduleDuration"`
+	AverageContainersReadySum                float64 `json:"AveragePodContainersReadyDuration"`
+	AverageQueueProxyStartedSum              float64 `json:"AveragePodQueueProxyStartedDuration"`
+	AverageUserContrainerStartedSum          float64 `json:"AveragePodUserContainerStartedDuration"`
+	AverageKpaActiveSum                      float64 `json:"AverageAutoscalerActiveDuration"`
+	AverageSksReadySum                       float64 `json:"AverageServiceReadyDuration"`
+	AverageSksActivatorEndpointsPopulatedSum float64 `json:"AverageServiceActivatorEndpointsPopulatedDuration"`
+	AverageSksEndpointsPopulatedSum          float64 `json:"AverageServiceEndpointsPopulatedDuration"`
+	AverageSvcRoutesReadySum                 float64 `json:"AverageServiceRouteReadyDuration"`
+	AverageIngressReadySum                   float64 `json:"AverageIngressReadyDuration"`
+	AverageIngressNetworkConfiguredSum       float64 `json:"AverageIngressNetworkConfiguredDuration"`
+	AverageIngressLoadBalancerReadySum       float64 `json:"AverageIngressLoadBalancerReadyDuration"`
+	OverallTotal                             float64 `json:"Total"`
+	OverallAverage                           float64 `json:"Average"`
+	OverallMedian                            float64 `json:"Median"`
+	OverallMin                               float64 `json:"Min"`
+	OverallMax                               float64 `json:"Max"`
+	P50                                      float64 `json:"Percentile50"`
+	P90                                      float64 `json:"Percentile90"`
+	P95                                      float64 `json:"Percentile95"`
+	P98                                      float64 `json:"Percentile98"`
+	P99                                      float64 `json:"Percentile99"`
 }
