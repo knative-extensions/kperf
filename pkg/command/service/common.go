@@ -53,6 +53,14 @@ type measureArgs struct {
 }
 
 type measureResult struct {
+	Sums         sums `json:"-"`
+	Result       result
+	Service      serviceCount
+	KnativeInfo  knativeInfo
+	SvcReadyTime []float64 `json:"-"`
+}
+
+type sums struct {
 	svcConfigurationsReadySum         float64
 	svcRoutesReadySum                 float64
 	svcReadySum                       float64
@@ -69,10 +77,6 @@ type measureResult struct {
 	queueProxyStartedSum              float64
 	userContrainerStartedSum          float64
 	deploymentCreatedSum              float64
-	Result                            result
-	Service                           serviceCount
-	svcReadyTime                      []float64
-	KnativeInfo                       knativeInfo
 }
 
 type serviceCount struct {
