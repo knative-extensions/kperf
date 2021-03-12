@@ -681,7 +681,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 	serviceMeasureCommand.Flags().BoolVarP(&measureArgs.verbose, "verbose", "v", false, "Service verbose result")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespaceRange, "namespace-range", "", "", "Service namespace range")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespacePrefix, "namespace-prefix", "", "", "Service namespace prefix")
-	serviceMeasureCommand.Flags().IntVarP(&measureArgs.concurrency, "concurrency", "c", 10, "")
+	serviceMeasureCommand.Flags().IntVarP(&measureArgs.concurrency, "concurrency", "c", 10, "Number of workers to do measurement job")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.output, "output", "o", "/tmp", "Measure result location")
 	return serviceMeasureCommand
 }
