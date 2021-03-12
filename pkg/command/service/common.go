@@ -50,6 +50,7 @@ type measureArgs struct {
 	namespacePrefix string
 	concurrency     int
 	verbose         bool
+	output          string
 }
 
 type measureResult struct {
