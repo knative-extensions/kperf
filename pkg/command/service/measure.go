@@ -626,7 +626,10 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				fmt.Printf("Percentile99: %fs\n", measureFinalResult.Result.P99)
 
 				current := time.Now()
-				outputLocation := measureArgs.output
+				outputLocation, err := utils.CheckOutputLocation(measureArgs.output)
+				if err != nil {
+					fmt.Printf("failed to check measure output location: %s\n", err)
+				}
 				rawPath := fmt.Sprintf("%s/%s_%s", outputLocation, current.Format("20060102150405"), "raw_ksvc_creation_time.csv")
 				err = utils.GenerateCSVFile(rawPath, rawRows)
 				if err != nil {

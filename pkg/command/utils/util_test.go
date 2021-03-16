@@ -143,3 +143,24 @@ func TestGenerateJSONFile(t *testing.T) {
 		assert.ErrorContains(t, err, "failed to create json file open /tmp: is a directory")
 	})
 }
+
+func TestCheckOutputLocation(t *testing.T) {
+	t.Run("remove last /", func(t *testing.T) {
+		dirName := "/tmp/"
+
+		newName, err := CheckOutputLocation(dirName)
+		assert.NilError(t, err)
+		assert.Equal(t, newName, "/tmp")
+	})
+
+	t.Run("dir not exist", func(t *testing.T) {
+		dirName := "/tmpdbcd"
+		_, err := CheckOutputLocation(dirName)
+		assert.ErrorContains(t, err, "is not existed")
+	})
+	t.Run("pass a filename", func(t *testing.T) {
+		dirName := "./util_test.go"
+		_, err := CheckOutputLocation(dirName)
+		assert.ErrorContains(t, err, "is not directory")
+	})
+}
