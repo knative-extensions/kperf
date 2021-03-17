@@ -28,6 +28,7 @@ import (
 	"knative.dev/kperf/pkg/command/utils"
 
 	"encoding/json"
+	"path/filepath"
 
 	"knative.dev/kperf/pkg"
 
@@ -41,6 +42,10 @@ import (
 	autoscalingv1api "knative.dev/serving/pkg/apis/autoscaling/v1alpha1"
 	servingv1api "knative.dev/serving/pkg/apis/serving/v1"
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
+)
+
+const (
+	DateFormatString = "20060102150405"
 )
 
 func NewServiceMeasureCommand(p *pkg.PerfParams) *cobra.Command {
@@ -630,21 +635,21 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				if err != nil {
 					fmt.Printf("failed to check measure output location: %s\n", err)
 				}
-				rawPath := fmt.Sprintf("%s/%s_%s", outputLocation, current.Format("20060102150405"), "raw_ksvc_creation_time.csv")
+				rawPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "raw_ksvc_creation_time.csv"))
 				err = utils.GenerateCSVFile(rawPath, rawRows)
 				if err != nil {
 					fmt.Printf("failed to generate raw timestamp file and skip %s\n", err)
 				}
 				fmt.Printf("Raw Timestamp saved in CSV file %s\n", rawPath)
 
-				csvPath := fmt.Sprintf("%s/%s_%s", outputLocation, current.Format("20060102150405"), "ksvc_creation_time.csv")
+				csvPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.csv"))
 				err = utils.GenerateCSVFile(csvPath, rows)
 				if err != nil {
 					fmt.Printf("failed to generate CSV file and skip %s\n", err)
 				}
 				fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
 
-				jsonPath := fmt.Sprintf("%s/%s_%s", outputLocation, current.Format("20060102150405"), "ksvc_creation_time.json")
+				jsonPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.json"))
 				jsonData, err := json.Marshal(measureFinalResult)
 				if err != nil {
 					fmt.Printf("failed to generate json data and skip %s\n", err)
@@ -655,7 +660,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				}
 				fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
 
-				htmlPath := fmt.Sprintf("%s/%s_%s", outputLocation, current.Format("20060102150405"), "ksvc_creation_time.html")
+				htmlPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.html"))
 				err = utils.GenerateHTMLFile(csvPath, htmlPath)
 				if err != nil {
 					fmt.Printf("failed to generate HTML file and skip %s\n", err)
@@ -685,7 +690,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespaceRange, "namespace-range", "", "", "Service namespace range")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespacePrefix, "namespace-prefix", "", "", "Service namespace prefix")
 	serviceMeasureCommand.Flags().IntVarP(&measureArgs.concurrency, "concurrency", "c", 10, "Number of workers to do measurement job")
-	serviceMeasureCommand.Flags().StringVarP(&measureArgs.output, "output", "o", "/tmp", "Measure result location")
+	serviceMeasureCommand.Flags().StringVarP(&measureArgs.output, "output", "o", ".", "Measure result location")
 	return serviceMeasureCommand
 }
 

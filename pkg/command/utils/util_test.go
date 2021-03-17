@@ -145,14 +145,6 @@ func TestGenerateJSONFile(t *testing.T) {
 }
 
 func TestCheckOutputLocation(t *testing.T) {
-	t.Run("remove last /", func(t *testing.T) {
-		dirName := "/tmp/"
-
-		newName, err := CheckOutputLocation(dirName)
-		assert.NilError(t, err)
-		assert.Equal(t, newName, "/tmp")
-	})
-
 	t.Run("dir not exist", func(t *testing.T) {
 		dirName := "/tmpdbcd"
 		_, err := CheckOutputLocation(dirName)

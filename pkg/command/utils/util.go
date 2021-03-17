@@ -74,12 +74,13 @@ func GenerateJSONFile(jsonData []byte, targetJSON string) error {
 }
 
 func CheckOutputLocation(outputLocation string) (string, error) {
-	if outputLocation[len(outputLocation)-1:] == "/" {
-		outputLocation = outputLocation[0 : len(outputLocation)-1]
-	}
 	dirInfo, err := os.Stat(outputLocation)
 	if err != nil {
-		return outputLocation, fmt.Errorf("output location (%s) is not existed: %s\n", outputLocation, err)
+		if os.IsNotExist(err) {
+			return outputLocation, fmt.Errorf("output location (%s) is not existed: %s\n", outputLocation, err)
+		} else {
+			return outputLocation, fmt.Errorf("output location (%s) has error: %s\n", outputLocation, err)
+		}
 	} else {
 		if !dirInfo.IsDir() {
 			return outputLocation, fmt.Errorf("output location (%s) is not directory, please check!\n", outputLocation)
