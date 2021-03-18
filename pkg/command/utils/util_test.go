@@ -150,6 +150,13 @@ func TestCheckOutputLocation(t *testing.T) {
 		_, err := CheckOutputLocation(dirName)
 		assert.ErrorContains(t, err, "is not existed")
 	})
+	t.Run("dir is not writable", func(t *testing.T) {
+		dirName := "/tmp/notwrite"
+		os.Mkdir(dirName, 0555)
+		_, err := CheckOutputLocation(dirName)
+		assert.ErrorContains(t, err, "is not writable")
+		os.Remove(dirName)
+	})
 	t.Run("pass a filename", func(t *testing.T) {
 		dirName := "./util_test.go"
 		_, err := CheckOutputLocation(dirName)

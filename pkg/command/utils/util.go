@@ -85,6 +85,9 @@ func CheckOutputLocation(outputLocation string) (string, error) {
 		if !dirInfo.IsDir() {
 			return outputLocation, fmt.Errorf("output location (%s) is not directory, please check!\n", outputLocation)
 		}
+		if dirInfo.Mode().Perm()&(1<<(uint(7))) == 0 {
+			return outputLocation, fmt.Errorf("output location (%s) is not writable, please check!\n", outputLocation)
+		}
 	}
 	return outputLocation, nil
 }
