@@ -100,6 +100,40 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		assert.NilError(t, err)
 	})
 
+	t.Run("measure service with output flag", func(t *testing.T) {
+		ns := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ns1",
+			},
+		}
+		client := k8sfake.NewSimpleClientset(ns)
+		fakeAutoscaling := &autoscalingv1fake.FakeAutoscalingV1alpha1{Fake: &clienttesting.Fake{}}
+		autoscalingClient := func() (autoscalingv1client.AutoscalingV1alpha1Interface, error) {
+			return fakeAutoscaling, nil
+		}
+
+		fakeServing := &servingv1fake.FakeServingV1{Fake: &clienttesting.Fake{}}
+		servingClient := func() (servingv1client.ServingV1Interface, error) {
+			return fakeServing, nil
+		}
+
+		fakeNetworking := &fakenetworkingv1alpha1.FakeNetworkingV1alpha1{Fake: &clienttesting.Fake{}}
+		networkingClient := func() (networkingv1alpha1.NetworkingV1alpha1Interface, error) {
+			return fakeNetworking, nil
+		}
+
+		p := &pkg.PerfParams{
+			ClientSet:            client,
+			NewAutoscalingClient: autoscalingClient,
+			NewServingClient:     servingClient,
+			NewNetworkingClient:  networkingClient,
+		}
+
+		cmd := NewServiceMeasureCommand(p)
+		_, err := testutil.ExecuteCommand(cmd, "--svc-prefix", "svc", "--namespace", "ns1", "--range", "1,1", "--output", "/tmp1")
+		assert.NilError(t, err)
+	})
+
 	t.Run("measure service as expected with namespace prefix flag", func(t *testing.T) {
 		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{

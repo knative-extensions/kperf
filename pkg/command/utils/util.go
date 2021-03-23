@@ -72,3 +72,22 @@ func GenerateJSONFile(jsonData []byte, targetJSON string) error {
 	}
 	return nil
 }
+
+func CheckOutputLocation(outputLocation string) (string, error) {
+	dirInfo, err := os.Stat(outputLocation)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return outputLocation, fmt.Errorf("output location (%s) is not existed: %s\n", outputLocation, err)
+		} else {
+			return outputLocation, fmt.Errorf("output location (%s) has error: %s\n", outputLocation, err)
+		}
+	} else {
+		if !dirInfo.IsDir() {
+			return outputLocation, fmt.Errorf("output location (%s) is not directory, please check!\n", outputLocation)
+		}
+		if dirInfo.Mode().Perm()&(1<<(uint(7))) == 0 {
+			return outputLocation, fmt.Errorf("output location (%s) is not writable, please check!\n", outputLocation)
+		}
+	}
+	return outputLocation, nil
+}

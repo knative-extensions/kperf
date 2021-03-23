@@ -80,7 +80,7 @@ Here is a figure of different resources generated for a Knative Service(assuming
 **Example 1 Measure Services (for eg. range 1,500)for load test under a specific namespace**
 
 ```shell script
-$ kperf service measure --namespace ktest-1 --svc-prefix ktest --range 0,9  --verbose
+$ kperf service measure --namespace ktest-1 --svc-prefix ktest --range 0,9  --verbose --output /tmp
 [Verbose] Service ktest-0: Service Configuration Ready Duration is 52s/52.000000s
 [Verbose] Service ktest-0: - Service Revision Ready Duration is 52s/52.000000s
 [Verbose] Service ktest-0:   - Service Deployment Created Duration is 14s/14.000000s
