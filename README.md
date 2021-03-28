@@ -43,6 +43,16 @@ kubectl create ns {namespace-name}
 for name in {1..10};do kubectl create ns test-$name;done
 ```
 
+### Prepare namespaces
+#### Configuration file
+
+To use kperf with a configuration file, configure through a [configuration template file](docs/config_template.yaml) as
+below
+
+1. Create e new file called `config.yaml` in the ` ~/.config/kperf` folder.
+
+2. The precedence will be: kperf flag values you specified > values in config file > config defaults
+
 ### generate Knative Service deployment load
 ```shell script
 # Generate total 30 knative service, for each 15 seconds create 10 ksvc with 5 concurrency in namespace test-1, test-2

@@ -44,25 +44,22 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 
 		cmd := NewServiceMeasureCommand(p)
 
-		_, err := testutil.ExecuteCommand(cmd)
-		assert.ErrorContains(t, err, "'service measure' requires flag(s)")
-
-		_, err = testutil.ExecuteCommand(cmd, "--range", "1200", "--namespace", "ns")
+		_, err := testutil.ExecuteCommand(cmd, "--svc-range", "1200", "--namespace", "ns")
 		assert.ErrorContains(t, err, "expected range like 1,500, given 1200")
 
-		_, err = testutil.ExecuteCommand(cmd, "--range", "1200", "--namespace-prefix", "ns", "--namespace-range", "1,2")
+		_, err = testutil.ExecuteCommand(cmd, "--svc-range", "1200", "--namespace-prefix", "ns", "--namespace-range", "1,2")
 		assert.ErrorContains(t, err, "expected range like 1,500, given 1200")
 
-		_, err = testutil.ExecuteCommand(cmd, "--range", "x,y", "--namespace", "ns")
+		_, err = testutil.ExecuteCommand(cmd, "--svc-range", "x,y", "--namespace", "ns")
 		assert.ErrorContains(t, err, "strconv.Atoi: parsing \"x\": invalid syntax")
 
-		_, err = testutil.ExecuteCommand(cmd, "--range", "x,y", "--namespace-prefix", "ns", "--namespace-range", "1,2")
+		_, err = testutil.ExecuteCommand(cmd, "--svc-range", "x,y", "--namespace-prefix", "ns", "--namespace-range", "1,2")
 		assert.ErrorContains(t, err, "strconv.Atoi: parsing \"x\": invalid syntax")
 
-		_, err = testutil.ExecuteCommand(cmd, "--range", "1,y", "--namespace", "ns")
+		_, err = testutil.ExecuteCommand(cmd, "--svc-range", "1,y", "--namespace", "ns")
 		assert.ErrorContains(t, err, "strconv.Atoi: parsing \"y\": invalid syntax")
 
-		_, err = testutil.ExecuteCommand(cmd, "--range", "1,y", "--namespace-prefix", "ns", "--namespace-range", "1,2")
+		_, err = testutil.ExecuteCommand(cmd, "--svc-range", "1,y", "--namespace-prefix", "ns", "--namespace-range", "1,2")
 		assert.ErrorContains(t, err, "strconv.Atoi: parsing \"y\": invalid syntax")
 	})
 
@@ -96,7 +93,7 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		}
 
 		cmd := NewServiceMeasureCommand(p)
-		_, err := testutil.ExecuteCommand(cmd, "--svc-prefix", "svc", "--namespace", "ns1", "--range", "1,1")
+		_, err := testutil.ExecuteCommand(cmd, "--svc-prefix", "svc", "--namespace", "ns1", "--svc-range", "1,1")
 		assert.NilError(t, err)
 	})
 
@@ -130,7 +127,7 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		}
 
 		cmd := NewServiceMeasureCommand(p)
-		_, err := testutil.ExecuteCommand(cmd, "--svc-prefix", "svc", "--namespace", "ns1", "--range", "1,1", "--output", "/tmp1")
+		_, err := testutil.ExecuteCommand(cmd, "--svc-prefix", "svc", "--namespace", "ns1", "--svc-range", "1,1", "--output", "/tmp1")
 		assert.NilError(t, err)
 	})
 

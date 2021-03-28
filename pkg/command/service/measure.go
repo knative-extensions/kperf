@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"sort"
 	"strconv"
 	"strings"
@@ -60,13 +61,30 @@ For example:
 # To measure a Knative Service creation time running currently with 20 concurent jobs
 kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrency 20
 `,
-		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if cmd.Flags().NFlag() == 0 {
-				return fmt.Errorf("'service measure' requires flag(s)")
-			}
-			return nil
+		PreRun: func(cmd *cobra.Command, args []string) {
+			viper.BindPFlag("svc_provision.namespace", cmd.Flags().Lookup("namespace"))
+			viper.BindPFlag("svc_provision.namespace_range", cmd.Flags().Lookup("namespace-range"))
+			viper.BindPFlag("svc_provision.namespace_prefix", cmd.Flags().Lookup("namespace-prefix"))
+
+			viper.BindPFlag("svc_provision.svc_prefix", cmd.Flags().Lookup("svc-prefix"))
+			viper.BindPFlag("svc_provision.svc_range", cmd.Flags().Lookup("svc-range"))
+
+			viper.BindPFlag("svc_provision.verbose", cmd.Flags().Lookup("verbose"))
+			viper.BindPFlag("svc_provision.timeout", cmd.Flags().Lookup("concurrency"))
+			viper.BindPFlag("kperf.output", cmd.Flags().Lookup("output"))
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			measureArgs.namespace = viper.GetString("svc_provision.namespace")
+			measureArgs.namespaceRange = viper.GetString("svc_provision.namespace_range")
+			measureArgs.namespacePrefix = viper.GetString("svc_provision.namespace-prefix")
+
+			measureArgs.svcPrefix = viper.GetString("svc_provision.svc_prefix")
+			measureArgs.svcRange = viper.GetString("svc_provision.svc_range")
+
+			measureArgs.verbose = viper.GetBool("svc_provision.verbose")
+			measureArgs.concurrency = viper.GetInt("svc_provision.concurrency")
+			measureArgs.output = viper.GetString("kperf.output")
+
 			var lock sync.Mutex
 			svcNamespacedName := make([][]string, 0)
 			if cmd.Flags().Changed("namespace") {
@@ -683,14 +701,17 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 		},
 	}
 
-	serviceMeasureCommand.Flags().StringVarP(&measureArgs.svcRange, "range", "r", "", "Desired service range")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespace, "namespace", "", "", "Service namespace")
-	serviceMeasureCommand.Flags().StringVarP(&measureArgs.svcPrefix, "svc-prefix", "", "", "Service name prefix")
-	serviceMeasureCommand.Flags().BoolVarP(&measureArgs.verbose, "verbose", "v", false, "Service verbose result")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespaceRange, "namespace-range", "", "", "Service namespace range")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespacePrefix, "namespace-prefix", "", "", "Service namespace prefix")
+
+	serviceMeasureCommand.Flags().StringVarP(&measureArgs.svcPrefix, "svc-prefix", "", "", "Service name prefix")
+	serviceMeasureCommand.Flags().StringVarP(&measureArgs.svcRange, "svc-range", "r", "", "Desired service range")
+
+	serviceMeasureCommand.Flags().BoolVarP(&measureArgs.verbose, "verbose", "v", false, "Service verbose result")
 	serviceMeasureCommand.Flags().IntVarP(&measureArgs.concurrency, "concurrency", "c", 10, "Number of workers to do measurement job")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.output, "output", "o", ".", "Measure result location")
+
 	return serviceMeasureCommand
 }
 

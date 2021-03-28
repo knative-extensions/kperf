@@ -1,0 +1,68 @@
+// Copyright 2021 The Knative Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+################################
+#                              #
+#    EXAMPLE CONFIGURATION     #
+#                              #
+################################
+---
+# The common config for kperf
+kperf:
+  # TODO: The log_level of kperf output
+  log_level: info
+
+  # The directory kperf will save output to
+  # Default is current working directory.
+  output: "."
+
+# The config for Knative Service Provision load test.
+svc_provision:
+  # The total number of Knative Service to generate.
+  number: 100
+
+  # NOTE: either use namespace or namespace_prefix & namespace_range.
+  # When namespace is not empty, Knative Services will be created in the namespace.
+  namespace: "default"
+
+  # The Knative Services will be created and distributed in the namespaces with the prefix and range.
+  namespace_prefix: ""
+  namespace_range: ""
+
+  # The interval for each batch generation.
+  interval: 1
+  # The number of Knative Service each time to generate.
+  batch: 1
+  # Number of multiple Knative Services to generate at a time.
+  concurrency: 10
+
+  # This is for Knative Servicee "autoscaling.knative.dev/minScale" annotation.
+  min_scale: 0
+  # This is for Knative Servicee "autoscaling.knative.dev/maxScale" annotation.
+  max_scale: 1
+
+  # Knative Service name prefix. By default, the Knative Services generated will be kperfsvc-1,kperfsvc-2 and etc.
+  # The total Service is specified by "number".
+  svc_prefix: "kperfsvc"
+  # Knative Service name range to measure.
+  svc_range: "1,100"
+
+  # Whether to wait the previous Knative Service to be ready. Default: false
+  wait: false
+  # The duration to wait for previous Knative Service to be ready.
+  timeout: 10m
+
+  # TODO: move this to global kperf.log_level
+  # Whether to print verbose info when to measure Service Provision workload.
+  verbose: false

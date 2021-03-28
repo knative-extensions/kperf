@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"strconv"
 	"strings"
 	"time"
@@ -53,9 +54,41 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 			if flags.Changed("namespace-prefix") && flags.Changed("namespace") {
 				return errors.New("expected either namespace with prefix & range or only namespace name")
 			}
+			viper.BindPFlag("svc_provision.number", cmd.Flags().Lookup("number"))
+			viper.BindPFlag("svc_provision.interval", cmd.Flags().Lookup("interval"))
+			viper.BindPFlag("svc_provision.batch", cmd.Flags().Lookup("batch"))
+
+			viper.BindPFlag("svc_provision.concurrency", cmd.Flags().Lookup("concurrency"))
+			viper.BindPFlag("svc_provision.min_scale", cmd.Flags().Lookup("min-scale"))
+			viper.BindPFlag("svc_provision.max_scale", cmd.Flags().Lookup("max-scale"))
+
+			viper.BindPFlag("svc_provision.namespace_prefix", cmd.Flags().Lookup("namespace-prefix"))
+			viper.BindPFlag("svc_provision.namespace_range", cmd.Flags().Lookup("namespace-range"))
+			viper.BindPFlag("svc_provision.namespace", cmd.Flags().Lookup("namespace"))
+
+			viper.BindPFlag("svc_provision.svc_prefix", cmd.Flags().Lookup("svc-prefix"))
+			viper.BindPFlag("svc_provision.wait", cmd.Flags().Lookup("wait"))
+			viper.BindPFlag("svc_provision.timeout", cmd.Flags().Lookup("timeout"))
+
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			generateArgs.number = viper.GetInt("svc_provision.number")
+			generateArgs.interval = viper.GetInt("svc_provision.interval")
+			generateArgs.batch = viper.GetInt("svc_provision.batch")
+
+			generateArgs.concurrency = viper.GetInt("svc_provision.concurrency")
+			generateArgs.minScale = viper.GetInt("svc_provision.min_scale")
+			generateArgs.maxScale = viper.GetInt("svc_provision.max_scale")
+
+			generateArgs.namespacePrefix = viper.GetString("svc_provision.namespace_prefix")
+			generateArgs.namespaceRange = viper.GetString("svc_provision.namespace_range")
+			generateArgs.namespace = viper.GetString("svc_provision.namespace")
+
+			generateArgs.svcPrefix = viper.GetString("svc_provision.svc_prefix")
+			generateArgs.checkReady = viper.GetBool("svc_provision.wait")
+			generateArgs.timeout = viper.GetDuration("svc_provision.timeout")
+
 			nsNameList := []string{}
 			if generateArgs.namespacePrefix == "" && generateArgs.namespace == "" {
 				nsNameList = []string{"default"}
@@ -155,15 +188,14 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 			return nil
 		},
 	}
-	ksvcGenCommand.Flags().IntVarP(&generateArgs.number, "number", "n", 0, "Total number of Knative Service to be created")
-	ksvcGenCommand.MarkFlagRequired("number")
-	ksvcGenCommand.Flags().IntVarP(&generateArgs.interval, "interval", "i", 0, "Interval for each batch generation")
-	ksvcGenCommand.MarkFlagRequired("interval")
-	ksvcGenCommand.Flags().IntVarP(&generateArgs.batch, "batch", "b", 0, "Number of Knative Service each time to be created")
-	ksvcGenCommand.MarkFlagRequired("batch")
-	ksvcGenCommand.Flags().IntVarP(&generateArgs.concurrency, "concurrency", "c", 10, "Number of multiple Knative Services to make at a time")
+
+	ksvcGenCommand.Flags().IntVarP(&generateArgs.number, "number", "n", 100, "Total number of Knative Service to generate")
+	ksvcGenCommand.Flags().IntVarP(&generateArgs.interval, "interval", "i", 1, "Interval for each batch generation")
+	ksvcGenCommand.Flags().IntVarP(&generateArgs.batch, "batch", "b", 1, "Number of Knative Service each time to generate")
+
+	ksvcGenCommand.Flags().IntVarP(&generateArgs.concurrency, "concurrency", "c", 10, "Number of multiple Knative Services to generate at a time")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.minScale, "min-scale", "", 0, "For autoscaling.knative.dev/minScale")
-	ksvcGenCommand.Flags().IntVarP(&generateArgs.maxScale, "max-scale", "", 0, "For autoscaling.knative.dev/minScale")
+	ksvcGenCommand.Flags().IntVarP(&generateArgs.maxScale, "max-scale", "", 0, "For autoscaling.knative.dev/maxScale")
 
 	ksvcGenCommand.Flags().StringVarP(&generateArgs.namespacePrefix, "namespace-prefix", "", "", "Namespace prefix. The Knative Services will be created in the namespaces with the prefix")
 	ksvcGenCommand.Flags().StringVarP(&generateArgs.namespaceRange, "namespace-range", "", "", "")

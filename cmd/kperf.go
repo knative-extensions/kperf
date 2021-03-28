@@ -22,8 +22,17 @@ import (
 )
 
 func main() {
-	if err := core.NewPerfCommand().Execute(); err != nil {
+	err := run(os.Args[1:])
+	if err != nil && len(os.Args) > 1 {
 		log.Println("failed to execute kperf command:", err)
+		// This is the only point from where to exit when an error occurs
 		os.Exit(1)
 	}
+}
+
+func run(args []string) error {
+	if err := core.NewPerfCommand().Execute(); err != nil {
+		return err
+	}
+	return nil
 }

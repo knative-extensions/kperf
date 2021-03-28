@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"strconv"
 	"strings"
 
@@ -41,7 +42,21 @@ For example:
 # To clean Knative Service workload
 kperf service clean --namespace-prefix testns / --namespace nsname
 `,
+		PreRun: func(cmd *cobra.Command, args []string) {
+			viper.BindPFlag("svc_provision.namespace", cmd.Flags().Lookup("namespace"))
+			viper.BindPFlag("svc_provision.namespace_prefix", cmd.Flags().Lookup("namespace-prefix"))
+			viper.BindPFlag("svc_provision.namespace_range", cmd.Flags().Lookup("namespace-range"))
+
+			viper.BindPFlag("svc_provision.svc_prefix", cmd.Flags().Lookup("svc-prefix"))
+			viper.BindPFlag("svc_provision.concurrency", cmd.Flags().Lookup("concurrency"))
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			cleanArgs.namespace = viper.GetString("svc_provision.namespace")
+			cleanArgs.namespacePrefix = viper.GetString("svc_provision.namespace_prefix")
+			cleanArgs.namespaceRange = viper.GetString("svc_provision.namespace_range")
+			cleanArgs.svcPrefix = viper.GetString("svc_provision.svc_prefix")
+			cleanArgs.concurrency = viper.GetInt("svc_provision.concurrency")
+
 			var namespaceRangeMap map[string]bool = map[string]bool{}
 			if cleanArgs.namespacePrefix != "" {
 				r := strings.Split(cleanArgs.namespaceRange, ",")
@@ -104,6 +119,7 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 			} else {
 				return errors.New("both namespace and namespace-prefix are empty")
 			}
+
 			matchedNsNameList := [][2]string{}
 			cleanKsvc := func(namespace, name string) {
 				fmt.Printf("Delete ksvc %s in namespace %s\n", name, namespace)

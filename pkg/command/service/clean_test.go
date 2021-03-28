@@ -41,10 +41,7 @@ func TestNewServiceCleanCommand(t *testing.T) {
 		}
 		cmd := NewServiceCleanCommand(p)
 
-		_, err := testutil.ExecuteCommand(cmd)
-		assert.ErrorContains(t, err, "both namespace and namespace-prefix are empty")
-
-		_, err = testutil.ExecuteCommand(cmd, "--namespace-prefix", "test-kperf-1", "--namespace-range", "2,1")
+		_, err := testutil.ExecuteCommand(cmd, "--namespace-prefix", "test-kperf-1", "--namespace-range", "2,1")
 		assert.ErrorContains(t, err, "failed to parse namespace range 2,1")
 
 		_, err = testutil.ExecuteCommand(cmd, "--namespace-prefix", "test-kperf", "--namespace-range", "x,y")
