@@ -16,7 +16,7 @@ stability, scalability and performance bottleneck.
 ```cassandraql
 # format and build kperf
 $ cd {workspace}/src/knative.dev/kperf
-$ go get -u github.com/jteeuwen/go-bindata/...
+$ go get -u github.com/kevinburke/go-bindata/...
 $ export PATH=$PATH:$GOPATH/bin
 $ ./hack/build.sh
 

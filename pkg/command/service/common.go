@@ -49,6 +49,7 @@ type measureArgs struct {
 	namespaceRange  string
 	namespacePrefix string
 	concurrency     int
+	svcReadyTimeout int
 	verbose         bool
 	output          string
 }

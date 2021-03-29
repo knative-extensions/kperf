@@ -140,7 +140,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				return fmt.Errorf("failed to create networking client%s\n", err)
 			}
 
-			svcChannel := make(chan []string)
+			svcChannel := make(chan []string, len(svcNamespacedName))
 			group := sync.WaitGroup{}
 			workerMeasureResults := make([]measureResult, measureArgs.concurrency)
 			for i := 0; i < measureArgs.concurrency; i++ {
@@ -180,11 +180,17 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 								continue
 							}
 						}
+
 						if !svcIns.IsReady() {
-							fmt.Printf("service %s/%s not ready and skip measuring\n", svc, svcNs)
-							currentMeasureResult.Service.NotReadyCount++
-							workerMeasureResults[index] = currentMeasureResult
-							group.Done()
+							if time.Now().Sub(svcIns.GetCreationTimestamp().Time) <= time.Duration(measureArgs.svcReadyTimeout)*time.Second {
+								fmt.Printf("service %s/%s not ready and will be re-measured later\n", svc, svcNs)
+								svcChannel <- j
+							} else {
+								fmt.Printf("service %s/%s not ready and skip measuring\n", svc, svcNs)
+								currentMeasureResult.Service.NotReadyCount++
+								workerMeasureResults[index] = currentMeasureResult
+								group.Done()
+							}
 							continue
 						}
 
@@ -443,7 +449,6 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 			for _, item := range svcNamespacedName {
 				group.Add(1)
 				svcChannel <- item
-
 			}
 
 			group.Wait()
@@ -690,6 +695,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespaceRange, "namespace-range", "", "", "Service namespace range")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespacePrefix, "namespace-prefix", "", "", "Service namespace prefix")
 	serviceMeasureCommand.Flags().IntVarP(&measureArgs.concurrency, "concurrency", "c", 10, "Number of workers to do measurement job")
+	serviceMeasureCommand.Flags().IntVarP(&measureArgs.svcReadyTimeout, "svc-ready-timeout", "", 0, "Duration (seconds) to wait for the service to become ready")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.output, "output", "o", ".", "Measure result location")
 	return serviceMeasureCommand
 }
