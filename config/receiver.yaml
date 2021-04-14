@@ -34,6 +34,12 @@ spec:
           command: ["/kperf"]
           args: [ "eventing", "receiver" ]
           env:
+          - name: KAFKA_BOOTSTRAP_SERVERS
+            value: "${KAFKA_BOOTSTRAP_SERVERS}"
+          - name: REDIS_ADDRESS
+            value: "${REDIS_ADDRESS}"
+          - name: EXPERIMENT_ID
+            value: "test4e"
           - name: EXPERIMENT_ID
             value: "test4e"
           - name: SLEEP_SECONDS

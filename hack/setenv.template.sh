@@ -22,3 +22,5 @@ export START=100
 export INC=100 
 export DURATION=1
 export TEST_DURATION=1
+export KAFKA_BOOTSTRAP_SERVERS=
+export REDIS_ADDRESS=
