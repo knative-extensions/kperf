@@ -16,9 +16,11 @@ package driver
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -72,6 +74,20 @@ func readConfig() TestConfig {
 	return config
 }
 
+func senderForWorkloadPlan(plan SendEventsPlan, http *http.Transport) EventSender {
+	var sender EventSender
+	if strings.HasPrefix(plan.targetUrl, "http") {
+		sender = HttpEventSender{plan, http}
+	} else if strings.HasPrefix(plan.targetUrl, "kafka") {
+		sender = KafkaEventSender{plan}
+	} else if strings.HasPrefix(plan.targetUrl, "rediss") {
+		sender = NewRedisSender(plan)
+	} else {
+		log.Fatal("unknon target to send event ", plan.targetUrl)
+	}
+	return sender
+}
+
 func DriveWorkload() {
 	config := readConfig()
 	//util.UtilMe()
@@ -94,7 +110,7 @@ func DriveWorkload() {
 			name := "test-sender-" + strconv.Itoa(i+1)
 			plan := SendEventsPlan{name, eventsToSend, durationSeconds, config.targetUrl}
 			//sender := FakeEventSender{plan, 0.001}
-			sender := HttpEventSender{plan, http}
+			sender := senderForWorkloadPlan(plan, http)
 			go doSending(sender, respChan)
 		}
 		//get results

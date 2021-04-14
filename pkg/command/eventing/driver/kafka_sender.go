@@ -30,8 +30,8 @@ import (
 )
 
 type KafkaEventSender struct {
-	Plan             SendEventsPlan
-	SleepTimeSeconds float64 // simulate sending time
+	Plan SendEventsPlan
+	//SleepTimeSeconds float64 // simulate sending time
 }
 
 func (s KafkaEventSender) Send() EventsStats {
@@ -48,10 +48,10 @@ func (s KafkaEventSender) Send() EventsStats {
 
 type envConfig struct {
 	// Port on which to listen for cloudevents
-	Port int `envconfig:"PORT" default:"8080"`
+	//Port int `envconfig:"PORT" default:"8080"`
 
 	// KafkaServer URL to connect to the Kafka server.
-	KafkaServer string `envconfig:"KAFKA_SERVER" required:"true"`
+	KafkaServer string `envconfig:"KAFKA_BOOTSTRAP_SERVERS" required:"true"`
 
 	// Subject is the nats subject to publish cloudevents on.
 	Topic string `envconfig:"KAFKA_TOPIC" required:"true"`
