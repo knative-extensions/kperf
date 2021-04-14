@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kperf-eventing-receiver
+spec:
+  replicas: ${REPLICAS}
+  selector:
+    matchLabels: &labels
+      app: kperf-eventing-receiver
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      containers:
+        - name: kperf-eventing-receiver
+          image: ${IMAGE_NAME}
+          imagePullPolicy: Always
+          command: ["/kperf"]
+          args: [ "eventing", "receiver" ]
+          env:
+          - name: EXPERIMENT_ID
+            value: "test4e"
+          - name: SLEEP_SECONDS
+            value: "1"
+          ports:
+          - containerPort: 8001
+            name: http
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "2000m"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kperf-eventing-receiver
+  annotations:
+      prometheus.io/scrape: 'true'
+      prometheus.io/port:   '8001'
+spec:
+  selector:
+    app: kperf-eventing-receiver
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8001
+      name: http

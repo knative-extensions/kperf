@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kperf-eventing-driver-job-${RUN_ID}
+spec:
+  template:
+    spec:
+      containers:
+      - name: kperf-eventing-driver-job
+        image: ${IMAGE_NAME}
+        imagePullPolicy: Always
+        command: ["/kperf"]
+        args: [ "eventing", "driver" ]
+        env:
+        - name: TARGET_URL
+          value: "${TARGET_URL}"
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          value: "${KAFKA_BOOTSTRAP_SERVERS}"
+        - name: KAFKA_TOPIC
+          value: "${KAFKA_TOPIC}"
+        - name: RUN_ID
+          value: "$RUN_ID"
+        - name: START
+          value: "$START"
+        - name: INC
+          value: "$INC"
+        - name: DURATION
+          value: "$DURATION"
+        - name: TEST_DURATION
+          value: "$TEST_DURATION"
+        - name: CONCURRENT
+          value: "$CONCURRENT"
+      restartPolicy: Never
+  backoffLimit: 4
