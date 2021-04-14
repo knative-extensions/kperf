@@ -45,7 +45,7 @@ var (
 
 type envConfig struct {
 	// KafkaServer URL to connect to the Kafka server.
-	KafkaServer string `envconfig:"KAFKA_SERVER" required:"true"`
+	KafkaServer string `envconfig:"KAFKA_BOOTSTRAP_SERVERS" required:"true"`
 
 	// Subject is the nats subject to publish cloudevents on.
 	Topic string `envconfig:"KAFKA_TOPIC" required:"true"`

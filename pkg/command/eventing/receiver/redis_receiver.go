@@ -168,7 +168,7 @@ func (a *Adapter) Start(ctx context.Context) error {
 			consumerName := fmt.Sprintf("%s-%d", groupName, j)
 			xreadID := "0" //Initial ID to read pending messages
 			//a.logger.Info("Listening for messages", zap.String("consumerName", consumerName))
-			log.Print("Listening for messages", consumerName)
+			log.Print("Listening for messages in consumer ", consumerName)
 
 			for {
 				select {
@@ -290,6 +290,10 @@ func (a *Adapter) processEntry(ctx context.Context, conn redis.Conn, streamName 
 }
 
 func (a *Adapter) newPool(address string) *redis.Pool {
+	redissPrefix := "rediss://"
+	if !strings.HasPrefix(address, redissPrefix) {
+		address = redissPrefix + address
+	}
 	opt, err := redisParse.ParseURL(address)
 	if err != nil {
 		panic(err)

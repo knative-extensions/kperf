@@ -22,5 +22,13 @@ export START=100
 export INC=100 
 export DURATION=1
 export TEST_DURATION=1
+# For local setup
+#export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+#export KAFKA_TOPIC=topic10
+#export KAFKA_GROUP=test4
+#export REDIS_ADDRESS=localhost:6379
+# For cloud setup
 export KAFKA_BOOTSTRAP_SERVERS=
+export KAFKA_TOPIC=
+export KAFKA_GROUP=
 export REDIS_ADDRESS=

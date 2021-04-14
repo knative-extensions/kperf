@@ -52,7 +52,7 @@ func aggegateMetrics(eventsMetrics *EventsMetrics, respChan chan ReceivedEventsS
 func ReceiverRun() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	fmt.Printf("Receiver starting ...\n")
-	respChan := make(chan ReceivedEventsStats, 10*1000)
+	respChan := make(chan ReceivedEventsStats, 10*1000) // make size configurable based on concurrency?
 
 	requestHandler := func(res http.ResponseWriter, req *http.Request) {
 		//data := []byte("{'Hello' :  'World!'}")
@@ -68,6 +68,10 @@ func ReceiverRun() {
 
 	if util.GetEnv("KAFKA_BOOTSTRAP_SERVERS", "") != "" {
 		go KafkaReceive(respChan)
+	}
+
+	if util.GetEnv("REDIS_ADDRESS", "") != "" {
+		go RedisReceive(respChan)
 	}
 
 	eventsMetrics := EventsMetrics{0, make(map[float64]int64, 16)}
