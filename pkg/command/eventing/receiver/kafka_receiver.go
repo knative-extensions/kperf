@@ -84,7 +84,7 @@ func KafkaReceive(respChan chan ReceivedEventsStats) {
 		os.Exit(1)
 	}
 
-	log.Println("Starting a new Sarama consumer")
+	log.Printf("Starting a new Sarama consumer for %s topic %s group %s", env.KafkaServer, env.Topic, env.Group)
 
 	if verbose {
 		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)

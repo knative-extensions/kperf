@@ -16,9 +16,11 @@ package driver
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -36,13 +38,13 @@ type KafkaEventSender struct {
 
 func (s KafkaEventSender) Send() EventsStats {
 	plan := s.Plan
-	eventsSent := int(float64(plan.eventsPerSecond) * plan.durationSeconds)
-	sendEvent()
+	//eventsSent := int(float64(plan.eventsPerSecond) * plan.durationSeconds)
+	stats := sendEvents(plan)
 	// TODO better golang idiom/conversion?
-	sleepTimeNano := int64(plan.durationSeconds * float64(time.Second))
-	time.Sleep(time.Duration(sleepTimeNano))
-	timeSeconds := plan.durationSeconds
-	stats := EventsStats{plan.senderName, eventsSent, timeSeconds, 0, 0}
+	// sleepTimeNano := int64(plan.durationSeconds * float64(time.Second))
+	// time.Sleep(time.Duration(sleepTimeNano))
+	// timeSeconds := plan.durationSeconds
+	//stats := EventsStats{plan.senderName, eventsSent, timeSeconds, 0, 0}
 	return stats
 }
 
@@ -57,9 +59,10 @@ type envConfig struct {
 	Topic string `envconfig:"KAFKA_TOPIC" required:"true"`
 }
 
-func sendEvent() {
+func sendEvents(plan SendEventsPlan) EventsStats {
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Version = sarama.V2_0_0_0
+	senderName := plan.senderName
 
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -75,7 +78,7 @@ func sendEvent() {
 	// 	log.Fatalf("failed to create http protocol: %s", err.Error())
 	// }
 
-	log.Printf("Sinking to KAFKA_SERVER=%s KAFKA_TOPIC=%s", env.KafkaServer, env.Topic)
+	log.Printf("Sending to KAFKA_BOOTSTRAP_SERVERS=%s KAFKA_TOPIC=%s", env.KafkaServer, env.Topic)
 	kafkaProtocol, err := cloudeventskafka.NewSender([]string{env.KafkaServer}, saramaConfig, env.Topic)
 	if err != nil {
 		log.Fatalf("failed to create Kafka protcol, %s", err.Error())
@@ -86,31 +89,56 @@ func sendEvent() {
 	// Blocking call to wait for new messages from httpProtocol
 	//message, err := httpProtocol.Receive(ctx)
 
-	log.Printf("Sending event to Kafka")
-	source := types.URIRef{URL: url.URL{Scheme: "http", Host: "example.com", Path: "/source"}}
-	timestamp := types.Timestamp{Time: time.Now()}
-	//schema := types.URI{URL: url.URL{Scheme: "http", Host: "example.com", Path: "/schema"}}
-	e := event.Event{
-		Context: event.EventContextV1{
-			Type:   "com.example.FullEvent",
-			Source: source,
-			ID:     "full-event",
-			Time:   &timestamp,
-			//DataSchema: &schema,
-			Subject: strptr("topic"),
-		}.AsV1(),
-	}
-	//if err := event.SetData("text/json", "[\"fruit\", \"orange\"]"); err != nil {
-	data := []byte("[\"fruit\", \"orange\"]")
-	//data := []byte("{\"a\" : \"b\"}") // {"a": "b"}
-	if err := e.SetData(event.ApplicationJSON, data); err != nil {
-		panic(err)
-	}
+	startTime := time.Now()
+	errCount := 0
+	eventsSentCount := 0
+	eventsToSend := int(float64(plan.eventsPerSecond) * plan.durationSeconds)
+	log.Printf("Sending events to Kafka %d", eventsToSend)
+	//TODO test HTTP 2 pipelining
+	//TODO test CLoudEvents batch
+	for i := 0; i < eventsToSend; i++ {
 
-	msg := binding.ToMessage(&e)
-	err = kafkaProtocol.Send(ctx, msg)
-	if err != nil {
-		log.Printf("Error while forwarding the message: %s", err.Error())
+		source := types.URIRef{URL: url.URL{Scheme: "http", Host: "example.com", Path: "/source"}}
+		timestamp := types.Timestamp{Time: time.Now()}
+		//schema := types.URI{URL: url.URL{Scheme: "http", Host: "example.com", Path: "/schema"}}
+		e := event.Event{
+			Context: event.EventContextV1{
+				Type:   "com.example.FullEvent",
+				Source: source,
+				ID:     "full-event",
+				Time:   &timestamp,
+				//DataSchema: &schema,
+				Subject: strptr("topic"),
+			}.AsV1(),
+		}
+		e.SetID(strconv.Itoa(i + 1))
+		//ifs err := event.SetData("text/json", "[\"fruit\", \"orange\"]"); err != nil {
+		data := []byte("[\"fruit\", \"orange\"]")
+		//data := []byte("{\"a\" : \"b\"}") // {"a": "b"}
+		if err := e.SetData(event.ApplicationJSON, data); err != nil {
+			panic(err)
+		}
+
+		msg := binding.ToMessage(&e)
+		err = kafkaProtocol.Send(ctx, msg)
+		if err != nil {
+			log.Printf("Error while forwarding the message: %s", err.Error())
+		}
+		eventsSentCount++
+
 	}
+	// sleep for remaining time to reach events/second
+	endTime := time.Now()
+	targetEndTime := startTime.Add(time.Duration(plan.durationSeconds) * time.Second)
+	//duration := time.Since(start)
+	duration := endTime.Sub(startTime)
+	if endTime.Before(targetEndTime) {
+		sleepDuration := targetEndTime.Sub(endTime)
+		fmt.Printf("Sender %s sleeping %s\n", senderName, sleepDuration)
+		time.Sleep(sleepDuration)
+	}
+	timeSeconds := float64(duration.Nanoseconds()) / float64(time.Second)
+	stats := EventsStats{plan.senderName, eventsSentCount, timeSeconds, -1, errCount}
+	return stats
 
 }
