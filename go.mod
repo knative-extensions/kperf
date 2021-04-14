@@ -4,6 +4,13 @@ go 1.14
 
 require (
 	bou.ke/monkey v1.0.2
+	github.com/Shopify/sarama v1.28.0
+	github.com/cloudevents/sdk-go/protocol/kafka_sarama/v2 v2.4.0
+	github.com/cloudevents/sdk-go/v2 v2.4.0
+	github.com/go-redis/redis/v8 v8.8.0
+	github.com/gomodule/redigo v1.8.4
+	github.com/google/uuid v1.2.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kevinburke/go-bindata v3.22.0+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/montanaflynn/stats v0.6.5

@@ -44,3 +44,7 @@ tags
 
 # Operating system temporary files
 .DS_Store
+
+# local environment
+hack/setenv.sh
+
