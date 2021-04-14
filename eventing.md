@@ -69,6 +69,20 @@ export REPLICAS=1
 cat config/receiver.yaml | envsubst | kubectl apply -f -
 ```
 
+To start receiver consuming events from Kafka:
+
+```
+export KAFKA_BOOTSTRAP_SERVERS=<your Kafka broker>
+export KAFKA_TOPIC=<topic>
+export KAFKA_GROUP=<consumer group>
+```
+
+And to start receiver consuming events from Redis Streams:
+
+```
+export REDIS_ADDRESS=<redis server address>
+```
+
 ### kperf measure
 
 That functionality will be wrapped into `kperf eventing prepare` command in near future.
@@ -113,7 +127,7 @@ NS=`kubectl config view --minify --output 'jsonpath={..namespace}'`
 export TARGET_URL=http://kperf-eventing-receiver.${NS}.svc.cluster.local
 ```
 
-The smiple version should also work:
+The simple version should also work:
 
 ```
 export TARGET_URL=http://kperf-eventing-receiver
