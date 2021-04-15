@@ -32,6 +32,7 @@ func TestNewPerfCommand(t *testing.T) {
 		expectedSubCommands := []string{
 			"help",
 			"version",
+			"eventing",
 			"service",
 		}
 
