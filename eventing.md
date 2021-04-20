@@ -64,7 +64,7 @@ kubectl -n <namespace> port-forward deployment/kperf-eventing-receiver 8001:8001
 Verify tunnel works
 
 ```
-curl http://localhost:8002/metrics
+curl http://localhost:8001/metrics
 ```
 
 
@@ -91,7 +91,7 @@ NS=`kubectl config view --minify --output 'jsonpath={..namespace}'`
 export TARGET_URL=http://kperf-eventing-receiver.${NS}.svc.cluster.local
 ```
 
-The simple version should also work:
+The simple version of RURL should also work:
 
 ```
 export TARGET_URL=http://kperf-eventing-receiver
@@ -120,6 +120,22 @@ export DURATION=1
 export TEST_DURATION=5
 cat config/driver-job.yaml | envsubst | kubectl apply -f -
 ```
+
+To send to Kafka target:
+
+```
+export TARGET_URL=kafka://
+export KAFKA_BOOTSTRAP_SERVERS=<kafka bootstrap server>
+export KAFKA_TOPIC=<topic>
+export KAFKA_GROUP=<consumer group>
+```
+
+To send to Redis target:
+
+```
+export TARGET_URL=rediss://<rediss server>
+```
+
 
 ### kperf cleanup
 

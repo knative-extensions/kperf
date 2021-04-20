@@ -29,19 +29,19 @@ spec:
     spec:
       containers:
         - name: kperf-eventing-receiver
-          image: ${IMAGE_NAME}
+          image: {{.IMAGE_NAME}}
           imagePullPolicy: Always
           command: ["/kperf"]
           args: [ "eventing", "receiver" ]
           env:
           - name: KAFKA_BOOTSTRAP_SERVERS
-            value: "${KAFKA_BOOTSTRAP_SERVERS}"
+            value: "{{.KAFKA_BOOTSTRAP_SERVERS}}"
           - name: REDIS_ADDRESS
-            value: "${REDIS_ADDRESS}"
+            value: "{{.REDIS_ADDRESS}}"
           - name: EXPERIMENT_ID
-            value: "${EXPERIMENT_ID}"
+            value: "{{.EXPERIMENT_ID}}"
           - name: SLEEP_SECONDS
-            value: "${SLEEP_SECONDS}"
+            value: "{{.SLEEP_SECONDS}}"
           ports:
           - containerPort: 8001
             name: http

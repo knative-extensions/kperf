@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -31,8 +30,8 @@ type HttpEventSender struct {
 
 func (s HttpEventSender) Send() EventsStats {
 	plan := s.Plan
+	g := NewEventGenerator(plan)
 	senderName := plan.senderName
-	values := map[string]string{"id": "1234668888888", "source": "323223232332909090", "type": "dev.knative.eventing.test.scaling", "timestamp": "12929299999992222"}
 	startTime := time.Now()
 	errCount := 0
 	eventsSentCount := 0
@@ -44,7 +43,7 @@ func (s HttpEventSender) Send() EventsStats {
 	//TODO test HTTP 2 pipelining
 	//TODO test CLoudEvents batch
 	for i := 0; i < eventsToSend; i++ {
-		values["id"] = strconv.Itoa(i + 1)
+		values := g.NextCloudEventsAsMaps()[0] //TODO list
 		event, err := json.Marshal(values)
 		if err != nil {
 			log.Fatal(err)

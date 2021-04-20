@@ -1,4 +1,4 @@
-# kperf
+# kperf eventing Development notes
 
 
 ## Building eventing support 
