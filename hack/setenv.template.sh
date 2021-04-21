@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+export NAMESPACE=default
+export REPLICAS=1
 export VERSION=0.1
 export IMAGE_NAME=${DOCKER_REGISTRY:-docker.io/aslom}/kperf:${VERSION}
 echo IMAGE_NAME=$IMAGE_NAME

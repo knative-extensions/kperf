@@ -18,20 +18,20 @@ import (
 	"testing"
 )
 
-func TestNewServiceGenerateCommand(t *testing.T) {
-	t.Run("incompleted or wrong args for service generate", func(t *testing.T) {
-		// client := k8sfake.NewSimpleClientset()
-		// fakeServing := &servingv1fake.FakeServingV1{Fake: &client.Fake}
-		// servingClient := func() (servingv1client.ServingV1Interface, error) {
-		// 	return fakeServing, nil
-		// }
+func TestNewEventingPrepareCommand(t *testing.T) {
+	// t.Run("incompleted or wrong args for service generate", func(t *testing.T) {
+	// 	// client := k8sfake.NewSimpleClientset()
+	// 	// fakeServing := &servingv1fake.FakeServingV1{Fake: &client.Fake}
+	// 	// servingClient := func() (servingv1client.ServingV1Interface, error) {
+	// 	// 	return fakeServing, nil
+	// 	// }
 
-		// p := &pkg.PerfParams{
-		// 	ClientSet:        client,
-		// 	NewServingClient: servingClient,
-		// }
-		//cmd := NewEventingPrepareCommand(p)
+	// 	// p := &pkg.PerfParams{
+	// 	// 	ClientSet:        client,
+	// 	// 	NewServingClient: servingClient,
+	// 	// }
+	// 	//cmd := NewEventingPrepareCommand(p)
 
-	})
+	// })
 
 }

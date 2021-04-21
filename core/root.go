@@ -42,7 +42,7 @@ func NewPerfCommand(params ...pkg.PerfParams) *cobra.Command {
 		Long:  `A CLI to help with Knative performance test.`,
 	}
 	cobra.OnInitialize(initConfig)
-	rootCmd.AddCommand(eventing.NewServiceCmd(p))
+	rootCmd.AddCommand(eventing.NewEventingCmd(p))
 	rootCmd.AddCommand(service.NewServiceCmd(p))
 	rootCmd.AddCommand(version.NewVersionCommand())
 	rootCmd.InitDefaultHelpCmd()

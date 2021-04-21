@@ -54,7 +54,7 @@ type envConfig struct {
 	Group string `envconfig:"KAFKA_GROUP" required:"true"`
 }
 
-func init() {
+func initFlags() {
 	// flag.StringVar(&brokers, "brokers", "", "Kafka bootstrap brokers to connect to, as a comma separated list")
 	// flag.StringVar(&group, "group", "", "Kafka consumer group definition")
 	flag.StringVar(&version, "version", "2.1.1", "Kafka cluster version")

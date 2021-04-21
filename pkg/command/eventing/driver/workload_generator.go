@@ -31,13 +31,13 @@ func NewEventGenerator(plan SendEventsPlan) EventGenerator {
 
 func (s EventGenerator) NextCloudEvents() []*event.Event {
 	e := event.Event{}
-	events := make([]*event.Event, 2, 100)
+	events := make([]*event.Event, 1, 100)
 	events[0] = &e
 	return events
 }
 
 func (s EventGenerator) NextCloudEventsAsMaps() []*map[string]string {
-	events := make([]*map[string]string, 2, 100)
+	events := make([]*map[string]string, 1, 100)
 	values := map[string]string{"id": "1234668888888", "source": "323223232332909090", "type": "dev.knative.eventing.test.scaling", "timestamp": "12929299999992222"}
 	s.eventSeq++
 	events[0] = &values
