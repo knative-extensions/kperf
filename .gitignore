@@ -13,7 +13,7 @@
 cover.html
 
 # kperf binary itself, if you want to `go build cmd/kperf` in the top dir.
-kperf
+./kperf
 
 # template bind data
 **/htmltemplatebindata.go

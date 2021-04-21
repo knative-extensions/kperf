@@ -48,7 +48,7 @@ function go_pre_build() {
 function go_build() {
   echo "🚧 Compile"
   go_pre_build
-  go build -mod=mod -ldflags "$(build_flags)" -o kperf ./cmd/...
+  go build -mod=mod -ldflags "$(build_flags)" -o kperf ./cmd/kperf/...
 }
 
 function go_test() {
