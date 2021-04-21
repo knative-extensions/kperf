@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	kafkasourcev1beta1 "knative.dev/eventing-kafka/pkg/client/clientset/versioned/typed/sources/v1beta1"
 	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 	autoscalingv1alpha1 "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
@@ -33,6 +34,7 @@ type PerfParams struct {
 	NewAutoscalingClient func() (autoscalingv1alpha1.AutoscalingV1alpha1Interface, error)
 	NewServingClient     func() (servingv1client.ServingV1Interface, error)
 	NewNetworkingClient  func() (networkingv1alpha1.NetworkingV1alpha1Interface, error)
+	NewKafkaSourceClient func() (kafkasourcev1beta1.SourcesV1beta1Interface, error)
 }
 
 func (params *PerfParams) Initialize() error {
@@ -56,6 +58,9 @@ func (params *PerfParams) Initialize() error {
 	}
 	if params.NewNetworkingClient == nil {
 		params.NewNetworkingClient = params.newNetworkingClient
+	}
+	if params.NewKafkaSourceClient == nil {
+		params.NewKafkaSourceClient = params.newKafkaSourceClient
 	}
 	return nil
 }
@@ -92,6 +97,19 @@ func (params *PerfParams) newNetworkingClient() (networkingv1alpha1.NetworkingV1
 	}
 
 	client, err := networkingv1alpha1.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+	return client, nil
+}
+
+func (params *PerfParams) newKafkaSourceClient() (kafkasourcev1beta1.SourcesV1beta1Interface, error) {
+	restConfig, err := params.RestConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := kafkasourcev1beta1.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}

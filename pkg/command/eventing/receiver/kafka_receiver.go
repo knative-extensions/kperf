@@ -43,7 +43,7 @@ var (
 	verbose  = false
 )
 
-type envConfig struct {
+type KafkaEnvConfig struct {
 	// KafkaServer URL to connect to the Kafka server.
 	KafkaServer string `envconfig:"KAFKA_BOOTSTRAP_SERVERS" required:"true"`
 
@@ -78,9 +78,9 @@ func init() {
 }
 
 func KafkaReceive(respChan chan ReceivedEventsStats) {
-	var env envConfig
+	var env KafkaEnvConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Printf("[ERROR] Failed to process envirnment variables: %s", err)
+		log.Printf("[ERROR] Failed to process environment variables: %s", err)
 		os.Exit(1)
 	}
 

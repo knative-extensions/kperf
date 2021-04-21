@@ -16,24 +16,28 @@ package eventing
 
 import (
 	"github.com/spf13/cobra"
+
 	"knative.dev/kperf/pkg"
+
+	// Register scenarios
+	_ "knative.dev/kperf/pkg/command/eventing/scenario/kafkasource"
 )
 
-// domainCmd represents the domain command
-func NewServiceCmd(p *pkg.PerfParams) *cobra.Command {
-	var serviceCmd = &cobra.Command{
+// NewEventingCmd represents the eventing command
+func NewEventingCmd(p *pkg.PerfParams) *cobra.Command {
+	var eventingCmd = &cobra.Command{
 		Use:   "eventing",
 		Short: "Knative eventing load test",
 		Long: `Knative eventing load test and measurement. For example:
 
 kperf eventing measure --range 1,10, --name perf - to measure 10 Knative eventing wokloads in perf-x namespaces (x between 1 and 10)`,
 	}
-	serviceCmd.AddCommand(NewEventingPrepareCommand(p))
-	serviceCmd.AddCommand(NewEventingMeasureCommand(p))
-	serviceCmd.AddCommand(NewEventingCleanCommand(p))
-	serviceCmd.AddCommand(NewEventingDriverCommand(p))
-	serviceCmd.AddCommand(NewEventingReceiverCommand(p))
+	eventingCmd.AddCommand(NewEventingPrepareCommand(p))
+	eventingCmd.AddCommand(NewEventingMeasureCommand(p))
+	eventingCmd.AddCommand(NewEventingCleanCommand(p))
+	eventingCmd.AddCommand(NewEventingDriverCommand(p))
+	eventingCmd.AddCommand(NewEventingReceiverCommand(p))
 
-	serviceCmd.InitDefaultHelpCmd()
-	return serviceCmd
+	eventingCmd.InitDefaultHelpCmd()
+	return eventingCmd
 }

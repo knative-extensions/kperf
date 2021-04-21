@@ -21,7 +21,7 @@ import (
 )
 
 func TestNewEventingCmd(t *testing.T) {
-	cmd := NewServiceCmd(nil)
+	cmd := NewEventingCmd(nil)
 	assert.Check(t, cmd.HasSubCommands(), "cmd eventing should have subcommands")
 
 	_, _, err := cmd.Find([]string{"prepare"})
