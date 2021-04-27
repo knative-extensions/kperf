@@ -1,11 +1,11 @@
 # The OWNERS file is used by prow to automatically merge approved PRs.
 
 approvers:
-- zhanggbj
-- maximilien
-# Also including TOC members as backup:
-- mattmoor
-- chizhg
-- vagababov
-- dprotaso
-- markusthoemmes
+- technical-oversight-committee
+- knative-release-leads
+- eventing-writers
+- serving-writers
+- kperf-approvers
+
+reviewers:
+- kperf-approvers
