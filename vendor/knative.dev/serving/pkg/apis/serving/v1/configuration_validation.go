@@ -18,7 +18,6 @@ package v1
 
 import (
 	"context"
-	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"knative.dev/pkg/apis"
@@ -32,9 +31,8 @@ func (c *Configuration) Validate(ctx context.Context) (errs *apis.FieldError) {
 	// have changed (i.e. due to config-defaults changes), we elide the metadata and
 	// spec validation.
 	if !apis.IsInStatusUpdate(ctx) {
-		errs = errs.Also(serving.ValidateObjectMetadata(ctx, c.GetObjectMeta()))
+		errs = errs.Also(serving.ValidateObjectMetadata(ctx, c.GetObjectMeta(), false))
 		errs = errs.Also(c.validateLabels().ViaField("labels"))
-		errs = errs.Also(serving.ValidateHasNoAutoscalingAnnotation(c.GetAnnotations()).ViaField("annotations"))
 		errs = errs.ViaField("metadata")
 
 		ctx = apis.WithinParent(ctx, c.ObjectMeta)
@@ -63,19 +61,8 @@ func (cs *ConfigurationSpec) Validate(ctx context.Context) *apis.FieldError {
 
 // validateLabels function validates configuration labels
 func (c *Configuration) validateLabels() (errs *apis.FieldError) {
-	for key, val := range c.GetLabels() {
-		switch key {
-		case serving.RouteLabelKey,
-			serving.ConfigurationUIDLabelKey,
-			serving.ServiceUIDLabelKey:
-			// Known valid labels - so just skip them
-		case serving.ServiceLabelKey:
-			errs = errs.Also(verifyLabelOwnerRef(val, serving.ServiceLabelKey, "Service", c.GetOwnerReferences()))
-		default:
-			if strings.HasPrefix(key, serving.GroupNamePrefix) {
-				errs = errs.Also(apis.ErrInvalidKeyName(key, apis.CurrentField))
-			}
-		}
+	if val, ok := c.Labels[serving.ServiceLabelKey]; ok {
+		errs = errs.Also(verifyLabelOwnerRef(val, serving.ServiceLabelKey, "Service", c.GetOwnerReferences()))
 	}
 	return errs
 }

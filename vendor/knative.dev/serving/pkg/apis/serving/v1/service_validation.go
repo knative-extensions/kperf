@@ -18,7 +18,6 @@ package v1
 
 import (
 	"context"
-	"strings"
 
 	network "knative.dev/networking/pkg"
 	"knative.dev/pkg/apis"
@@ -32,11 +31,9 @@ func (s *Service) Validate(ctx context.Context) (errs *apis.FieldError) {
 	// have changed (i.e. due to config-defaults changes), we elide the metadata and
 	// spec validation.
 	if !apis.IsInStatusUpdate(ctx) {
-		errs = errs.Also(serving.ValidateObjectMetadata(ctx, s.GetObjectMeta()))
+		errs = errs.Also(serving.ValidateObjectMetadata(ctx, s.GetObjectMeta(), false))
 		errs = errs.Also(s.validateLabels().ViaField("labels"))
 		errs = errs.Also(serving.ValidateRolloutDurationAnnotation(
-			s.GetAnnotations()).ViaField("annotations"))
-		errs = errs.Also(serving.ValidateHasNoAutoscalingAnnotation(
 			s.GetAnnotations()).ViaField("annotations"))
 		errs = errs.ViaField("metadata")
 
@@ -67,13 +64,8 @@ func (ss *ServiceSpec) Validate(ctx context.Context) *apis.FieldError {
 
 // validateLabels function validates service labels
 func (s *Service) validateLabels() (errs *apis.FieldError) {
-	for key, val := range s.GetLabels() {
-		switch {
-		case key == network.VisibilityLabelKey:
-			errs = errs.Also(validateClusterVisibilityLabel(val))
-		case strings.HasPrefix(key, serving.GroupNamePrefix):
-			errs = errs.Also(apis.ErrInvalidKeyName(key, apis.CurrentField))
-		}
+	if val, ok := s.Labels[network.VisibilityLabelKey]; ok {
+		errs = errs.Also(validateClusterVisibilityLabel(val))
 	}
 	return errs
 }
