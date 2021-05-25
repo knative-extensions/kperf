@@ -1,2 +1,0 @@
-# Default owners are kperf owners, TOC, release leads, serving writers and eventing writers
-* @knative-sandbox/kperf-approvers @knative-sandbox/serving-writers @knative-sandbox/eventing-writers @knative-sandbox/knative-release-leads @knative-sandbox/technical-oversight-committee
