@@ -132,6 +132,12 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 				}
 			}
 
+			var verbose = cmd.Flags().Changed("verbose")
+			if verbose {
+				fmt.Printf("[Verbose] Start to measure Knative services...\n")
+				fmt.Printf("[Verbose] Concurrency: %d\n", measureArgs.concurrency)
+			}
+
 			rows := make([][]string, 0)
 			rawRows := make([][]string, 0)
 
@@ -378,7 +384,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 							ingressNetworkConfiguredTime.String(),
 							ingressLoadBalancerReadyTime.String()})
 
-						if cmd.Flags().Changed("verbose") {
+						if verbose {
 							fmt.Printf("[Verbose] Service %s: Service Configuration Ready Duration is %s/%fs\n",
 								svc, svcConfigurationsReadyDuration, svcConfigurationsReadyDuration.Seconds())
 							fmt.Printf("[Verbose] Service %s: - Service Revision Ready Duration is %s/%fs\n",
@@ -686,7 +692,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.svcRange, "range", "r", "", "Desired service range")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespace, "namespace", "", "", "Service namespace")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.svcPrefix, "svc-prefix", "", "", "Service name prefix")
-	serviceMeasureCommand.Flags().BoolVarP(&measureArgs.verbose, "verbose", "v", false, "Service verbose result")
+	serviceMeasureCommand.Flags().BoolVarP(&measureArgs.verbose, "verbose", "v", false, "Verbose output. The details of Knative Services measuring output")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespaceRange, "namespace-range", "", "", "Service namespace range")
 	serviceMeasureCommand.Flags().StringVarP(&measureArgs.namespacePrefix, "namespace-prefix", "", "", "Service namespace prefix")
 	serviceMeasureCommand.Flags().IntVarP(&measureArgs.concurrency, "concurrency", "c", 10, "Number of workers to do measurement job")

@@ -14,6 +14,7 @@
 package service
 
 import (
+	"sync"
 	"time"
 )
 
@@ -30,8 +31,29 @@ type generateArgs struct {
 	namespace       string
 	svcPrefix       string
 
+	verbose    bool
 	checkReady bool
 	timeout    time.Duration
+}
+
+type generateResult struct {
+	ksvcGenerateSuccess int
+	ksvcGenerateFail    int
+	ksvcReady           int
+	ksvcNotReady        int
+	m                   sync.Mutex
+}
+
+func (g *generateResult) SetSuccess() {
+	g.m.Lock()
+	defer g.m.Unlock()
+	g.ksvcGenerateSuccess += 1
+}
+
+func (g *generateResult) SetFail() {
+	g.m.Lock()
+	defer g.m.Unlock()
+	g.ksvcGenerateFail += 1
 }
 
 type cleanArgs struct {
@@ -40,6 +62,25 @@ type cleanArgs struct {
 	namespace       string
 	svcPrefix       string
 	concurrency     int
+	verbose         bool
+}
+
+type cleanResult struct {
+	ksvcCleanSuccess int
+	ksvcCleanFail    int
+	m                sync.Mutex
+}
+
+func (c *cleanResult) SetSuccess() {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.ksvcCleanSuccess += 1
+}
+
+func (c *cleanResult) SetFail() {
+	c.m.Lock()
+	defer c.m.Unlock()
+	c.ksvcCleanFail += 1
 }
 
 type measureArgs struct {

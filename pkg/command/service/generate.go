@@ -83,6 +83,19 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 				nsNameList = append(nsNameList, generateArgs.namespace)
 			}
 
+			var verbose = cmd.Flags().Changed("verbose")
+			if verbose {
+				fmt.Printf("[Verbose] Start to generate Knative services...\n")
+				fmt.Printf("[Verbose] Number: %d\n", generateArgs.number)
+				fmt.Printf("[Verbose] Namespaces: %+v\n", nsNameList)
+				fmt.Printf("[Verbose] Interval: %d\n", generateArgs.interval)
+				fmt.Printf("[Verbose] Batch: %d\n", generateArgs.batch)
+				fmt.Printf("[Verbose] Concurrency: %d\n", generateArgs.concurrency)
+				fmt.Printf("[Verbose] MinScale: %d\n", generateArgs.minScale)
+				fmt.Printf("[Verbose] MaxScale: %d\n", generateArgs.maxScale)
+				fmt.Printf("[Verbose] Timeout: %d s\n", generateArgs.timeout)
+				fmt.Printf("[Verbose] Wait for ready: %t\n", false)
+			}
 			// Check if namespace exists, in NOT, return error
 			for _, ns := range nsNameList {
 				_, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
@@ -97,6 +110,12 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 			if err != nil {
 				return err
 			}
+
+			generateResult := generateResult{
+				ksvcGenerateSuccess: 0,
+				ksvcGenerateFail:    0,
+			}
+
 			createKSVCFunc := func(ns string, index int) (string, string) {
 				service := servingv1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -128,6 +147,9 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 				_, err := ksvcClient.Services(ns).Create(context.TODO(), &service, metav1.CreateOptions{})
 				if err != nil {
 					fmt.Printf("failed to create Knative Service %s in namespace %s : %s\n", service.GetName(), service.GetNamespace(), err)
+					generateResult.SetFail()
+				} else {
+					generateResult.SetSuccess()
 				}
 				return service.GetNamespace(), service.GetName()
 			}
@@ -138,11 +160,13 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 					conditions := svc.Status.Conditions
 					for i := 0; i < len(conditions); i++ {
 						if conditions[i].Type == knativeapis.ConditionReady && conditions[i].IsTrue() {
+							generateResult.ksvcReady += 1
 							return nil
 						}
 					}
 				}
 				fmt.Printf("Error: Knative Service %s in namespace %s is not ready after %s\n", name, ns, generateArgs.timeout)
+				generateResult.ksvcNotReady += 1
 				return fmt.Errorf("Knative Service %s in namespace %s is not ready after %s ", name, ns, generateArgs.timeout)
 
 			}
@@ -150,6 +174,18 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 				generator.NewBatchGenerator(time.Duration(generateArgs.interval)*time.Second, generateArgs.number, generateArgs.batch, generateArgs.concurrency, nsNameList, createKSVCFunc, checkServiceStatusReadyFunc).Generate()
 			} else {
 				generator.NewBatchGenerator(time.Duration(generateArgs.interval)*time.Second, generateArgs.number, generateArgs.batch, generateArgs.concurrency, nsNameList, createKSVCFunc, func(ns, name string) error { return nil }).Generate()
+			}
+
+			if verbose {
+				fmt.Printf("[Verbose] Knative services generation finished.\n")
+				if cmd.Flags().Changed("wait") {
+					fmt.Printf("[Verbose] Generated Knative services number, success: %d, fail: %d, ready: %d, not ready: %d\n",
+						generateResult.ksvcGenerateSuccess, generateResult.ksvcGenerateFail, generateResult.ksvcReady, generateResult.ksvcNotReady)
+
+				} else {
+					fmt.Printf("[Verbose] Generated Knative services number, success: %d, fail: %d\n",
+						generateResult.ksvcGenerateSuccess, generateResult.ksvcGenerateFail)
+				}
 			}
 
 			return nil
@@ -171,6 +207,7 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 
 	ksvcGenCommand.Flags().StringVarP(&generateArgs.svcPrefix, "svc-prefix", "", "ksvc", "Knative Service name prefix. The Knative Services will be ksvc-1,ksvc-2,ksvc-3 and etc.")
 	ksvcGenCommand.Flags().BoolVarP(&generateArgs.checkReady, "wait", "", false, "Whether to wait the previous Knative Service to be ready")
+	ksvcGenCommand.Flags().BoolVarP(&generateArgs.verbose, "verbose", "v", false, "Verbose output. The details of Knative Services generating output")
 	ksvcGenCommand.Flags().DurationVarP(&generateArgs.timeout, "timeout", "", 10*time.Minute, "Duration to wait for previous Knative Service to be ready")
 
 	return ksvcGenCommand

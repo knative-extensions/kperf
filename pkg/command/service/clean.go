@@ -65,6 +65,13 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 				}
 			}
 
+			var verbose = cmd.Flags().Changed("verbose")
+			if verbose {
+				fmt.Printf("[Verbose] Start to clean Knative services...\n")
+				fmt.Printf("[Verbose] Concurrency: %d\n", cleanArgs.concurrency)
+
+			}
+
 			ksvcClient, err := p.NewServingClient()
 			if err != nil {
 				return err
@@ -105,11 +112,18 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 				return errors.New("both namespace and namespace-prefix are empty")
 			}
 			matchedNsNameList := [][2]string{}
+			cleanResult := cleanResult{
+				ksvcCleanSuccess: 0,
+				ksvcCleanFail:    0,
+			}
 			cleanKsvc := func(namespace, name string) {
 				fmt.Printf("Delete ksvc %s in namespace %s\n", name, namespace)
 				err := ksvcClient.Services(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 				if err != nil {
 					fmt.Printf("Failed to delete ksvc %s in namespace %s\n", name, namespace)
+					cleanResult.SetFail()
+				} else {
+					cleanResult.SetSuccess()
 				}
 			}
 			for i := 0; i < len(nsNameList); i++ {
@@ -127,6 +141,13 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 			} else {
 				fmt.Println("No service found for cleaning")
 			}
+
+			if verbose {
+				fmt.Printf("[Verbose] Knative services cleaning finished.\n")
+				fmt.Printf("[Verbose] Cleaned Knative services, success: %d, fail: %d\n",
+					cleanResult.ksvcCleanSuccess, cleanResult.ksvcCleanFail)
+			}
+
 			return nil
 		},
 	}
@@ -136,6 +157,7 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 	ksvcCleanCommand.Flags().StringVarP(&cleanArgs.namespace, "namespace", "", "", "Namespace name. The ksvc in the namespace will be cleaned.")
 	ksvcCleanCommand.Flags().StringVarP(&cleanArgs.svcPrefix, "svc-prefix", "", "testksvc", "ksvc name prefix. The ksvcs will be svcPrefix1,svcPrefix2,svcPrefix3......")
 	ksvcCleanCommand.Flags().IntVarP(&cleanArgs.concurrency, "concurrency", "c", 10, "Number of multiple ksvcs to make at a time")
+	ksvcCleanCommand.Flags().BoolVarP(&cleanArgs.verbose, "verbose", "v", false, "Verbose output. The details of Knative Services cleaning output")
 
 	return ksvcCleanCommand
 }
