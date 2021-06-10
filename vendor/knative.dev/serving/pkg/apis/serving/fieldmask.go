@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Note: Please update `hack/schemapatch-config.yaml` and run `hack/update-schemas.sh` whenever
+// fields are added or removed here.
+
 package serving
 
 import (
@@ -613,7 +616,7 @@ func SecurityContextMask(ctx context.Context, in *corev1.SecurityContext) *corev
 // CapabilitiesMask performs a _shallow_ copy of the Kubernetes Capabilities object to a new
 // Kubernetes Capabilities object bringing over only the fields allowed in the Knative API. This
 // does not validate the contents or the bounds of the provided fields.
-func CapabilitiesMask(in *corev1.Capabilities) *corev1.Capabilities {
+func CapabilitiesMask(ctx context.Context, in *corev1.Capabilities) *corev1.Capabilities {
 	if in == nil {
 		return nil
 	}
@@ -623,9 +626,9 @@ func CapabilitiesMask(in *corev1.Capabilities) *corev1.Capabilities {
 	// Allowed fields
 	out.Drop = in.Drop
 
-	// Disallowed
-	// This list is unnecessary, but added here for clarity
-	out.Add = nil
+	if config.FromContextOrDefaults(ctx).Features.ContainerSpecAddCapabilities != config.Disabled {
+		out.Add = in.Add
+	}
 
 	return out
 }
