@@ -114,7 +114,7 @@ func validateVolume(volume corev1.Volume) *apis.FieldError {
 
 	vs := volume.VolumeSource
 	errs = errs.Also(apis.CheckDisallowedFields(vs, *VolumeSourceMask(&vs)))
-	specified := []string{}
+	var specified []string
 	if vs.Secret != nil {
 		specified = append(specified, "secret")
 		for i, item := range vs.Secret.Items {
@@ -447,11 +447,11 @@ func validateResources(resources *corev1.ResourceRequirements) *apis.FieldError 
 	return apis.CheckDisallowedFields(*resources, *ResourceRequirementsMask(resources))
 }
 
-func validateCapabilities(cap *corev1.Capabilities) *apis.FieldError {
+func validateCapabilities(ctx context.Context, cap *corev1.Capabilities) *apis.FieldError {
 	if cap == nil {
 		return nil
 	}
-	return apis.CheckDisallowedFields(*cap, *CapabilitiesMask(cap))
+	return apis.CheckDisallowedFields(*cap, *CapabilitiesMask(ctx, cap))
 }
 
 func validateSecurityContext(ctx context.Context, sc *corev1.SecurityContext) *apis.FieldError {
@@ -460,7 +460,7 @@ func validateSecurityContext(ctx context.Context, sc *corev1.SecurityContext) *a
 	}
 	errs := apis.CheckDisallowedFields(*sc, *SecurityContextMask(ctx, sc))
 
-	errs = errs.Also(validateCapabilities(sc.Capabilities).ViaField("capabilities"))
+	errs = errs.Also(validateCapabilities(ctx, sc.Capabilities).ViaField("capabilities"))
 
 	if sc.RunAsUser != nil {
 		uid := *sc.RunAsUser
