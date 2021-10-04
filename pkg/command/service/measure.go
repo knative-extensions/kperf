@@ -35,7 +35,7 @@ import (
 	"github.com/montanaflynn/stats"
 	"github.com/spf13/cobra"
 
-	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1api "knative.dev/networking/pkg/apis/networking/v1alpha1"
