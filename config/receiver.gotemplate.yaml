@@ -18,8 +18,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kperf-eventing-receiver
+  namespace: {{.NAMESPACE}}
 spec:
-  replicas: ${REPLICAS}
+  replicas: "{{.REPLICAS}}"
   selector:
     matchLabels: &labels
       app: kperf-eventing-receiver
@@ -57,6 +58,7 @@ kind: Service
 apiVersion: v1
 metadata:
   name: kperf-eventing-receiver
+  namespace: {{.NAMESPACE}}
   annotations:
       prometheus.io/scrape: 'true'
       prometheus.io/port:   '8001'
