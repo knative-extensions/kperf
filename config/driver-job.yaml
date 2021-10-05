@@ -17,7 +17,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: kperf-eventing-driver-job-${RUN_ID}
+  name: kperf-job-${EXPERIMENT_ID}-${SETUP_ID}-${WORKLOAD_ID}
 spec:
   template:
     spec:
@@ -34,17 +34,36 @@ spec:
           value: "${KAFKA_BOOTSTRAP_SERVERS}"
         - name: KAFKA_TOPIC
           value: "${KAFKA_TOPIC}"
-        - name: RUN_ID
-          value: "$RUN_ID"
+        - name: KAFKA_GROUP
+          value: "${KAFKA_GROUP}"
+        - name: KAFKA_NET_TLS_ENABLE
+          value: "${KAFKA_NET_TLS_ENABLE}"
+        - name: KAFKA_NET_SASL_ENABLE
+          value: "${KAFKA_NET_SASL_ENABLE}"
+        - name: KAFKA_NET_SASL_USER
+          value: "${KAFKA_NET_SASL_USER}"
+        - name: KAFKA_NET_SASL_PASSWORD
+          value: "${KAFKA_NET_SASL_PASSWORD}"
+        - name: EXPERIMENT_ID
+          value: "$EXPERIMENT_ID"
+        - name: SETUP_ID
+          value: "$SETUP_ID"
+        - name: WORKLOAD_ID
+          value: "$WORKLOAD_ID"
         - name: START
           value: "$START"
-        - name: INC
-          value: "$INC"
         - name: DURATION
           value: "$DURATION"
         - name: TEST_DURATION
           value: "$TEST_DURATION"
         - name: CONCURRENT
           value: "$CONCURRENT"
+        resources:
+          requests:
+            cpu: "1"
+            memory: "2G"
+          limits:
+            cpu: "1"
+            memory: "8G"
       restartPolicy: Never
   backoffLimit: 4

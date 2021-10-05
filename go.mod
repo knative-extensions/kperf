@@ -9,7 +9,7 @@ require (
 	github.com/cloudevents/sdk-go/v2 v2.4.0
 	github.com/go-redis/redis/v8 v8.8.0
 	github.com/gomodule/redigo v1.8.4
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.2.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/kevinburke/go-bindata v3.22.0+incompatible
 	github.com/mitchellh/go-homedir v1.1.0

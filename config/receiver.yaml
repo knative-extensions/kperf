@@ -36,22 +36,34 @@ spec:
           env:
           - name: KAFKA_BOOTSTRAP_SERVERS
             value: "${KAFKA_BOOTSTRAP_SERVERS}"
+          - name: KAFKA_TOPIC
+            value: "${KAFKA_TOPIC}"
+          - name: KAFKA_GROUP
+            value: "${KAFKA_GROUP}"
+          - name: KAFKA_NET_TLS_ENABLE
+            value: "${KAFKA_NET_TLS_ENABLE}"
+          - name: KAFKA_NET_SASL_ENABLE
+            value: "${KAFKA_NET_SASL_ENABLE}"
+          - name: KAFKA_NET_SASL_USER
+            value: "${KAFKA_NET_SASL_USER}"
+          - name: KAFKA_NET_SASL_PASSWORD
+            value: "${KAFKA_NET_SASL_PASSWORD}"
           - name: REDIS_ADDRESS
             value: "${REDIS_ADDRESS}"
-          - name: EXPERIMENT_ID
-            value: "${EXPERIMENT_ID}"
           - name: SLEEP_SECONDS
             value: "${SLEEP_SECONDS}"
+          - name: BUCKET_LIST
+            value: "${BUCKET_LIST}"
+          resources:
+            requests:
+              cpu: "2"
+              memory: "8G"
+            limits:
+              cpu: "2"
+              memory: "8G"
           ports:
           - containerPort: 8001
             name: http
-          resources:
-            requests:
-              memory: "512Mi"
-              cpu: "250m"
-            limits:
-              memory: "1024Mi"
-              cpu: "2000m"
 ---
 kind: Service
 apiVersion: v1

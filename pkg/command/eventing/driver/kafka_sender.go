@@ -18,17 +18,15 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/url"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/Shopify/sarama"
 	cloudeventskafka "github.com/cloudevents/sdk-go/protocol/kafka_sarama/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
-	"github.com/cloudevents/sdk-go/v2/event"
-	"github.com/cloudevents/sdk-go/v2/types"
 	"github.com/kelseyhightower/envconfig"
+
+	"knative.dev/kperf/pkg/command/eventing/util"
 )
 
 type KafkaEventSender struct {
@@ -57,9 +55,12 @@ type envConfig struct {
 
 	// Subject is the nats subject to publish cloudevents on.
 	Topic string `envconfig:"KAFKA_TOPIC" required:"true"`
+
+	Net util.AdapterNet
 }
 
 func sendEvents(plan SendEventsPlan) EventsStats {
+	g := NewEventGenerator(plan)
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Version = sarama.V2_0_0_0
 	senderName := plan.senderName
@@ -69,6 +70,7 @@ func sendEvents(plan SendEventsPlan) EventsStats {
 		log.Printf("[ERROR] Failed to process envirnment variables: %s", err)
 		os.Exit(1)
 	}
+	util.UpdateSaramaConfigFromEnv(env.Net, saramaConfig)
 
 	ctx := context.Background()
 
@@ -77,8 +79,9 @@ func sendEvents(plan SendEventsPlan) EventsStats {
 	// if err != nil {
 	// 	log.Fatalf("failed to create http protocol: %s", err.Error())
 	// }
+	eventsToSend := int(float64(plan.eventsPerSecond) * plan.durationSeconds)
 
-	log.Printf("Sending to KAFKA_BOOTSTRAP_SERVERS=%s KAFKA_TOPIC=%s", env.KafkaServer, env.Topic)
+	log.Printf("Sending to KAFKA_BOOTSTRAP_SERVERS=%s KAFKA_TOPIC=%s eventsToSend=%d", env.KafkaServer, env.Topic, eventsToSend)
 	kafkaProtocol, err := cloudeventskafka.NewSender([]string{env.KafkaServer}, saramaConfig, env.Topic)
 	if err != nil {
 		log.Fatalf("failed to create Kafka protcol, %s", err.Error())
@@ -90,46 +93,73 @@ func sendEvents(plan SendEventsPlan) EventsStats {
 	//message, err := httpProtocol.Receive(ctx)
 
 	startTime := time.Now()
+	targetEndTime := startTime.Add(time.Duration(plan.durationSeconds) * time.Second)
 	errCount := 0
 	eventsSentCount := 0
-	eventsToSend := int(float64(plan.eventsPerSecond) * plan.durationSeconds)
-	log.Printf("Sending events to Kafka %d", eventsToSend)
+	//log.Printf("Sending events to Kafka eventsToSend %d", eventsToSend)
 	//TODO test HTTP 2 pipelining
 	//TODO test CLoudEvents batch
-	for i := 0; i < eventsToSend; i++ {
-
-		source := types.URIRef{URL: url.URL{Scheme: "http", Host: "example.com", Path: "/source"}}
-		timestamp := types.Timestamp{Time: time.Now()}
-		//schema := types.URI{URL: url.URL{Scheme: "http", Host: "example.com", Path: "/schema"}}
-		e := event.Event{
-			Context: event.EventContextV1{
-				Type:   "com.example.FullEvent",
-				Source: source,
-				ID:     "full-event",
-				Time:   &timestamp,
-				//DataSchema: &schema,
-				Subject: strptr("topic"),
-			}.AsV1(),
+	for {
+		//TODO switch between different types of events
+		events := g.NextCloudEvents()
+		if events == nil {
+			break
 		}
-		e.SetID(strconv.Itoa(i + 1))
-		//ifs err := event.SetData("text/json", "[\"fruit\", \"orange\"]"); err != nil {
-		data := []byte("[\"fruit\", \"orange\"]")
-		//data := []byte("{\"a\" : \"b\"}") // {"a": "b"}
-		if err := e.SetData(event.ApplicationJSON, data); err != nil {
-			panic(err)
-		}
+		for _, event := range events {
+			fmt.Printf("Sending %v\n", event)
+			msg := binding.ToMessage(event)
+			err = kafkaProtocol.Send(ctx, msg)
+			if err != nil {
+				log.Printf("Error while forwarding the message: %s", err.Error())
+			}
+			eventsSentCount++
+			//errCount++
+			//chunkCount++
+			eventsToSend := g.EventRemainingToSend()
+			soFarTime := time.Now()
+			if eventsToSend > 0 && soFarTime.Before(targetEndTime) {
+				remainingDuration := targetEndTime.Sub(soFarTime)
+				sleepDuration := remainingDuration / time.Duration(eventsToSend)
+				//fmt.Printf("sending sleeping %s\n", sleepDuration)
+				time.Sleep(sleepDuration)
 
-		msg := binding.ToMessage(&e)
-		err = kafkaProtocol.Send(ctx, msg)
-		if err != nil {
-			log.Printf("Error while forwarding the message: %s", err.Error())
-		}
-		eventsSentCount++
+			}
 
+		}
 	}
+
+	// for i := 0; i < eventsToSend; i++ {
+	// 	source := types.URIRef{URL: url.URL{Scheme: "http", Host: "example.com", Path: "/source"}}
+	// 	timestamp := types.Timestamp{Time: time.Now()}
+	// 	//schema := types.URI{URL: url.URL{Scheme: "http", Host: "example.com", Path: "/schema"}}
+	// 	e := event.Event{
+	// 		Context: event.EventContextV1{
+	// 			Type:   "com.example.FullEvent",
+	// 			Source: source,
+	// 			ID:     "full-event",
+	// 			Time:   &timestamp,
+	// 			//DataSchema: &schema,
+	// 			Subject: strptr("topic"),
+	// 		}.AsV1(),
+	// 	}
+	// 	e.SetID(strconv.Itoa(i + 1))
+	// 	//ifs err := event.SetData("text/json", "[\"fruit\", \"orange\"]"); err != nil {
+	// 	data := []byte("[\"fruit\", \"orange\"]")
+	// 	//data := []byte("{\"a\" : \"b\"}") // {"a": "b"}
+	// 	if err := e.SetData(event.ApplicationJSON, data); err != nil {
+	// 		panic(err)
+	// 	}
+
+	// 	msg := binding.ToMessage(&e)
+	// 	err = kafkaProtocol.Send(ctx, msg)
+	// 	if err != nil {
+	// 		log.Printf("Error while forwarding the message: %s", err.Error())
+	// 	}
+	// 	eventsSentCount++
+
+	// }
 	// sleep for remaining time to reach events/second
 	endTime := time.Now()
-	targetEndTime := startTime.Add(time.Duration(plan.durationSeconds) * time.Second)
 	//duration := time.Since(start)
 	duration := endTime.Sub(startTime)
 	if endTime.Before(targetEndTime) {

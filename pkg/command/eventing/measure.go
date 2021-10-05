@@ -15,9 +15,15 @@
 package eventing
 
 import (
+	"bufio"
+	"encoding/csv"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
 	"knative.dev/kperf/pkg"
+	"knative.dev/kperf/pkg/command/eventing/util"
 
 	"github.com/spf13/cobra"
 
@@ -31,19 +37,22 @@ import (
 
 //TODO aggregate measurements
 
-//TODO convert measurements ot pretty text
+//TODO convert measurements to pretty text
 
-//TODO write measurememnts ot .csv file
+//TODO write measurememnts to .csv file
 
-func mesaureOne(t *http.Transport) {
+func mesaureOne(t *http.Transport, metricLabels string) float64 {
 	//fmt.Printf("measure\n")
-	req, err := http.NewRequest("GET", "http://127.0.0.1:8001/metrics", nil)
+	loc := util.GetEnv("METRICS_LOC1", "http://127.0.0.1:8001/metrics")
+	//fmt.Printf("Getting metrics from %s\n", loc)
+	req, err := http.NewRequest("GET", loc, nil)
 	if err != nil {
 		log.Println(err)
 	}
 	res, err := t.RoundTrip(req)
 	if err != nil {
 		log.Println(err)
+		return -1
 	}
 	//fmt.Printf("res: %v\n", res)
 	defer res.Body.Close()
@@ -53,17 +62,128 @@ func mesaureOne(t *http.Transport) {
 			log.Fatal(err)
 		}
 		bodyString := string(bodyBytes)
-		log.Print(bodyString)
+		//log.Print(bodyString)
+		return parseEventsTotal(bodyString, metricLabels)
 	}
-
+	return -1
 }
+
+func parseEventsTotal(metrics string, metricLabels string) float64 {
+	scanner := bufio.NewScanner(strings.NewReader(metrics))
+	// events_total
+	key := "events_count" + metricLabels
+	for scanner.Scan() {
+		line := scanner.Text()
+		words := strings.Fields(line)
+		if len(words) > 1 {
+			if words[0] == key {
+				val, err := strconv.ParseFloat(words[1], 64)
+				if err != nil {
+					return -1
+				}
+				//fmt.Println(val)
+				return val
+			}
+		}
+
+	}
+	return 0
+}
+
+const idleSeconds = 60
 
 func measure() {
 	t := &http.Transport{}
-	for {
-		mesaureOne(t)
-		time.Sleep(1 * time.Second)
+	var prev int = -1
+	var noChangeCount int
+	var maxEventsPerSecond int
+	nonstop := util.GetEnv("CONTINOUS", "false") == "true"
+	if nonstop {
+		fmt.Println("CONTINOUS mode enabled")
 	}
+	experimentId := util.RequiredGetEnv("EXPERIMENT_ID")
+	setupId := util.RequiredGetEnv("SETUP_ID")
+	workloadId := util.RequiredGetEnv("WORKLOAD_ID")
+	metricLabels := fmt.Sprintf("{experimentId=\"%s\",setupId=\"%s\",workloadId=\"%s\"}", experimentId, setupId, workloadId)
+
+	start := util.GetEnvInt("START", "500")
+	concurrent := util.GetEnvInt("CONCURRENT", "1")
+	durationSeconds := util.GetEnvFloat64("DURATION", "0.01")
+	eventsToReceive := int(float64(start) * float64(concurrent) * durationSeconds)
+	fmt.Printf("Expected to receive %d events for experimentId=%s,setupId=%s,workloadId=%s\n", eventsToReceive, experimentId, setupId, workloadId)
+	logsDir := util.GetEnv("LOGS_DIR", "logs")
+	path := logsDir + "/results.csv"
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0600)
+	//createHeader
+	if err != nil {
+		if file, err = os.Create(path); err != nil {
+			log.Fatal(err)
+		}
+	}
+	defer file.Close()
+	csvWriter := csv.NewWriter(file)
+
+	// var lastStartTime time.Time
+	// var lastCount int = -1
+	eventsMeasured := 0
+	measureStartTime := time.Now()
+
+	for {
+		startTime := time.Now()
+		val := int(mesaureOne(t, metricLabels))
+		endTime := time.Now()
+		timeStr := endTime.Format("20060102150405")
+		if val == prev {
+			noChangeCount++
+		} else if prev < 0 {
+			fmt.Printf("%s starting with total %d\n", timeStr, val)
+		} else if val > 0 && prev > 0 {
+			noChangeCount = 0
+			diff := val - prev
+			if diff > maxEventsPerSecond {
+				maxEventsPerSecond = diff
+				fmt.Printf("\n%s new maximum events per second %d", timeStr, maxEventsPerSecond)
+			}
+			eventsMeasured += diff
+			fmt.Printf("\n%s events per second %d (total %d so far %d)\n", timeStr, diff, val, eventsMeasured)
+		}
+		gotAllEvent := eventsMeasured >= eventsToReceive
+		if gotAllEvent || noChangeCount > idleSeconds {
+			if gotAllEvent || !nonstop {
+				if gotAllEvent {
+					fmt.Printf("\nReceived %d out of expected %d\n", eventsMeasured, eventsToReceive)
+				} else {
+					fmt.Printf("\nNo change for %d seconds, exiting\n", idleSeconds)
+				}
+				measureEndTime := time.Now()
+				measureDuration := measureEndTime.Sub(measureStartTime)
+				measureTimeSeconds := float64(measureDuration.Nanoseconds()) / float64(time.Second)
+				fmt.Printf("Measured %d events in %f seconds\n", eventsMeasured, measureTimeSeconds)
+				avgEventsPerSecond := float64(eventsMeasured) / measureTimeSeconds
+				fmt.Printf("Measured average events per second %f\n", avgEventsPerSecond)
+				fmt.Printf("Measured maximum events per second %d\n", maxEventsPerSecond)
+				maxEventsPerSecondStr := strconv.Itoa(maxEventsPerSecond)
+				currentTime := time.Now()
+				currentTimeYMD := currentTime.Format("20060102150405")
+				row := []string{currentTimeYMD, experimentId, setupId, workloadId, maxEventsPerSecondStr}
+				csvWriter.Write(row)
+				csvWriter.Flush()
+				os.Exit(0)
+			}
+			noChangeCount = 0
+		}
+		prev = val
+		targetEndTime := startTime.Add(time.Duration(1) * time.Second)
+		//duration := endTime.Sub(startTime)
+		if endTime.Before(targetEndTime) {
+			sleepDuration := targetEndTime.Sub(endTime)
+			//fmt.Printf("%s sleeping %s\n", timeStr, sleepDuration)
+			fmt.Print(".")
+			time.Sleep(sleepDuration)
+		}
+		//time.Sleep(1 * time.Second)
+	}
+
 }
 
 const (
@@ -87,7 +207,7 @@ kperf eventing measure --svc-perfix svc --range 1,200 --namespace ns --concurren
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			fmt.Printf("Eventing measure starring\n")
+			fmt.Printf("Eventing measure starting\n")
 			measure()
 			return nil
 		},

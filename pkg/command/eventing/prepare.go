@@ -37,8 +37,8 @@ func NewEventingPrepareCommand(p *pkg.PerfParams) *cobra.Command {
 		Short: "Prepare Knative Eventing receiver",
 		Long: `Prepare Knative Eventing receiver
 For example:
-# To prepare Knative Eventing receiver
-kperf eventing prepare --namespace-prefix testns/ --namespace nsname)
+# To prepare Knative Eventing receiver in namespaces test1 and test2
+kperf eventing prepare --namespace-prefix test --namespace-range 1,2
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()

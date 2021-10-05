@@ -25,8 +25,10 @@ func NewEventingCmd(p *pkg.PerfParams) *cobra.Command {
 		Use:   "eventing",
 		Short: "Knative eventing load test",
 		Long: `Knative eventing load test and measurement. For example:
-
-kperf eventing measure --range 1,10, --name perf - to measure 10 Knative eventing wokloads in perf-x namespaces (x between 1 and 10)`,
+#to prepre 2 Knative eventing wokloads in perf-x namespaces (x between 1 and 2)
+kperf eventing prepare --range 1,2 --name perf- 
+# to measure 2 Knative eventing wokloads in perf-x namespaces (x between 1 and 2)
+kperf eventing measure --range 1,2 --name perf-`,
 	}
 	eventingCmd.AddCommand(NewEventingPrepareCommand(p))
 	eventingCmd.AddCommand(NewEventingMeasureCommand(p))

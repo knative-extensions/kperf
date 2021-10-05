@@ -26,10 +26,13 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/Shopify/sarama"
 
 	"github.com/kelseyhightower/envconfig"
+
+	"knative.dev/kperf/pkg/command/eventing/util"
 )
 
 // Sarama configuration options
@@ -44,6 +47,8 @@ var (
 )
 
 type envConfig struct {
+	//KafkaConfigJson  string   `envconfig:"K_KAFKA_CONFIG"`
+	//BootstrapServers []string `envconfig:"KAFKA_BOOTSTRAP_SERVERS" required:"true"`
 	// KafkaServer URL to connect to the Kafka server.
 	KafkaServer string `envconfig:"KAFKA_BOOTSTRAP_SERVERS" required:"true"`
 
@@ -52,6 +57,8 @@ type envConfig struct {
 
 	// Consumer gorup
 	Group string `envconfig:"KAFKA_GROUP" required:"true"`
+
+	Net util.AdapterNet
 }
 
 func initFlags() {
@@ -80,7 +87,13 @@ func initFlags() {
 func KafkaReceive(respChan chan ReceivedEventsStats) {
 	var env envConfig
 	if err := envconfig.Process("", &env); err != nil {
-		log.Printf("[ERROR] Failed to process envirnment variables: %s", err)
+		log.Printf("[ERROR] Failed to process environment variables: %s", err)
+		os.Exit(1)
+	}
+	initFlags()
+
+	if strings.Contains(env.Topic, ",") {
+		log.Printf("[ERROR] Currently only one topic is suppoerted")
 		os.Exit(1)
 	}
 
@@ -90,17 +103,20 @@ func KafkaReceive(respChan chan ReceivedEventsStats) {
 		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
 	}
 
-	version, err := sarama.ParseKafkaVersion(version)
-	if err != nil {
-		log.Panicf("Error parsing Kafka version: %v", err)
-	}
+	// version, err := sarama.ParseKafkaVersion(version)
+	// if err != nil {
+	// 	log.Panicf("Error parsing Kafka version: %v", err)
+	// }
 
 	/**
 	 * Construct a new Sarama configuration.
 	 * The Kafka cluster version has to be defined before the consumer/producer is initialized.
 	 */
 	config := sarama.NewConfig()
-	config.Version = version
+	//config.Version = version
+	config.Version = sarama.V2_0_0_0
+
+	util.UpdateSaramaConfigFromEnv(env.Net, config)
 
 	switch assignor {
 	// case "sticky":
@@ -113,9 +129,9 @@ func KafkaReceive(respChan chan ReceivedEventsStats) {
 		log.Panicf("Unrecognized consumer group partition assignor: %s", assignor)
 	}
 
-	if oldest {
-		config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	}
+	//if oldest {
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	//}
 
 	/**
 	 * Setup a new Sarama consumer group
@@ -161,11 +177,16 @@ func KafkaReceive(respChan chan ReceivedEventsStats) {
 	case <-sigterm:
 		log.Println("terminating: via signal")
 	}
+	log.Println("canceling")
 	cancel()
+	log.Println("waitng")
 	wg.Wait()
+	log.Println("closing")
 	if err = client.Close(); err != nil {
 		log.Panicf("Error closing client: %v", err)
 	}
+	log.Println("done, doing os.exit(0)")
+	os.Exit(0)
 }
 
 // Consumer represents a Sarama consumer group consumer
@@ -194,13 +215,56 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	// The `ConsumeClaim` itself is called within a goroutine, see:
 	// https://github.com/Shopify/sarama/blob/master/consumer_group.go#L27-L29
 	for message := range claim.Messages() {
-		log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
+		//log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
+		headers := message.Headers
+		event := make(map[string]string)
+		labelHeaders := map[string]bool{
+			//"source":   true,
+			//"runtime":  true,
+			"experimentid": true,
+			"setupid":      true,
+			"workloadid":   true,
+			//"runid":    true,
+			//"phase":    true,
+			"senderid": true,
+		}
+		labels := make(map[string]string)
+		for _, header := range headers {
+			key := strings.TrimPrefix(string(header.Key), "ce_")
+			event[key] = string(header.Value)
+			if labelHeaders[key] {
+				labels[key] = string(header.Value)
+			}
+		}
+		event["data"] = string(message.Value)
+		log.Printf("Event received map %v", event)
+		// jsonMap := make(map[string]interface{})
+		// err := json.Unmarshal(message.Value, &jsonMap)
+		// if err != nil {
+		// 	log.Printf("Error unmarshaling message value to JSON: %v", err)
+		// 	return err
+		// }
+
 		session.MarkMessage(message, "")
 
-		latencies := make([]float64, 1)
+		//latencies := make([]float64, 1)
 		//TODO calculate latency based on received timestamp
-		latencies[0] = 0.01
-		stats := ReceivedEventsStats{1, &latencies}
+		//latencies[0] = 0.01
+		experimentId := labels["experimentid"]
+		setupId := labels["setupid"]
+		workloadId := labels["workloadid"]
+		source := event["source"]
+		eventId := event["id"]
+		timeStr := event["time"]
+		timestamp, err := time.Parse(time.RFC3339Nano, timeStr)
+		if err != nil {
+			log.Printf("Error unrecognized time format: %s %v", timeStr, err)
+			//http.Error(res, err.Error(), 500)
+			continue // skip
+		}
+		latencySeconds := time.Since(timestamp).Seconds()
+		stats := ReceivedEventsStats{experimentId, setupId, workloadId, source, eventId, latencySeconds}
+		//1, &latencies}
 		consumer.respChan <- stats
 	}
 

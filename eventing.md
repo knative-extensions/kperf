@@ -25,12 +25,13 @@ See separate docs about [kpef eventing development](./eventing-dev.mg).
 
 That functionality will be wrapped into `kperf eventing prepare` command in near future.
 
-Currently it needs ti be run from command line to dwpeloy test receiver.
+Currently it needs to be run from command line to deploy test receiver:
 
 ```
 source hack/setenv.sh
-export REPLICAS=1
-cat config/receiver.yaml | envsubst | kubectl apply -f -
+./kperf prepare --namespace=prefix=test --namespace-range=1,10 | kubectl apply -f -
+#./kperf prepare --kafka-source-topic=topic10 | kubectl apply -f -
+#cat config/receiver.yaml | envsubst | kubectl apply -f -
 ```
 
 To start receiver consuming events from Kafka:

@@ -23,12 +23,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"knative.dev/kperf/pkg/command/eventing/util"
 )
 
 type SendEventsPlan struct {
-	senderName      string
+	senderName   string
+	experimentId string
+	setupId      string
+	workloadId   string
+	//phaseId         string
+	//senderId        string
 	eventsPerSecond int
 	durationSeconds float64
 	targetUrl       string
@@ -52,8 +56,11 @@ func doSending(sender EventSender, respChan chan EventsStats) {
 }
 
 type TestConfig struct {
-	targetUrl           string
-	runId               string
+	targetUrl    string
+	experimentId string
+	setupId      string
+	workloadId   string
+	//runId               string
 	concurrent          int
 	start               int
 	durationSeconds     float64
@@ -64,8 +71,11 @@ type TestConfig struct {
 func readConfig() TestConfig {
 	var config TestConfig
 	config.targetUrl = util.GetEnv("TARGET_URL", "http://localhost:8001")
-	uuid := uuid.New()
-	config.runId = util.GetEnv("RUN_ID", uuid.String())
+	//uuid := uuid.New()
+	config.experimentId = util.RequiredGetEnv("EXPERIMENT_ID")
+	config.setupId = util.RequiredGetEnv("SETUP_ID") //.GetEnv("SETUP_ID", "test-"+uuid.String())
+	config.workloadId = util.RequiredGetEnv("WORKLOAD_ID")
+	//config.runId = util.GetEnv("RUN_ID", "test-"+uuid.String())
 	config.concurrent = util.GetEnvInt("CONCURRENT", "1")
 	config.start = util.GetEnvInt("START", "500")
 	config.inc = util.GetEnvInt("INC", "500")
@@ -90,9 +100,12 @@ func senderForWorkloadPlan(plan SendEventsPlan, http *http.Transport) EventSende
 
 func DriveWorkload() {
 	config := readConfig()
+	fmt.Printf("Test driver starting for %s\n", config.targetUrl)
+
 	//util.UtilMe()
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	startTime := time.Now()
+	//runTime := startTime.Format("20060102150405")
 	respChan := make(chan EventsStats)
 	http := &http.Transport{}
 	eventsToSend := config.start
@@ -102,13 +115,21 @@ func DriveWorkload() {
 	eventsCount := 0
 	errorsCount := 0
 	phaseCounter := 0
+	// senderName := config.setupId
+	// if config.setupId != "" {
+	// 	senderName = senderName + "-"
+	// }
+	// senderName = senderName + config.runId + "-" + runTime
 	for {
 		phaseCounter++
 		phaseStartTime := time.Now()
-		phaseName := "phase-" + strconv.Itoa(phaseCounter)
+		phaseId := strconv.Itoa(phaseCounter)
 		for i := 0; i < config.concurrent; i++ {
-			name := "test-sender-" + strconv.Itoa(i+1)
-			plan := SendEventsPlan{name, eventsToSend, durationSeconds, config.targetUrl}
+			senderId := strconv.Itoa(i + 1)
+			//name := senderName + "-" + phaseId + "-" + senderId
+			name := config.experimentId + "-" + config.setupId + "-" + config.workloadId + "-" + senderId
+			//plan := SendEventsPlan{name, runTime, config.setupId, config.runId, phaseId, senderId, eventsToSend, durationSeconds, config.targetUrl}
+			plan := SendEventsPlan{name, config.experimentId, config.setupId, config.workloadId, eventsToSend, durationSeconds, config.targetUrl}
 			//sender := FakeEventSender{plan, 0.001}
 			sender := senderForWorkloadPlan(plan, http)
 			go doSending(sender, respChan)
@@ -131,7 +152,7 @@ func DriveWorkload() {
 		phaseDuration := endTime.Sub(phaseStartTime)
 		phaseTimeSeconds := float64(phaseDuration.Nanoseconds()) / float64(time.Second)
 		phaseEventsPerSecond := float64(phaseEventCount) / phaseTimeSeconds
-		fmt.Printf("Phase %s took %s to send %d events reaching %f [events/second] (erros %d)\n", phaseName, phaseDuration, phaseEventCount, phaseEventsPerSecond, phaseErrorsCount)
+		fmt.Printf("Phase %s took %s to send %d events reaching %f [events/second] (erros %d)\n", phaseId, phaseDuration, phaseEventCount, phaseEventsPerSecond, phaseErrorsCount)
 		eventsToSend += config.inc
 		if endTime.After(targetEndTime) {
 			break

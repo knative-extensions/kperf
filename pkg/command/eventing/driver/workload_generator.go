@@ -14,32 +14,81 @@
 
 package driver
 
-import "github.com/cloudevents/sdk-go/v2/event"
+import (
+	"strconv"
+	"time"
+
+	"github.com/cloudevents/sdk-go/v2/event"
+	"github.com/cloudevents/sdk-go/v2/types"
+)
+
+const eventType = "dev.knative.kperf.eventing.test"
 
 type EventGenerator struct {
-	plan     SendEventsPlan
-	eventSeq int
+	plan            SendEventsPlan
+	eventSeq        int
+	eventsToSend    int
+	eventsToSendStr string
 }
 
-func NewEventGenerator(plan SendEventsPlan) EventGenerator {
+func NewEventGenerator(plan SendEventsPlan) *EventGenerator {
 	eg := EventGenerator{
-		plan:     plan,
-		eventSeq: 0,
+		plan:         plan,
+		eventSeq:     0,
+		eventsToSend: int(float64(plan.eventsPerSecond) * plan.durationSeconds),
 	}
-	return eg
+	eg.eventsToSendStr = strconv.Itoa(eg.eventsToSend)
+	return &eg
 }
 
-func (s EventGenerator) NextCloudEvents() []*event.Event {
-	e := event.Event{}
-	events := make([]*event.Event, 1, 100)
+func (s *EventGenerator) EventRemainingToSend() int {
+	return s.eventsToSend - s.eventSeq
+}
+
+func (s *EventGenerator) NextCloudEvents() []*event.Event {
+	s.eventSeq++
+	if s.eventSeq > s.eventsToSend {
+		return nil
+	}
+	e := event.New("1.0")
+	// {
+	// 	Context: MinEventContextV1()
+	// }
+	eventSeqStr := strconv.Itoa(s.eventSeq)
+	e.SetID(eventSeqStr)
+	e.SetSource(s.plan.senderName)
+	e.SetType(eventType)
+	e.SetTime(time.Now())
+	//e.SetExtension("phase", s.plan.phaseId)
+	//e.SetExtension("runid", s.plan.runId)
+	//e.SetExtension("runtime", s.plan.runTime)
+	//e.SetExtension("senderid", s.plan.senderId)
+	e.SetExtension("experimentid", s.plan.experimentId)
+	e.SetExtension("setupid", s.plan.setupId)
+	e.SetExtension("workloadid", s.plan.workloadId)
+	e.SetExtension("sequence", eventSeqStr)
+	e.SetExtension("sequencetype", "Integer")
+	e.SetExtension("sequencemax", s.eventsToSendStr)
+	//data := []byte("[\"fruit\", \"orange\"]")
+	data := []byte("{}")
+	e.SetData(event.ApplicationJSON, data)
+	events := make([]*event.Event, 1)
 	events[0] = &e
 	return events
 }
 
-func (s EventGenerator) NextCloudEventsAsMaps() []*map[string]string {
-	events := make([]*map[string]string, 1, 100)
-	values := map[string]string{"id": "1234668888888", "source": "323223232332909090", "type": "dev.knative.eventing.test.scaling", "timestamp": "12929299999992222"}
+func (s *EventGenerator) NextCloudEventsAsMaps() []*map[string]string {
 	s.eventSeq++
+	if s.eventSeq > s.eventsToSend {
+		return nil
+	}
+	eventSeqStr := strconv.Itoa(s.eventSeq)
+	timestamp := types.Timestamp{Time: time.Now()}
+	timestampStr := timestamp.String()
+	// "phase": s.plan.phaseId, "runid": s.plan.runId, "runtime": s.plan.runTime, "senderid": s.plan.senderId,
+	values := map[string]string{"specversion": "1.0", "id": eventSeqStr, "source": s.plan.senderName, "type": eventType, "time": timestampStr, "experimentid": s.plan.experimentId, "setupid": s.plan.setupId, "workloadid": s.plan.workloadId, "sequence": eventSeqStr, "sequencetype": "Integer", "sequencemax": s.eventsToSendStr, "data": "{}"}
+	// , "data": "[\"fruit\", \"orange\"]"
+	events := make([]*map[string]string, 1)
 	events[0] = &values
 	return events
 }
