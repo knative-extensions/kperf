@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -75,6 +76,13 @@ func NewAdapter(ctx context.Context) *Adapter {
 		log.Printf("[ERROR] Failed to process envirnoment variables: %s", err)
 		os.Exit(1)
 	}
+
+	decoded, err := base64.StdEncoding.DecodeString(env.TLSCertificate)
+	if err != nil {
+		fmt.Println("decode error:", err)
+		return nil
+	}
+	env.TLSCertificate = string(decoded)
 	// config := &Config{
 	// 	Address: "rediss://localhost:6379",
 	// 	//source:         RedisStreamSourceEventType,
@@ -118,7 +126,7 @@ func (a *Adapter) Start(ctx context.Context) error {
 		if strings.Contains(strings.ToLower(err.Error()), "no such key") || strings.Contains(strings.ToLower(err.Error()), "no longer exists") {
 			// stream does not exist, may have been deleted accidentally
 			//a.logger.Info("Creating stream and consumer group", zap.String("group", groupName))
-			log.Print("reating stream and consumer group", groupName)
+			log.Print("Creating stream and consumer group", groupName)
 			//XGROUP CREATE creates the stream automatically, if it doesn't exist, when MKSTREAM subcommand is specified as last argument
 			_, err := conn.Do("XGROUP", "CREATE", streamName, groupName, "$", "MKSTREAM")
 			if err != nil {
@@ -316,6 +324,7 @@ func (a *Adapter) newPool(address string) *redis.Pool {
 				}
 				c, err = redis.Dial("tcp", opt.Addr,
 					//redis.DialUsername(opt.Username), //username needs to be empty for successful redis connection (v8 go-redis issue)
+					redis.DialUsername(opt.Username),
 					redis.DialPassword(opt.Password),
 					redis.DialTLSConfig(&tls.Config{
 						RootCAs: roots,
