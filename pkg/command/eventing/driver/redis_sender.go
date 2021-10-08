@@ -17,6 +17,7 @@ package driver
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -62,12 +63,18 @@ func NewRedisSender(plan SendEventsPlan) EventSender {
 		log.Printf("[ERROR] Failed to process envirnoment variables: %s", err)
 		os.Exit(1)
 	}
+	decoded, err := base64.StdEncoding.DecodeString(env.TLSCertificate)
+	if err != nil {
+		fmt.Println("decode error:", err)
+		return nil
+	}
 	rs := &RedisEventSender{
 		Plan:           plan,
 		Address:        env.Address,
-		TLSCertificate: env.TLSCertificate,
+		TLSCertificate: string(decoded),
 		Stream:         env.Stream,
 	}
+	log.Printf("TLSCertificate=%s", rs.TLSCertificate)
 	rs.pool = newPool(rs.Address, rs.TLSCertificate)
 	// rs.logger :=logging.FromContext(ctx).Desugar().With(zap.String("stream", config.Stream)),
 	//logger: logger
@@ -207,6 +214,7 @@ func newPool(address string, tlscert string) *redis.Pool {
 				}
 				c, err = redis.Dial("tcp", opt.Addr,
 					//redis.DialUsername(opt.Username), //username needs to be empty for successful redis connection (v8 go-redis issue)
+					redis.DialUsername(opt.Username),
 					redis.DialPassword(opt.Password),
 					redis.DialTLSConfig(&tls.Config{
 						RootCAs: roots,
