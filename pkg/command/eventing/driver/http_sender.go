@@ -88,7 +88,6 @@ func (s HttpEventSender) Send() EventsStats {
 	}
 	// sleep for remaining time to reach events/second
 	endTime := time.Now()
-	//duration := time.Since(start)
 	duration := endTime.Sub(startTime)
 	if endTime.Before(targetEndTime) {
 		sleepDuration := targetEndTime.Sub(endTime)

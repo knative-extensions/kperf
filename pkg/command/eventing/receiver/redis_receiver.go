@@ -59,17 +59,18 @@ type Adapter struct {
 	config *redisEnvConfig
 	//logger *zap.Logger
 	//client cloudevents.Client
-	source string
+	source   string
+	respChan chan ReceivedEventsStats
 }
 
 func RedisReceive(respChan chan ReceivedEventsStats) {
 	ctx, _ := context.WithCancel(context.Background())
-	redisReceiver := NewAdapter(ctx) //, NewEnvConfig(), nil)
+	redisReceiver := NewAdapter(ctx, respChan) //, NewEnvConfig(), nil)
 	_ = redisReceiver.Start(ctx)
 
 }
 
-func NewAdapter(ctx context.Context) *Adapter {
+func NewAdapter(ctx context.Context, respChan chan ReceivedEventsStats) *Adapter {
 	//config := processed.(*Config)
 	var env redisEnvConfig
 	if err := envconfig.Process("", &env); err != nil {
@@ -94,7 +95,8 @@ func NewAdapter(ctx context.Context) *Adapter {
 	//logger, _ := zap.NewProduction()
 
 	return &Adapter{
-		config: &env,
+		config:   &env,
+		respChan: respChan,
 		//logger: logger,
 		//logger: logging.FromContext(ctx).Desugar().With(zap.String("stream", config.Stream)),
 		// client: ceClient,
@@ -279,8 +281,8 @@ func (a *Adapter) processEntry(ctx context.Context, conn redis.Conn, streamName 
 	}
 	fmt.Println("Event Original CE Timestamp: ", eventAttribs["time"]) //time in string
 
-	timestamp := strings.Split(event.ID(), "-")[0]   //timestamp of xadd in first element
-	fmt.Println("Event XAdd Timestamp: ", timestamp) //unix time in string
+	timeUnix := strings.Split(event.ID(), "-")[0]  //timestamp of xadd in first element
+	fmt.Println("Event XAdd timeUnix: ", timeUnix) //unix time in string
 
 	_, err = conn.Do("XACK", streamName, groupName, event.ID())
 	if err != nil {
@@ -292,6 +294,18 @@ func (a *Adapter) processEntry(ctx context.Context, conn redis.Conn, streamName 
 		}
 		return xreadID
 	}
+
+	// hardcoded for now
+	experimentId := "redisExpId" //eventAttribs["experimentid"]
+	setupId := "redisSetupId"    //eventAttribs["setupid"]
+	workloadId := "redisWkId"    //eventAttribs["workloadid"]
+	source := "redisSrcId"       //eventAttribs["source"]
+	eventId := event.ID()
+
+	latencySeconds := 0.0 //time.Since(timestamp).Seconds()
+	stats := ReceivedEventsStats{experimentId, setupId, workloadId, source, eventId, latencySeconds}
+	a.respChan <- stats
+
 	//a.logger.Info("Consumer acknowledged the message", zap.String("consumerName", consumerName))
 	log.Print("Consumer acknowledged the message", consumerName)
 	return xreadID

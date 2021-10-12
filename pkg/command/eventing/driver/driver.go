@@ -27,12 +27,10 @@ import (
 )
 
 type SendEventsPlan struct {
-	senderName   string
-	experimentId string
-	setupId      string
-	workloadId   string
-	//phaseId         string
-	//senderId        string
+	senderName      string
+	experimentId    string
+	setupId         string
+	workloadId      string
 	eventsPerSecond int
 	durationSeconds float64
 	targetUrl       string
@@ -56,11 +54,10 @@ func doSending(sender EventSender, respChan chan EventsStats) {
 }
 
 type TestConfig struct {
-	targetUrl    string
-	experimentId string
-	setupId      string
-	workloadId   string
-	//runId               string
+	targetUrl           string
+	experimentId        string
+	setupId             string
+	workloadId          string
 	concurrent          int
 	start               int
 	durationSeconds     float64
@@ -71,11 +68,9 @@ type TestConfig struct {
 func readConfig() TestConfig {
 	var config TestConfig
 	config.targetUrl = util.GetEnv("TARGET_URL", "http://localhost:8001")
-	//uuid := uuid.New()
 	config.experimentId = util.RequiredGetEnv("EXPERIMENT_ID")
 	config.setupId = util.RequiredGetEnv("SETUP_ID") //.GetEnv("SETUP_ID", "test-"+uuid.String())
 	config.workloadId = util.RequiredGetEnv("WORKLOAD_ID")
-	//config.runId = util.GetEnv("RUN_ID", "test-"+uuid.String())
 	config.concurrent = util.GetEnvInt("CONCURRENT", "1")
 	config.start = util.GetEnvInt("START", "500")
 	config.inc = util.GetEnvInt("INC", "500")

@@ -51,25 +51,17 @@ func (s *EventGenerator) NextCloudEvents() []*event.Event {
 		return nil
 	}
 	e := event.New("1.0")
-	// {
-	// 	Context: MinEventContextV1()
-	// }
 	eventSeqStr := strconv.Itoa(s.eventSeq)
 	e.SetID(eventSeqStr)
 	e.SetSource(s.plan.senderName)
 	e.SetType(eventType)
 	e.SetTime(time.Now())
-	//e.SetExtension("phase", s.plan.phaseId)
-	//e.SetExtension("runid", s.plan.runId)
-	//e.SetExtension("runtime", s.plan.runTime)
-	//e.SetExtension("senderid", s.plan.senderId)
 	e.SetExtension("experimentid", s.plan.experimentId)
 	e.SetExtension("setupid", s.plan.setupId)
 	e.SetExtension("workloadid", s.plan.workloadId)
 	e.SetExtension("sequence", eventSeqStr)
 	e.SetExtension("sequencetype", "Integer")
 	e.SetExtension("sequencemax", s.eventsToSendStr)
-	//data := []byte("[\"fruit\", \"orange\"]")
 	data := []byte("{}")
 	e.SetData(event.ApplicationJSON, data)
 	events := make([]*event.Event, 1)
@@ -85,9 +77,7 @@ func (s *EventGenerator) NextCloudEventsAsMaps() []*map[string]string {
 	eventSeqStr := strconv.Itoa(s.eventSeq)
 	timestamp := types.Timestamp{Time: time.Now()}
 	timestampStr := timestamp.String()
-	// "phase": s.plan.phaseId, "runid": s.plan.runId, "runtime": s.plan.runTime, "senderid": s.plan.senderId,
 	values := map[string]string{"specversion": "1.0", "id": eventSeqStr, "source": s.plan.senderName, "type": eventType, "time": timestampStr, "experimentid": s.plan.experimentId, "setupid": s.plan.setupId, "workloadid": s.plan.workloadId, "sequence": eventSeqStr, "sequencetype": "Integer", "sequencemax": s.eventsToSendStr, "data": "{}"}
-	// , "data": "[\"fruit\", \"orange\"]"
 	events := make([]*map[string]string, 1)
 	events[0] = &values
 	return events
