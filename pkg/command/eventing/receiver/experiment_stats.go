@@ -103,7 +103,7 @@ func (h *ExperimentStats) GetMetrics() string {
 		str = str + h.name + "_bucket{le=\"" + boundaryStr + "\"" + h.commaLabels + "} " + strconv.FormatInt(val, 10) + ".0\n"
 	}
 	if len(h.buckets) > 0 {
-		str = str + h.name + "_bucket{le\"+Inf\"" + h.commaLabels + "} " + strconv.FormatInt(h.count, 10) + ".0\n"
+		str = str + h.name + "_bucket{le=\"+Inf\"" + h.commaLabels + "} " + strconv.FormatInt(h.count, 10) + ".0\n"
 	}
 	labels := ""
 	if len(h.commaLabels) > 0 {
