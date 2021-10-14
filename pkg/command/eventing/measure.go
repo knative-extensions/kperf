@@ -90,14 +90,15 @@ func parseEventsTotal(metrics string, metricLabels string) float64 {
 	return 0
 }
 
-const idleSeconds = 60
+//const idleSeconds = 60
 
 func measure() {
 	t := &http.Transport{}
 	var prev int = -1
 	var noChangeCount int
 	var maxEventsPerSecond int
-	nonstop := util.GetEnv("CONTINOUS", "false") == "true"
+	idleSeconds := util.GetEnvFloat64("KPERF_EVENTING_MEASURE_IDLE_WAIT", "60.0")
+	nonstop := util.GetEnv("CONTINOUS", "false") == "true" || idleSeconds <= 0
 	if nonstop {
 		fmt.Println("CONTINOUS mode enabled")
 	}
@@ -148,12 +149,12 @@ func measure() {
 			fmt.Printf("\n%s events per second %d (total %d so far %d)\n", timeStr, diff, val, eventsMeasured)
 		}
 		gotAllEvent := eventsMeasured >= eventsToReceive
-		if gotAllEvent || noChangeCount > idleSeconds {
+		if gotAllEvent || (float64(noChangeCount) > idleSeconds) {
 			if gotAllEvent || !nonstop {
 				if gotAllEvent {
 					fmt.Printf("\nReceived %d out of expected %d\n", eventsMeasured, eventsToReceive)
 				} else {
-					fmt.Printf("\nNo change for %d seconds, exiting\n", idleSeconds)
+					fmt.Printf("\nNo change for %f seconds, exiting\n", idleSeconds)
 				}
 				measureEndTime := time.Now()
 				measureDuration := measureEndTime.Sub(measureStartTime)
