@@ -53,6 +53,7 @@ type redisEnvConfig struct {
 	Stream         string `envconfig:"REDIS_STREAM" default:"mystream"`
 	Group          string `envconfig:"REDIS_GROUP" default:"mygroup"`
 	//PodName        string
+	LogLevel string `envconfig:"REDIS_LOG_LEVEL" default:"info"`
 }
 
 type Adapter struct {
@@ -61,6 +62,7 @@ type Adapter struct {
 	//client cloudevents.Client
 	source   string
 	respChan chan ReceivedEventsStats
+	verbose  bool
 }
 
 func RedisReceive(respChan chan ReceivedEventsStats) {
@@ -97,6 +99,7 @@ func NewAdapter(ctx context.Context, respChan chan ReceivedEventsStats) *Adapter
 	return &Adapter{
 		config:   &env,
 		respChan: respChan,
+		verbose:  env.LogLevel != "info", //TODO use zap logger
 		//logger: logger,
 		//logger: logging.FromContext(ctx).Desugar().With(zap.String("stream", config.Stream)),
 		// client: ceClient,
@@ -256,12 +259,16 @@ func (a *Adapter) processEntry(ctx context.Context, conn redis.Conn, streamName 
 	}
 
 	//a.logger.Info("Consumer read a message", zap.String("consumerName", consumerName))
-	log.Print("Consumer read a message", consumerName)
+	if a.verbose {
+		log.Print("Consumer read a message", consumerName)
+	}
 
 	// if result := a.client.Send(ctx, *event); !cloudevents.IsACK(result) { //  Event is lost
 	// 	a.logger.Error("Failed to send cloudevent", zap.Any("result", result))
 	// }
-	fmt.Printf("Received event %v", event.Data())
+	if a.verbose {
+		fmt.Printf("Received event %v", event.Data())
+	}
 
 	var fields []interface{} //string array with 2 elements (field and value)
 	if err = json.Unmarshal(event.Data(), &fields); err != nil {
@@ -279,10 +286,14 @@ func (a *Adapter) processEntry(ctx context.Context, conn redis.Conn, streamName 
 		attrib := strings.SplitN(pair, ":", 2)
 		eventAttribs[attrib[0]] = attrib[1]
 	}
-	fmt.Println("Event Original CE Timestamp: ", eventAttribs["time"]) //time in string
+	if a.verbose {
+		fmt.Println("Event Original CE Timestamp: ", eventAttribs["time"]) //time in string
+	}
 
-	timeUnix := strings.Split(event.ID(), "-")[0]  //timestamp of xadd in first element
-	fmt.Println("Event XAdd timeUnix: ", timeUnix) //unix time in string
+	timeUnix := strings.Split(event.ID(), "-")[0] //timestamp of xadd in first element
+	if a.verbose {
+		fmt.Println("Event XAdd timeUnix: ", timeUnix) //unix time in string
+	}
 
 	_, err = conn.Do("XACK", streamName, groupName, event.ID())
 	if err != nil {
@@ -307,7 +318,10 @@ func (a *Adapter) processEntry(ctx context.Context, conn redis.Conn, streamName 
 	a.respChan <- stats
 
 	//a.logger.Info("Consumer acknowledged the message", zap.String("consumerName", consumerName))
-	log.Print("Consumer acknowledged the message", consumerName)
+
+	if a.verbose {
+		log.Print("Consumer acknowledged the message", consumerName)
+	}
 	return xreadID
 }
 
