@@ -27,6 +27,48 @@ import (
 	servingv1fake "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1/fake"
 )
 
+func TestCleanServicesFunc(t *testing.T) {
+	tests := []struct {
+		name      string
+		cleanArgs pkg.CleanArgs
+	}{
+		{
+			name: "should clean services in namespace",
+			cleanArgs: pkg.CleanArgs{
+				Namespace: "test-kperf-1",
+			},
+		},
+		{
+			name: "should clean services in namespace range",
+			cleanArgs: pkg.CleanArgs{
+				NamespacePrefix: "test-kperf",
+				NamespaceRange:  "1,2",
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ns := &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-kperf-1",
+				},
+			}
+			client := k8sfake.NewSimpleClientset(ns)
+			fakeServing := &servingv1fake.FakeServingV1{Fake: &client.Fake}
+			servingClient := func() (servingv1client.ServingV1Interface, error) {
+				return fakeServing, nil
+			}
+
+			p := &pkg.PerfParams{
+				ClientSet:        client,
+				NewServingClient: servingClient,
+			}
+			err := CleanServices(p, tc.cleanArgs)
+			assert.NilError(t, err)
+		})
+	}
+}
+
 func TestNewServiceCleanCommand(t *testing.T) {
 	t.Run("incompleted or wrong args for service clean", func(t *testing.T) {
 		client := k8sfake.NewSimpleClientset()

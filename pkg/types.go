@@ -14,12 +14,9 @@
 package pkg
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+	"time"
 
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 	autoscalingv1alpha1 "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
@@ -35,109 +32,107 @@ type PerfParams struct {
 	NewNetworkingClient  func() (networkingv1alpha1.NetworkingV1alpha1Interface, error)
 }
 
-func (params *PerfParams) Initialize() error {
-	if params.ClientSet == nil {
-		restConfig, err := params.RestConfig()
-		if err != nil {
-			return err
-		}
+type GenerateArgs struct {
+	Number      int
+	Interval    int
+	Batch       int
+	Concurrency int
+	MinScale    int
+	MaxScale    int
 
-		params.ClientSet, err = kubernetes.NewForConfig(restConfig)
-		if err != nil {
-			fmt.Println("failed to create client:", err)
-			os.Exit(1)
-		}
-	}
-	if params.NewAutoscalingClient == nil {
-		params.NewAutoscalingClient = params.newAutoscalingClient
-	}
-	if params.NewServingClient == nil {
-		params.NewServingClient = params.newServingClient
-	}
-	if params.NewNetworkingClient == nil {
-		params.NewNetworkingClient = params.newNetworkingClient
-	}
-	return nil
+	NamespacePrefix string
+	NamespaceRange  string
+	Namespace       string
+	SvcPrefix       string
+
+	CheckReady bool
+	Timeout    time.Duration
 }
 
-func (params *PerfParams) newAutoscalingClient() (autoscalingv1alpha1.AutoscalingV1alpha1Interface, error) {
-	restConfig, err := params.RestConfig()
-	if err != nil {
-		return nil, err
-	}
-	client, err := autoscalingv1alpha1.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
+type CleanArgs struct {
+	NamespacePrefix string
+	NamespaceRange  string
+	Namespace       string
+	SvcPrefix       string
+	Concurrency     int
 }
 
-func (params *PerfParams) newServingClient() (servingv1client.ServingV1Interface, error) {
-	restConfig, err := params.RestConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := servingv1client.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
+type MeasureArgs struct {
+	SvcRange        string
+	Namespace       string
+	SvcPrefix       string
+	NamespaceRange  string
+	NamespacePrefix string
+	Concurrency     int
+	Verbose         bool
+	Output          string
 }
 
-func (params *PerfParams) newNetworkingClient() (networkingv1alpha1.NetworkingV1alpha1Interface, error) {
-	restConfig, err := params.RestConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := networkingv1alpha1.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
+type MeasureResult struct {
+	Sums         Sums `json:"-"`
+	Result       Result
+	Service      ServiceCount
+	KnativeInfo  KnativeInfo
+	SvcReadyTime []float64 `json:"-"`
 }
 
-// RestConfig returns REST config, which can be to use to create specific clientset
-func (params *PerfParams) RestConfig() (*rest.Config, error) {
-	var err error
-
-	if params.ClientConfig == nil {
-		params.ClientConfig, err = params.GetClientConfig()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	config, err := params.ClientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return config, nil
+type Sums struct {
+	SvcConfigurationsReadySum         float64
+	SvcRoutesReadySum                 float64
+	SvcReadySum                       float64
+	RevisionReadySum                  float64
+	KpaActiveSum                      float64
+	SksReadySum                       float64
+	SksActivatorEndpointsPopulatedSum float64
+	SksEndpointsPopulatedSum          float64
+	IngressReadySum                   float64
+	IngressNetworkConfiguredSum       float64
+	IngressLoadBalancerReadySum       float64
+	PodScheduledSum                   float64
+	ContainersReadySum                float64
+	QueueProxyStartedSum              float64
+	UserContrainerStartedSum          float64
+	DeploymentCreatedSum              float64
 }
 
-// GetClientConfig gets ClientConfig from KubeCfgPath
-func (params *PerfParams) GetClientConfig() (clientcmd.ClientConfig, error) {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	if len(params.KubeCfgPath) == 0 {
-		return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{}), nil
-	}
+type ServiceCount struct {
+	ReadyCount    int `json:"Ready"`
+	NotReadyCount int `json:"NotReady"`
+	NotFoundCount int `json:"NotFound"`
+	FailCount     int `json:"Fail"`
+}
 
-	_, err := os.Stat(params.KubeCfgPath)
-	if err == nil {
-		loadingRules.ExplicitPath = params.KubeCfgPath
-		return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{}), nil
-	}
+type KnativeInfo struct {
+	ServingVersion    string
+	EventingVersion   string
+	IngressController string
+	IngressVersion    string
+}
 
-	if !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	paths := filepath.SplitList(params.KubeCfgPath)
-	if len(paths) > 1 {
-		return nil, fmt.Errorf("Can not find config file. '%s' looks like a path. "+
-			"Please use the env var KUBECONFIG if you want to check for multiple configuration files", params.KubeCfgPath)
-	}
-	return nil, fmt.Errorf("Config file '%s' can not be found", params.KubeCfgPath)
+type Result struct {
+	AverageSvcConfigurationReadySum          float64 `json:"AverageConfigurationDuration"`
+	AverageRevisionReadySum                  float64 `json:"AverageRevisionDuration"`
+	AverageDeploymentCreatedSum              float64 `json:"AverageDeploymentDuration"`
+	AveragePodScheduledSum                   float64 `json:"AveragePodScheduleDuration"`
+	AverageContainersReadySum                float64 `json:"AveragePodContainersReadyDuration"`
+	AverageQueueProxyStartedSum              float64 `json:"AveragePodQueueProxyStartedDuration"`
+	AverageUserContrainerStartedSum          float64 `json:"AveragePodUserContainerStartedDuration"`
+	AverageKpaActiveSum                      float64 `json:"AverageAutoscalerActiveDuration"`
+	AverageSksReadySum                       float64 `json:"AverageServiceReadyDuration"`
+	AverageSksActivatorEndpointsPopulatedSum float64 `json:"AverageServiceActivatorEndpointsPopulatedDuration"`
+	AverageSksEndpointsPopulatedSum          float64 `json:"AverageServiceEndpointsPopulatedDuration"`
+	AverageSvcRoutesReadySum                 float64 `json:"AverageServiceRouteReadyDuration"`
+	AverageIngressReadySum                   float64 `json:"AverageIngressReadyDuration"`
+	AverageIngressNetworkConfiguredSum       float64 `json:"AverageIngressNetworkConfiguredDuration"`
+	AverageIngressLoadBalancerReadySum       float64 `json:"AverageIngressLoadBalancerReadyDuration"`
+	OverallTotal                             float64 `json:"Total"`
+	OverallAverage                           float64 `json:"Average"`
+	OverallMedian                            float64 `json:"Median"`
+	OverallMin                               float64 `json:"Min"`
+	OverallMax                               float64 `json:"Max"`
+	P50                                      float64 `json:"Percentile50"`
+	P90                                      float64 `json:"Percentile90"`
+	P95                                      float64 `json:"Percentile95"`
+	P98                                      float64 `json:"Percentile98"`
+	P99                                      float64 `json:"Percentile99"`
 }
