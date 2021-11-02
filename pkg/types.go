@@ -68,12 +68,39 @@ type MeasureArgs struct {
 	Output          string
 }
 
+type ScaleArgs struct {
+	SvcRange         string
+	Namespace        string
+	SvcPrefix        string
+	NamespaceRange   string
+	NamespacePrefix  string
+	Concurrency      int
+	MaxRetries       int
+	RequestInterval  time.Duration
+	RequestTimeout   time.Duration
+	ResolvableDomain bool
+	Verbose          bool
+	Output           string
+}
+
 type MeasureResult struct {
 	Sums         Sums `json:"-"`
 	Result       Result
 	Service      ServiceCount
 	KnativeInfo  KnativeInfo
 	SvcReadyTime []float64 `json:"-"`
+}
+
+type ScaleResult struct {
+	KnativeInfo KnativeInfo
+	Measurment  []ScaleFromZeroResult
+}
+
+type ScaleFromZeroResult struct {
+	ServiceName       string
+	ServiceNamespace  string
+	ServiceLatency    float64 `json:"serviceLatency"`
+	DeploymentLatency float64 `json:"deploymentLatency"`
 }
 
 type Sums struct {

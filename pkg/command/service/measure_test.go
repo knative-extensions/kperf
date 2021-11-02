@@ -252,7 +252,7 @@ func TestGetKnativeVersion(t *testing.T) {
 		p := &pkg.PerfParams{
 			ClientSet: client,
 		}
-		version := getKnativeVersion(p)
+		version := GetKnativeVersion(p)
 		assert.Equal(t, "0.20.0", version["serving"])
 		assert.Equal(t, "0.20.0", version["eventing"])
 	})
@@ -268,7 +268,7 @@ func TestGetKnativeVersion(t *testing.T) {
 			ClientSet:        client,
 			NewServingClient: servingClient,
 		}
-		version := getKnativeVersion(p)
+		version := GetKnativeVersion(p)
 		assert.Equal(t, "Unknown", version["serving"])
 		assert.Equal(t, "Unknown", version["eventing"])
 	})
@@ -310,7 +310,7 @@ func TestGetIngressController(t *testing.T) {
 		}
 		p.ClientSet.CoreV1().ConfigMaps("istio-system").Create(context.TODO(), configMapIstio, metav1.CreateOptions{})
 
-		ingressController := getIngressController(p)
+		ingressController := GetIngressController(p)
 		assert.Equal(t, "Istio", ingressController["ingressController"])
 		assert.Equal(t, "1.7.3", ingressController["version"])
 	})
@@ -334,7 +334,7 @@ func TestGetIngressController(t *testing.T) {
 		}
 		p.ClientSet.CoreV1().ConfigMaps("knative-serving").Create(context.TODO(), configMapKnative, metav1.CreateOptions{})
 
-		ingressController := getIngressController(p)
+		ingressController := GetIngressController(p)
 		assert.Equal(t, "Istio", ingressController["ingressController"])
 		assert.Equal(t, "Unknown", ingressController["version"])
 	})
@@ -357,7 +357,7 @@ func TestGetIngressController(t *testing.T) {
 		}
 		p.ClientSet.CoreV1().ConfigMaps("knative-serving").Create(context.TODO(), configMapKnative, metav1.CreateOptions{})
 
-		ingressController := getIngressController(p)
+		ingressController := GetIngressController(p)
 		assert.Equal(t, "Unknown", ingressController["ingressController"])
 		assert.Equal(t, "Unknown", ingressController["version"])
 	})
