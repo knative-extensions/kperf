@@ -44,3 +44,7 @@ tags
 
 # Operating system temporary files
 .DS_Store
+
+# tools for linting scripts
+hack/tools/bin
+.wokeignore
