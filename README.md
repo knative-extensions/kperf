@@ -7,8 +7,8 @@
 A Knative Load Test Tool
 
 **Please NOTE this project is under rapid development**.
-Kperf is designed for Knative Load test. It helps to generate workload like Knative services and 
-gives measurement result about underneath resource create time duration based on server side timestamps, 
+Kperf is designed for Knative Load test. It helps to generate workload like Knative services and
+gives measurement result about underneath resource create time duration based on server side timestamps,
 and give statics and raw measurement result, to help Knative developers or operators to figure out Knative platform
 stability, scalability and performance bottleneck.
 
@@ -31,10 +31,10 @@ Note: [go-bindata](https://github.com/go-bindata/go-bindata) is required in the 
 ## Knative Serving load test
 
 Kperf can help to generate Knative Service Deployment Load in your Knative platform. We assume you have created a
-Kubernetes cluster and deployed [Knative Serving](https://knative.dev/docs/install/). 
+Kubernetes cluster and deployed [Knative Serving](https://knative.dev/docs/install/).
 
 ### Prepare namespaces
-Please note that by default kperf assumes you have prepared K8s namespace(s) to create Knative Service. 
+Please note that by default kperf assumes you have prepared K8s namespace(s) to create Knative Service.
 If namespace doesn't exist, create it with kubectl as below
 
 ```shell script
@@ -166,7 +166,7 @@ Raw Timestamp saved in CSV file /tmp/20210117104747_raw_ksvc_creation_time.csv
 Measurement saved in CSV file /tmp/20210117104747_ksvc_creation_time.csv
 Visualized measurement saved in HTML file /tmp/20210117104747_ksvc_creation_time.html
 
-$ cat /tmp/20210117104747_ksvc_creation_time.csv                                        
+$ cat /tmp/20210117104747_ksvc_creation_time.csv
 svc_name,svc_namespace,configuration_ready,revision_ready,deployment_created,pod_scheduled,containers_ready,queue-proxy_started,user-container_started,route_ready,kpa_active,sks_ready,sks_activator_endpoints_populated,sks_endpoints_populated,ingress_ready,ingress_config_ready,ingress_lb_ready,overall_ready
 ktest-0,ktest-1,52,52,14,0,16,11,9,54,37,17,0,17,2,0,2,54
 ktest-1,ktest-1,25,25,12,0,13,8,5,32,13,12,1,12,7,0,7,32
