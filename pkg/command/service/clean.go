@@ -16,9 +16,7 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,68 +55,16 @@ kperf service clean --namespace-prefix testns / --namespace nsname
 
 // CleanServices used to clean Knative Service workload
 func CleanServices(params *pkg.PerfParams, inputs pkg.CleanArgs) error {
-	var namespaceRangeMap map[string]bool = map[string]bool{}
-	if inputs.NamespacePrefix != "" {
-		r := strings.Split(inputs.NamespaceRange, ",")
-		if len(r) != 2 {
-			return fmt.Errorf("expected range like 1,500, given %s\n", inputs.NamespaceRange)
-		}
-		start, err := strconv.Atoi(r[0])
-		if err != nil {
-			return err
-		}
-		end, err := strconv.Atoi(r[1])
-		if err != nil {
-			return err
-		}
-		if start >= 0 && end >= 0 && start <= end {
-			for i := start; i <= end; i++ {
-				namespaceRangeMap[fmt.Sprintf("%s-%d", inputs.NamespacePrefix, i)] = true
-			}
-		} else {
-			return fmt.Errorf("failed to parse namespace range %s\n", inputs.NamespaceRange)
-		}
+	nsNameList, err := GetNamespaces(context.Background(), params, inputs.Namespace, inputs.NamespaceRange, inputs.NamespacePrefix)
+	if err != nil {
+		return err
 	}
 
 	ksvcClient, err := params.NewServingClient()
 	if err != nil {
 		return err
 	}
-	nsNameList := []string{}
-	if inputs.Namespace != "" {
-		nss, err := params.ClientSet.CoreV1().Namespaces().Get(context.TODO(), inputs.Namespace, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		nsNameList = append(nsNameList, nss.Name)
-	} else if inputs.NamespacePrefix != "" {
-		nsList, err := params.ClientSet.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return err
-		}
-		if len(nsList.Items) == 0 {
-			return fmt.Errorf("no namespace found with prefix %s", inputs.NamespacePrefix)
-		}
-		if len(namespaceRangeMap) >= 0 {
-			for i := 0; i < len(nsList.Items); i++ {
-				if _, exists := namespaceRangeMap[nsList.Items[i].Name]; exists {
-					nsNameList = append(nsNameList, nsList.Items[i].Name)
-				}
-			}
-		} else {
-			for i := 0; i < len(nsList.Items); i++ {
-				if strings.HasPrefix(nsList.Items[i].Name, inputs.NamespacePrefix) {
-					nsNameList = append(nsNameList, nsList.Items[i].Name)
-				}
-			}
-		}
 
-		if len(nsNameList) == 0 {
-			return fmt.Errorf("no namespace found with prefix %s", inputs.NamespacePrefix)
-		}
-	} else {
-		return errors.New("both namespace and namespace-prefix are empty")
-	}
 	matchedNsNameList := [][2]string{}
 	cleanKsvc := func(namespace, name string) {
 		fmt.Printf("Delete ksvc %s in namespace %s\n", name, namespace)

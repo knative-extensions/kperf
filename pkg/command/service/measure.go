@@ -531,8 +531,8 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 		"ingress_lb_ready"}}, rawRows...)
 	total := measureFinalResult.Service.ReadyCount + measureFinalResult.Service.NotReadyCount + measureFinalResult.Service.NotFoundCount + measureFinalResult.Service.FailCount
 
-	knativeVersion := getKnativeVersion(params)
-	ingressInfo := getIngressController(params)
+	knativeVersion := GetKnativeVersion(params)
+	ingressInfo := GetIngressController(params)
 	measureFinalResult.KnativeInfo.ServingVersion = knativeVersion["serving"]
 	measureFinalResult.KnativeInfo.EventingVersion = knativeVersion["eventing"]
 	measureFinalResult.KnativeInfo.IngressController = ingressInfo["ingressController"]
@@ -746,61 +746,4 @@ func getContainerStatus(status []corev1.ContainerStatus, name string) (*corev1.C
 		}
 	}
 	return nil, false
-}
-
-// Get Knative Serving and Eventing version
-// Returns a map like {"eventing":"0.20.0", "serving":"0.20.0"}
-func getKnativeVersion(p *pkg.PerfParams) map[string]string {
-	knativeVersion := make(map[string]string)
-	knativeServingNs, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), "knative-serving", metav1.GetOptions{})
-	if err != nil {
-		fmt.Printf("failed to get Knative Serving version: %s\n", err)
-		knativeVersion["serving"] = "Unknown"
-	} else {
-		servingVersion := knativeServingNs.Labels["serving.knative.dev/release"]
-		servingVersion = strings.Trim(servingVersion, "v")
-		knativeVersion["serving"] = servingVersion
-	}
-
-	knativeEventingNs, err := p.ClientSet.CoreV1().Namespaces().Get(context.TODO(), "knative-eventing", metav1.GetOptions{})
-	if err != nil {
-		fmt.Printf("failed to get Knative Eventing version: %s\n", err)
-		knativeVersion["eventing"] = "Unknown"
-	} else {
-		eventingVersion := knativeEventingNs.Labels["eventing.knative.dev/release"]
-		eventingVersion = strings.Trim(eventingVersion, "v")
-		knativeVersion["eventing"] = eventingVersion
-	}
-	return knativeVersion
-}
-
-// Get Knative ingress controller solution and version
-// Returns a map like {"ingressController":"Istio", "version":"1.7.3"}
-// For now, kperf only support Istio.
-// 1) If it is using Istio, get version from istio deployment labels in istio-system.
-// 2) If it is using other options, put version as "Unknown".
-func getIngressController(p *pkg.PerfParams) map[string]string {
-	ingressController := make(map[string]string)
-	knativeServingConfig, err := p.ClientSet.CoreV1().ConfigMaps("knative-serving").Get(context.TODO(), "config-network", metav1.GetOptions{})
-	if err != nil {
-		fmt.Printf("failed to get Knative ingress controller info: %s\n", err)
-		ingressController["ingressController"] = "Unknown"
-		ingressController["version"] = "Unknown"
-		return ingressController
-	}
-	ingressClass := knativeServingConfig.Data["ingress.class"]
-	if strings.Contains(ingressClass, "istio") {
-		ingressController["ingressController"] = "Istio"
-		istioVersion, err := p.ClientSet.CoreV1().ConfigMaps("istio-system").Get(context.TODO(), "istio", metav1.GetOptions{})
-		if err != nil {
-			fmt.Printf("failed to get Istio version: %s\n", err)
-			ingressController["version"] = "Unknown"
-			return ingressController
-		}
-		ingressController["version"] = istioVersion.Labels["operator.istio.io/version"]
-		return ingressController
-	}
-	ingressController["ingressController"] = "Unknown"
-	ingressController["version"] = "Unknown"
-	return ingressController
 }

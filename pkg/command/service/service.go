@@ -31,6 +31,7 @@ kperf service measure --range 1,10, --name perf - to measure 10 Knative service 
 	serviceCmd.AddCommand(NewServiceMeasureCommand(p))
 	serviceCmd.AddCommand(NewServiceGenerateCommand(p))
 	serviceCmd.AddCommand(NewServiceCleanCommand(p))
+	serviceCmd.AddCommand(NewServiceScaleCommand(p))
 
 	serviceCmd.InitDefaultHelpCmd()
 	return serviceCmd

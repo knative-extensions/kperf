@@ -228,3 +228,27 @@ Detailed description about the usage of the kperf dashboard:
 9. Toolbox **Data View** : display raw data in current chart and update chart after being edited.
 
 10. Toolbox **Save as Image** : save current chart view as an image.
+
+### Scale from zero and Measure Knative Service latency
+
+- Scales a service from zero and measure the latency for the service to come up and the deployment to change
+
+**Example, scale up services that already scaled down to zero in namespace `ktest`
+
+```shell script
+$ kperf service scale  --namespace ktest --svc-prefix ktest --range 0,9  --verbose --output /tmp
+result of scale for service ktest-3 is 11.153888, 2.255348
+result of scale for service ktest-2 is 11.223628, 2.197076
+result of scale for service ktest-8 is 11.183334, 2.228188
+result of scale for service ktest-5 is 12.190056, 2.425972
+result of scale for service ktest-0 is 12.443247, 2.365808
+result of scale for service ktest-9 is 13.226459, 0.274911
+result of scale for service ktest-4 is 13.218240, 2.289996
+result of scale for service ktest-7 is 13.956690, 2.333238
+result of scale for service ktest-6 is 14.786275, 2.232580
+result of scale for service ktest-1 is 15.294111, 0.295408
+failed to get Knative Eventing version: namespaces "knative-eventing" not found
+Measurement saved in CSV file /tmp/20211108115231_ksvc_creation_time.csv
+Measurement saved in JSON file /tmp/20211108115231_ksvc_creation_time.json
+Visualized measurement saved in HTML file /tmp/20211108115231_ksvc_creation_time.html
+```
