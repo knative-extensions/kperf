@@ -483,7 +483,7 @@ k8s.io/kube-openapi/pkg/util/proto
 k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20211108170701-96aac1c30be3
+# knative.dev/hack v0.0.0-20211112192837-128cf0150a69
 ## explicit
 knative.dev/hack
 # knative.dev/networking v0.0.0-20211111131538-526348e63718
@@ -507,7 +507,7 @@ knative.dev/pkg/network
 knative.dev/pkg/profiling
 knative.dev/pkg/ptr
 knative.dev/pkg/tracker
-# knative.dev/serving v0.27.1-0.20211111204138-b84916c9bb69
+# knative.dev/serving v0.27.1-0.20211112193036-eb83774a11af
 ## explicit
 knative.dev/serving/pkg/apis/autoscaling
 knative.dev/serving/pkg/apis/autoscaling/v1alpha1
