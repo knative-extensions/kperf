@@ -164,25 +164,27 @@ func scaleAndMeasure(params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []
 	count := len(objs)
 
 	var wg sync.WaitGroup
+	var m sync.Mutex
 	wg.Add(count)
 	for i := 0; i < count; i++ {
-		ndx := i
-		go func() {
+		go func(ndx int, m *sync.Mutex) {
 			defer wg.Done()
 			sdur, ddur, err := runScaleFromZero(params, inputs, objs[ndx].Namespace, objs[ndx].Service)
 			if err == nil {
 				//measure
 				fmt.Printf("result of scale for service %s is %f, %f \n", objs[ndx].Service.Name, sdur.Seconds(), ddur.Seconds())
+				m.Lock()
 				result.Measurment = append(result.Measurment, pkg.ScaleFromZeroResult{
 					ServiceName:       objs[ndx].Service.Name,
 					ServiceNamespace:  objs[ndx].Service.Namespace,
 					ServiceLatency:    sdur.Seconds(),
 					DeploymentLatency: ddur.Seconds(),
 				})
+				m.Unlock()
 			} else {
 				fmt.Printf("result of scale is error: %s", err)
 			}
-		}()
+		}(i, &m)
 	}
 	wg.Wait()
 
