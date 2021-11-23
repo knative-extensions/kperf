@@ -46,6 +46,10 @@ import (
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 )
 
+const (
+	OutputFilename = "ksvc_scaling_time"
+)
+
 type ServicesToScale struct {
 	Namespace string
 	Service   *servingv1.Service
@@ -126,14 +130,14 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 		fmt.Printf("failed to check measure output location: %s\n", err)
 	}
 
-	csvPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.csv"))
+	csvPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.csv", current.Format(DateFormatString), OutputFilename))
 	err = utils.GenerateCSVFile(csvPath, rows)
 	if err != nil {
 		fmt.Printf("failed to generate CSV file and skip %s\n", err)
 	}
 	fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
 
-	jsonPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.json"))
+	jsonPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.json", current.Format(DateFormatString), OutputFilename))
 	jsonData, err := json.Marshal(scaleFromZeroResult)
 	if err != nil {
 		fmt.Printf("failed to generate json data and skip %s\n", err)
@@ -144,7 +148,7 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 	}
 	fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
 
-	htmlPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.html"))
+	htmlPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.html", current.Format(DateFormatString), OutputFilename))
 	err = utils.GenerateHTMLFile(csvPath, htmlPath)
 	if err != nil {
 		fmt.Printf("failed to generate HTML file and skip %s\n", err)
