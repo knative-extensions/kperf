@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
+	"knative.dev/kperf/internal"
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/testutil"
 	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
@@ -89,10 +90,12 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:            client,
-			NewAutoscalingClient: autoscalingClient,
-			NewServingClient:     servingClient,
-			NewNetworkingClient:  networkingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				AutoscalingClient: autoscalingClient,
+				ServingClient:     servingClient,
+				NetworkingClient:  networkingClient,
+			},
 		}
 
 		cmd := NewServiceMeasureCommand(p)
@@ -123,10 +126,12 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:            client,
-			NewAutoscalingClient: autoscalingClient,
-			NewServingClient:     servingClient,
-			NewNetworkingClient:  networkingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				AutoscalingClient: autoscalingClient,
+				ServingClient:     servingClient,
+				NetworkingClient:  networkingClient,
+			},
 		}
 
 		cmd := NewServiceMeasureCommand(p)
@@ -158,10 +163,12 @@ func TestNewServiceMeasureCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:            client,
-			NewAutoscalingClient: autoscalingClient,
-			NewServingClient:     servingClient,
-			NewNetworkingClient:  networkingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				AutoscalingClient: autoscalingClient,
+				ServingClient:     servingClient,
+				NetworkingClient:  networkingClient,
+			},
 		}
 
 		cmd := NewServiceMeasureCommand(p)
@@ -265,8 +272,10 @@ func TestGetKnativeVersion(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 		version := GetKnativeVersion(p)
 		assert.Equal(t, "Unknown", version["serving"])

@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 	clienttesting "k8s.io/client-go/testing"
+	"knative.dev/kperf/internal"
 	"knative.dev/kperf/pkg"
 	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 	fakenetworkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake"
@@ -58,10 +59,12 @@ func TestScaleServces(t *testing.T) {
 	}
 
 	p := &pkg.PerfParams{
-		ClientSet:            client,
-		NewAutoscalingClient: autoscalingClient,
-		NewServingClient:     servingClient,
-		NewNetworkingClient:  networkingClient,
+		ClientSet: client,
+		KnClients: internal.PerfParamsClients{
+			AutoscalingClient: autoscalingClient,
+			ServingClient:     servingClient,
+			NetworkingClient:  networkingClient,
+		},
 	}
 
 	//"--svc-prefix", "svc", "--namespace", "ns1", "--range", "1,1")
@@ -71,9 +74,9 @@ func TestScaleServces(t *testing.T) {
 		SvcRange:  "1,1",
 	}
 
-	getFakeServices := func(context.Context, servingv1client.ServingV1Interface, []string, string) []ServicesToScale {
-		objs := []ServicesToScale{}
-		svc := ServicesToScale{
+	getFakeServices := func(servingv1client.ServingV1Interface, []string, string) []internal.ServicesToScale {
+		objs := []internal.ServicesToScale{}
+		svc := internal.ServicesToScale{
 			Service: &servingv1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ksvc-1",

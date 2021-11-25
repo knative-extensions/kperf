@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"knative.dev/kperf/internal"
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/testutil"
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
@@ -37,8 +38,10 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 		cmd := NewServiceGenerateCommand(p)
 
@@ -89,15 +92,17 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 
 		cmd := NewServiceGenerateCommand(p)
 		_, err := testutil.ExecuteCommand(cmd, "-n", "1", "-b", "10", "-i", "10", "--min-scale", "1", "--max-scale", "2", "--namespace", "test-kperf-1")
 		assert.NilError(t, err)
 
-		ksvcClient, _ := p.NewServingClient()
+		ksvcClient, _ := p.KnClients.ServingClient()
 		svc, _ := ksvcClient.Services("test-kperf-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
 		assert.Equal(t, "ksvc-0", svc.Name)
 		targetAnnotations := make(map[string]string)
@@ -125,15 +130,17 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 
 		cmd := NewServiceGenerateCommand(p)
 		_, err := testutil.ExecuteCommand(cmd, "-n", "2", "-b", "10", "-i", "10", "--min-scale", "1", "--max-scale", "2", "--namespace-prefix", "test-kperf-prefix", "--namespace-range", "1,2")
 		assert.NilError(t, err)
 
-		ksvcClient, _ := p.NewServingClient()
+		ksvcClient, _ := p.KnClients.ServingClient()
 		svc, _ := ksvcClient.Services("test-kperf-prefix-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
 		assert.Equal(t, "ksvc-0", svc.Name)
 		targetAnnotations := make(map[string]string)
@@ -164,8 +171,10 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 
 		cmd := NewServiceGenerateCommand(p)

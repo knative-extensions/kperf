@@ -25,7 +25,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
@@ -41,22 +40,14 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"knative.dev/kperf/internal"
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/command/utils"
-
-	"knative.dev/serving/pkg/apis/serving"
-	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
-	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 )
 
 const (
 	OutputFilename = "ksvc_scaling_time"
 )
-
-type ServicesToScale struct {
-	Namespace string
-	Service   *servingv1.Service
-}
 
 type Response struct {
 	Status     string
@@ -109,7 +100,7 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 		return err
 	}
 
-	scaleFromZeroResult, err := scaleAndMeasure(ctx, params, inputs, nsNameList, getServices)
+	scaleFromZeroResult, err := scaleAndMeasure(ctx, params, inputs, nsNameList, internal.GetListServicesFunc())
 	if err != nil {
 		return err
 	}
@@ -162,13 +153,14 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 	return nil
 }
 
-func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []string, servicesListFunc func(context.Context, servingv1client.ServingV1Interface, []string, string) []ServicesToScale) (pkg.ScaleResult, error) {
+func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []string, servicesListFunc internal.GetServicesFunc) (pkg.ScaleResult, error) {
 	result := pkg.ScaleResult{}
-	ksvcClient, err := params.NewServingClient()
+	ksvcClient, err := params.KnClients.ServingClient()
 	if err != nil {
 		return result, err
 	}
-	objs := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.SvcPrefix)
+
+	objs := servicesListFunc(ksvcClient, nsNameList, inputs.SvcPrefix)
 	count := len(objs)
 
 	var wg sync.WaitGroup
@@ -177,14 +169,17 @@ func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sca
 	for i := 0; i < count; i++ {
 		go func(ndx int, m *sync.Mutex) {
 			defer wg.Done()
-			sdur, ddur, err := runScaleFromZero(ctx, params, inputs, objs[ndx].Namespace, objs[ndx].Service)
+			url := objs[ndx].Service.Status.RouteStatusFields.URL.URL()
+			name := objs[ndx].Service.Name
+			namespace := objs[ndx].Namespace
+			sdur, ddur, err := runScaleFromZero(ctx, params, inputs, namespace, url.String(), name)
 			if err == nil {
 				//measure
-				fmt.Printf("result of scale for service %s is %f, %f \n", objs[ndx].Service.Name, sdur.Seconds(), ddur.Seconds())
+				fmt.Printf("result of scale for service %s is %f, %f \n", name, sdur.Seconds(), ddur.Seconds())
 				m.Lock()
 				result.Measurment = append(result.Measurment, pkg.ScaleFromZeroResult{
-					ServiceName:       objs[ndx].Service.Name,
-					ServiceNamespace:  objs[ndx].Service.Namespace,
+					ServiceName:       name,
+					ServiceNamespace:  namespace,
 					ServiceLatency:    sdur.Seconds(),
 					DeploymentLatency: ddur.Seconds(),
 				})
@@ -199,26 +194,10 @@ func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sca
 	return result, nil
 }
 
-func getServices(ctx context.Context, servingClient servingv1client.ServingV1Interface, nsNameList []string, svcPrefix string) []ServicesToScale {
-	objs := []ServicesToScale{}
-	for _, ns := range nsNameList {
-		svcList, err := servingClient.Services(ns).List(ctx, metav1.ListOptions{})
-		if err == nil {
-			for _, s := range svcList.Items {
-				svc := s
-				if strings.HasPrefix(s.Name, svcPrefix) {
-					objs = append(objs, ServicesToScale{Namespace: ns, Service: &svc})
-				}
-			}
-		}
-	}
-	return objs
-}
-
-func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, namespace string, svc *servingv1.Service) (
+func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, namespace string, svcURL, svcName string) (
 	time.Duration, time.Duration, error) {
 	selector := labels.SelectorFromSet(labels.Set{
-		serving.ServiceLabelKey: svc.Name,
+		"serving.knative.dev/service": svcName,
 	})
 
 	watcher, err := params.ClientSet.AppsV1().Deployments(namespace).Watch(
@@ -234,18 +213,27 @@ func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sc
 	sdch := make(chan struct{})
 	errch := make(chan error)
 
-	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, svc)
-	if err != nil {
-		return 0, 0, fmt.Errorf("failed to get the cluster endpoint: %w", err)
+	var endpoint string
+	if inputs.ResolvableDomain {
+		endpoint = svcURL
+	} else {
+		endpoint, err = getIngressEndpoint(ctx, params)
+		if err != nil {
+			return 0, 0, fmt.Errorf("failed to get the cluster endpoint: %w", err)
+		}
 	}
 
 	client := http.Client{}
 	req, _ := http.NewRequest("GET", endpoint, nil)
-	req.Header.Set("Host", svc.Status.RouteStatusFields.URL.URL().Host)
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get the cluster endpoint: %w", err)
+	}
+	req.Header.Set("Host", u.Hostname())
 	go func() {
 		_, err = Poll(client, req, inputs.MaxRetries, inputs.RequestInterval, inputs.RequestTimeout, endpoint)
 		if err != nil {
-			m := fmt.Sprintf("the endpoint for Route %q at %q didn't serve the expected text %v", svc.Name, endpoint, err)
+			m := fmt.Sprintf("the endpoint for Route %q at %q didn't serve the expected text %v", svcName, svcURL, err)
 			log.Println(m)
 			errch <- errors.New(m)
 			return
@@ -311,17 +299,6 @@ func Poll(httpClient http.Client, request *http.Request, maxRetries int, request
 	}
 
 	return resp, nil
-}
-
-// resolveEndpoint resolves the endpoint address considering whether the domain is resolvable
-func resolveEndpoint(ctx context.Context, params *pkg.PerfParams, resolvable bool, svc *servingv1.Service) (string, error) {
-	// If the domain is resolvable, it can be used directly
-	if resolvable {
-		url := svc.Status.RouteStatusFields.URL.URL()
-		return url.String(), nil
-	}
-	// Otherwise, use the actual cluster endpoint
-	return getIngressEndpoint(ctx, params)
 }
 
 // getIngressEndpoint gets the ingress public IP or hostname.

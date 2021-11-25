@@ -23,23 +23,19 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/spf13/cobra"
 
+	"knative.dev/kperf/internal"
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/generator"
-	knativeapis "knative.dev/pkg/apis"
-	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 )
 
 const (
 	DefaultNamespace = "default"
-	ServiceImage     = "gcr.io/knative-samples/helloworld-go"
 )
 
 func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
@@ -124,59 +120,13 @@ func GenerateServices(params *pkg.PerfParams, inputs pkg.GenerateArgs) error {
 		}
 	}
 
-	ksvcClient, err := params.NewServingClient()
+	ksvcClient, err := params.KnClients.ServingClient()
 	if err != nil {
 		return err
 	}
-	createKSVCFunc := func(ns string, index int) (string, string) {
-		service := servingv1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%d", inputs.SvcPrefix, index),
-				Namespace: ns,
-			},
-		}
+	createKSVCFunc := internal.GetCreateKsvcFunc(ksvcClient, inputs.MinScale, inputs.MaxScale, inputs.SvcPrefix, inputs.Timeout)
+	checkServiceStatusReadyFunc := internal.GetCheckServiceStatusReadyFunc(ksvcClient, inputs.Timeout)
 
-		service.Spec.Template = servingv1.RevisionTemplateSpec{
-			Spec: servingv1.RevisionSpec{},
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					"autoscaling.knative.dev/minScale": strconv.Itoa(inputs.MinScale),
-					"autoscaling.knative.dev/maxScale": strconv.Itoa(inputs.MaxScale),
-				},
-			},
-		}
-		service.Spec.Template.Spec.Containers = []corev1.Container{
-			{
-				Image: ServiceImage,
-				Ports: []corev1.ContainerPort{
-					{
-						ContainerPort: 8080,
-					},
-				},
-			},
-		}
-		fmt.Printf("Creating Knative Service %s in namespace %s\n", service.GetName(), service.GetNamespace())
-		_, err := ksvcClient.Services(ns).Create(context.TODO(), &service, metav1.CreateOptions{})
-		if err != nil {
-			fmt.Printf("failed to create Knative Service %s in namespace %s : %s\n", service.GetName(), service.GetNamespace(), err)
-		}
-		return service.GetNamespace(), service.GetName()
-	}
-	checkServiceStatusReadyFunc := func(ns, name string) error {
-		start := time.Now()
-		for time.Since(start) < inputs.Timeout {
-			svc, _ := ksvcClient.Services(ns).Get(context.TODO(), name, metav1.GetOptions{})
-			conditions := svc.Status.Conditions
-			for i := 0; i < len(conditions); i++ {
-				if conditions[i].Type == knativeapis.ConditionReady && conditions[i].IsTrue() {
-					return nil
-				}
-			}
-		}
-		fmt.Printf("Error: Knative Service %s in namespace %s is not ready after %s\n", name, ns, inputs.Timeout)
-		return fmt.Errorf("Knative Service %s in namespace %s is not ready after %s ", name, ns, inputs.Timeout)
-
-	}
 	if inputs.CheckReady {
 		generator.NewBatchGenerator(time.Duration(inputs.Interval)*time.Second, inputs.Number, inputs.Batch, inputs.Concurrency, nsNameList, createKSVCFunc, checkServiceStatusReadyFunc).Generate()
 	} else {

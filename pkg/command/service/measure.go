@@ -33,11 +33,8 @@ import (
 	"github.com/montanaflynn/stats"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	networkingv1api "knative.dev/networking/pkg/apis/networking/v1alpha1"
-	autoscalingv1api "knative.dev/serving/pkg/apis/autoscaling/v1alpha1"
-	servingv1api "knative.dev/serving/pkg/apis/serving/v1"
-	v1 "knative.dev/serving/pkg/apis/serving/v1"
 
+	"knative.dev/kperf/internal"
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/command/utils"
 )
@@ -119,11 +116,11 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 		}
 	}
 
-	autoscalingClient, err := params.NewAutoscalingClient()
+	autoscalingClient, err := params.KnClients.AutoscalingClient()
 	if err != nil {
 		return fmt.Errorf("failed to create autoscaling client%s\n", err)
 	}
-	servingClient, err := params.NewServingClient()
+	servingClient, err := params.KnClients.ServingClient()
 	if err != nil {
 		return fmt.Errorf("failed to create serving client%s\n", err)
 	}
@@ -164,7 +161,7 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 	rows := make([][]string, 0)
 	rawRows := make([][]string, 0)
 
-	nwclient, err := params.NewNetworkingClient()
+	nwclient, err := params.KnClients.NetworkingClient()
 	if err != nil {
 		return fmt.Errorf("failed to create networking client%s\n", err)
 	}
@@ -218,8 +215,8 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 				}
 
 				svcCreatedTime := svcIns.GetCreationTimestamp().Rfc3339Copy()
-				svcConfigurationsReady := svcIns.Status.GetCondition(servingv1api.ServiceConditionConfigurationsReady).LastTransitionTime.Inner.Rfc3339Copy()
-				svcRoutesReady := svcIns.Status.GetCondition(servingv1api.ServiceConditionRoutesReady).LastTransitionTime.Inner.Rfc3339Copy()
+				svcConfigurationsReady := svcIns.Status.GetCondition(internal.GetServiceConditionConfigurationsReady()).LastTransitionTime.Inner.Rfc3339Copy()
+				svcRoutesReady := svcIns.Status.GetCondition(internal.GetServiceConditionRoutesReadyType()).LastTransitionTime.Inner.Rfc3339Copy()
 
 				svcConfigurationsReadyDuration = svcConfigurationsReady.Sub(svcCreatedTime.Time)
 				svcRoutesReadyDuration = svcRoutesReady.Sub(svcCreatedTime.Time)
@@ -245,7 +242,7 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 				}
 
 				revisionCreatedTime := revisionIns.GetCreationTimestamp().Rfc3339Copy()
-				revisionReadyTime := revisionIns.Status.GetCondition(v1.RevisionConditionReady).LastTransitionTime.Inner.Rfc3339Copy()
+				revisionReadyTime := revisionIns.Status.GetCondition(internal.GetRevisionReadyCondition()).LastTransitionTime.Inner.Rfc3339Copy()
 				revisionReadyDuration := revisionReadyTime.Sub(revisionCreatedTime.Time)
 
 				label := fmt.Sprintf("serving.knative.dev/revision=%s", revisionName)
@@ -331,7 +328,7 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 					continue
 				}
 				kpaCreatedTime := kpaIns.GetCreationTimestamp().Rfc3339Copy()
-				kpaActiveTime := kpaIns.Status.GetCondition(autoscalingv1api.PodAutoscalerConditionActive).LastTransitionTime.Inner.Rfc3339Copy()
+				kpaActiveTime := kpaIns.Status.GetCondition(internal.GetPodAutoscalerConditionActive()).LastTransitionTime.Inner.Rfc3339Copy()
 				kpaActiveDuration := kpaActiveTime.Sub(kpaCreatedTime.Time)
 
 				sksIns, err := nwclient.ServerlessServices(svcNs).Get(context.TODO(), revisionName, metav1.GetOptions{})
@@ -343,9 +340,9 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 					continue
 				}
 				sksCreatedTime := sksIns.GetCreationTimestamp().Rfc3339Copy()
-				sksActivatorEndpointsPopulatedTime := sksIns.Status.GetCondition(networkingv1api.ActivatorEndpointsPopulated).LastTransitionTime.Inner.Rfc3339Copy()
-				sksEndpointsPopulatedTime := sksIns.Status.GetCondition(networkingv1api.ServerlessServiceConditionEndspointsPopulated).LastTransitionTime.Inner.Rfc3339Copy()
-				sksReadyTime := sksIns.Status.GetCondition(networkingv1api.ServerlessServiceConditionReady).LastTransitionTime.Inner.Rfc3339Copy()
+				sksActivatorEndpointsPopulatedTime := sksIns.Status.GetCondition(internal.GetActivatorEndpointsPopulatedCondition()).LastTransitionTime.Inner.Rfc3339Copy()
+				sksEndpointsPopulatedTime := sksIns.Status.GetCondition(internal.GetServerlessServiceConditionEndspointsPopulated()).LastTransitionTime.Inner.Rfc3339Copy()
+				sksReadyTime := sksIns.Status.GetCondition(internal.GetServerlessServiceConditionReady()).LastTransitionTime.Inner.Rfc3339Copy()
 				sksActivatorEndpointsPopulatedDuration := sksActivatorEndpointsPopulatedTime.Sub(sksCreatedTime.Time)
 				sksEndpointsPopulatedDuration := sksEndpointsPopulatedTime.Sub(sksCreatedTime.Time)
 				sksReadyDuration := sksReadyTime.Sub(sksCreatedTime.Time)
@@ -359,8 +356,8 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 					continue
 				}
 				ingressCreatedTime := ingressIns.GetCreationTimestamp().Rfc3339Copy()
-				ingressNetworkConfiguredTime := ingressIns.Status.GetCondition(networkingv1api.IngressConditionNetworkConfigured).LastTransitionTime.Inner.Rfc3339Copy()
-				ingressLoadBalancerReadyTime := ingressIns.Status.GetCondition(networkingv1api.IngressConditionLoadBalancerReady).LastTransitionTime.Inner.Rfc3339Copy()
+				ingressNetworkConfiguredTime := ingressIns.Status.GetCondition(internal.GetIngressConditionNetworkConfigured()).LastTransitionTime.Inner.Rfc3339Copy()
+				ingressLoadBalancerReadyTime := ingressIns.Status.GetCondition(internal.GetIngressConditionLoadBalancerReady()).LastTransitionTime.Inner.Rfc3339Copy()
 				ingressNetworkConfiguredDuration := ingressNetworkConfiguredTime.Sub(ingressCreatedTime.Time)
 				ingressLoadBalancerReadyDuration := ingressLoadBalancerReadyTime.Sub(ingressNetworkConfiguredTime.Time)
 				ingressReadyDuration := ingressLoadBalancerReadyTime.Sub(ingressCreatedTime.Time)

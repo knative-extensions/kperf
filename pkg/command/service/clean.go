@@ -60,7 +60,7 @@ func CleanServices(params *pkg.PerfParams, inputs pkg.CleanArgs) error {
 		return err
 	}
 
-	ksvcClient, err := params.NewServingClient()
+	ksvcClient, err := params.KnClients.ServingClient()
 	if err != nil {
 		return err
 	}

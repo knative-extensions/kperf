@@ -18,18 +18,14 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
-	autoscalingv1alpha1 "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
-	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
+	"knative.dev/kperf/internal"
 )
 
 type PerfParams struct {
-	KubeCfgPath          string
-	ClientConfig         clientcmd.ClientConfig
-	ClientSet            kubernetes.Interface
-	NewAutoscalingClient func() (autoscalingv1alpha1.AutoscalingV1alpha1Interface, error)
-	NewServingClient     func() (servingv1client.ServingV1Interface, error)
-	NewNetworkingClient  func() (networkingv1alpha1.NetworkingV1alpha1Interface, error)
+	KubeCfgPath  string
+	ClientConfig clientcmd.ClientConfig
+	ClientSet    kubernetes.Interface
+	KnClients    internal.PerfParamsClients
 }
 
 type GenerateArgs struct {

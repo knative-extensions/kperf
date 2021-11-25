@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"knative.dev/kperf/internal"
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/testutil"
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
@@ -60,8 +61,10 @@ func TestCleanServicesFunc(t *testing.T) {
 			}
 
 			p := &pkg.PerfParams{
-				ClientSet:        client,
-				NewServingClient: servingClient,
+				ClientSet: client,
+				KnClients: internal.PerfParamsClients{
+					ServingClient: servingClient,
+				},
 			}
 			err := CleanServices(p, tc.cleanArgs)
 			assert.NilError(t, err)
@@ -78,8 +81,10 @@ func TestNewServiceCleanCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 		cmd := NewServiceCleanCommand(p)
 
@@ -115,8 +120,10 @@ func TestNewServiceCleanCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 
 		cmd := NewServiceCleanCommand(p)
@@ -140,8 +147,10 @@ func TestNewServiceCleanCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 
 		cmd := NewServiceCleanCommand(p)
@@ -166,8 +175,10 @@ func TestNewServiceCleanCommand(t *testing.T) {
 		}
 
 		p := &pkg.PerfParams{
-			ClientSet:        client,
-			NewServingClient: servingClient,
+			ClientSet: client,
+			KnClients: internal.PerfParamsClients{
+				ServingClient: servingClient,
+			},
 		}
 
 		cmd := NewServiceCleanCommand(p)

@@ -21,9 +21,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
-	autoscalingv1alpha1 "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
-	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
+	"knative.dev/kperf/internal"
 )
 
 func (params *PerfParams) Initialize() error {
@@ -38,55 +36,13 @@ func (params *PerfParams) Initialize() error {
 			fmt.Println("failed to create client:", err)
 			os.Exit(1)
 		}
+
+		params.KnClients = internal.PerfParamsClients{
+			Config: restConfig,
+		}
 	}
-	if params.NewAutoscalingClient == nil {
-		params.NewAutoscalingClient = params.newAutoscalingClient
-	}
-	if params.NewServingClient == nil {
-		params.NewServingClient = params.newServingClient
-	}
-	if params.NewNetworkingClient == nil {
-		params.NewNetworkingClient = params.newNetworkingClient
-	}
+
 	return nil
-}
-
-func (params *PerfParams) newAutoscalingClient() (autoscalingv1alpha1.AutoscalingV1alpha1Interface, error) {
-	restConfig, err := params.RestConfig()
-	if err != nil {
-		return nil, err
-	}
-	client, err := autoscalingv1alpha1.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
-func (params *PerfParams) newServingClient() (servingv1client.ServingV1Interface, error) {
-	restConfig, err := params.RestConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := servingv1client.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
-}
-
-func (params *PerfParams) newNetworkingClient() (networkingv1alpha1.NetworkingV1alpha1Interface, error) {
-	restConfig, err := params.RestConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := networkingv1alpha1.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-	return client, nil
 }
 
 // RestConfig returns REST config, which can be to use to create specific clientset
