@@ -22,6 +22,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -32,6 +34,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -100,12 +103,13 @@ kperf service scale --svc-perfix svc --range 1,200 --namespace ns --concurrency 
 }
 
 func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error {
-	nsNameList, err := GetNamespaces(context.Background(), params, inputs.Namespace, inputs.NamespaceRange, inputs.NamespacePrefix)
+	ctx := context.Background()
+	nsNameList, err := GetNamespaces(ctx, params, inputs.Namespace, inputs.NamespaceRange, inputs.NamespacePrefix)
 	if err != nil {
 		return err
 	}
 
-	scaleFromZeroResult, err := scaleAndMeasure(params, inputs, nsNameList, getServices)
+	scaleFromZeroResult, err := scaleAndMeasure(ctx, params, inputs, nsNameList, getServices)
 	if err != nil {
 		return err
 	}
@@ -158,13 +162,13 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 	return nil
 }
 
-func scaleAndMeasure(params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []string, servicesListFunc func(servingv1client.ServingV1Interface, []string, string) []ServicesToScale) (pkg.ScaleResult, error) {
+func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []string, servicesListFunc func(context.Context, servingv1client.ServingV1Interface, []string, string) []ServicesToScale) (pkg.ScaleResult, error) {
 	result := pkg.ScaleResult{}
 	ksvcClient, err := params.NewServingClient()
 	if err != nil {
 		return result, err
 	}
-	objs := servicesListFunc(ksvcClient, nsNameList, inputs.SvcPrefix)
+	objs := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.SvcPrefix)
 	count := len(objs)
 
 	var wg sync.WaitGroup
@@ -173,7 +177,7 @@ func scaleAndMeasure(params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []
 	for i := 0; i < count; i++ {
 		go func(ndx int, m *sync.Mutex) {
 			defer wg.Done()
-			sdur, ddur, err := runScaleFromZero(params, inputs, objs[ndx].Namespace, objs[ndx].Service)
+			sdur, ddur, err := runScaleFromZero(ctx, params, inputs, objs[ndx].Namespace, objs[ndx].Service)
 			if err == nil {
 				//measure
 				fmt.Printf("result of scale for service %s is %f, %f \n", objs[ndx].Service.Name, sdur.Seconds(), ddur.Seconds())
@@ -195,10 +199,10 @@ func scaleAndMeasure(params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []
 	return result, nil
 }
 
-func getServices(servingClient servingv1client.ServingV1Interface, nsNameList []string, svcPrefix string) []ServicesToScale {
+func getServices(ctx context.Context, servingClient servingv1client.ServingV1Interface, nsNameList []string, svcPrefix string) []ServicesToScale {
 	objs := []ServicesToScale{}
 	for _, ns := range nsNameList {
-		svcList, err := servingClient.Services(ns).List(context.TODO(), metav1.ListOptions{})
+		svcList, err := servingClient.Services(ns).List(ctx, metav1.ListOptions{})
 		if err == nil {
 			for _, s := range svcList.Items {
 				svc := s
@@ -211,7 +215,7 @@ func getServices(servingClient servingv1client.ServingV1Interface, nsNameList []
 	return objs
 }
 
-func runScaleFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs, namespace string, svc *servingv1.Service) (
+func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, namespace string, svc *servingv1.Service) (
 	time.Duration, time.Duration, error) {
 	selector := labels.SelectorFromSet(labels.Set{
 		serving.ServiceLabelKey: svc.Name,
@@ -230,12 +234,18 @@ func runScaleFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs, namespace st
 	sdch := make(chan struct{})
 	errch := make(chan error)
 
-	url := svc.Status.RouteStatusFields.URL.URL()
+	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, svc)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get the cluster endpoint: %w", err)
+	}
 
+	client := http.Client{}
+	req, _ := http.NewRequest("GET", endpoint, nil)
+	req.Header.Set("Host", svc.Status.RouteStatusFields.URL.URL().Host)
 	go func() {
-		_, err = Poll(inputs.MaxRetries, inputs.RequestInterval, inputs.RequestTimeout, url.String())
+		_, err = Poll(client, req, inputs.MaxRetries, inputs.RequestInterval, inputs.RequestTimeout, endpoint)
 		if err != nil {
-			m := fmt.Sprintf("the endpoint for Route %q at %q didn't serve the expected text %v", svc.Name, url, err)
+			m := fmt.Sprintf("the endpoint for Route %q at %q didn't serve the expected text %v", svc.Name, endpoint, err)
 			log.Println(m)
 			errch <- errors.New(m)
 			return
@@ -264,17 +274,17 @@ func runScaleFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs, namespace st
 	}
 }
 
-func Poll(maxRetries int, requestInterval time.Duration, requestTimeout time.Duration, url string) (*Response, error) {
+func Poll(httpClient http.Client, request *http.Request, maxRetries int, requestInterval time.Duration, requestTimeout time.Duration, url string) (*Response, error) {
 	var resp *Response
 	retries := 0
 	err := wait.PollImmediate(requestInterval, requestTimeout, func() (bool, error) {
-		rawResp, err := http.Get(url)
+		rawResp, err := httpClient.Do(request)
 		if err != nil {
 			if retries < maxRetries {
-				fmt.Printf("Retrying %s", url)
+				fmt.Printf("Retrying %s\n", url)
 				return false, nil
 			}
-			fmt.Printf("NOT Retrying %s: %v", url, err)
+			fmt.Printf("NOT Retrying %s: %v\n", url, err)
 			return true, err
 		}
 
@@ -301,4 +311,59 @@ func Poll(maxRetries int, requestInterval time.Duration, requestTimeout time.Dur
 	}
 
 	return resp, nil
+}
+
+// resolveEndpoint resolves the endpoint address considering whether the domain is resolvable
+func resolveEndpoint(ctx context.Context, params *pkg.PerfParams, resolvable bool, svc *servingv1.Service) (string, error) {
+	// If the domain is resolvable, it can be used directly
+	if resolvable {
+		url := svc.Status.RouteStatusFields.URL.URL()
+		return url.String(), nil
+	}
+	// Otherwise, use the actual cluster endpoint
+	return getIngressEndpoint(ctx, params)
+}
+
+// getIngressEndpoint gets the ingress public IP or hostname.
+// address - is the endpoint to which we should actually connect.
+// err - an error when address cannot be established.
+func getIngressEndpoint(ctx context.Context, params *pkg.PerfParams) (address string, err error) {
+	ingressName := "istio-ingressgateway"
+	if gatewayOverride := os.Getenv("GATEWAY_OVERRIDE"); gatewayOverride != "" {
+		ingressName = gatewayOverride
+	}
+	ingressNamespace := "istio-system"
+	if gatewayNsOverride := os.Getenv("GATEWAY_NAMESPACE_OVERRIDE"); gatewayNsOverride != "" {
+		ingressNamespace = gatewayNsOverride
+	}
+
+	ingress, err := params.ClientSet.CoreV1().Services(ingressNamespace).Get(ctx, ingressName, metav1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	endpoint, err := endpointFromService(ingress)
+	if err != nil {
+		return "", err
+	}
+	url := url.URL{Scheme: "http", Host: endpoint}
+	return url.String(), nil
+}
+
+// endpointFromService extracts the endpoint from the service's ingress.
+func endpointFromService(svc *corev1.Service) (string, error) {
+	ingresses := svc.Status.LoadBalancer.Ingress
+	if len(ingresses) != 1 {
+		return "", fmt.Errorf("expected exactly one ingress load balancer, instead had %d: %v", len(ingresses), ingresses)
+	}
+	itu := ingresses[0]
+
+	switch {
+	case itu.IP != "":
+		return itu.IP, nil
+	case itu.Hostname != "":
+		return itu.Hostname, nil
+	default:
+		return "", fmt.Errorf("expected ingress loadbalancer IP or hostname for %s to be set, instead was empty", svc.Name)
+	}
 }

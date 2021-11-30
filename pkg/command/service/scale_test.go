@@ -15,6 +15,7 @@
 package service
 
 import (
+	"context"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -70,7 +71,7 @@ func TestScaleServces(t *testing.T) {
 		SvcRange:  "1,1",
 	}
 
-	getFakeServices := func(servingv1client.ServingV1Interface, []string, string) []ServicesToScale {
+	getFakeServices := func(context.Context, servingv1client.ServingV1Interface, []string, string) []ServicesToScale {
 		objs := []ServicesToScale{}
 		svc := ServicesToScale{
 			Service: &servingv1.Service{
@@ -91,6 +92,6 @@ func TestScaleServces(t *testing.T) {
 		return objs
 	}
 
-	_, err := scaleAndMeasure(p, scaleArgs, []string{"ns-1"}, getFakeServices)
+	_, err := scaleAndMeasure(context.TODO(), p, scaleArgs, []string{"ns-1"}, getFakeServices)
 	assert.NilError(t, err)
 }
