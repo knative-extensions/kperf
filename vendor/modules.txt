@@ -6,9 +6,11 @@ cloud.google.com/go/compute/metadata
 # github.com/Azure/go-autorest v14.2.0+incompatible
 github.com/Azure/go-autorest
 # github.com/Azure/go-autorest/autorest v0.11.17
+## explicit
 github.com/Azure/go-autorest/autorest
 github.com/Azure/go-autorest/autorest/azure
 # github.com/Azure/go-autorest/autorest/adal v0.9.10
+## explicit
 github.com/Azure/go-autorest/autorest/adal
 # github.com/Azure/go-autorest/autorest/date v0.3.0
 github.com/Azure/go-autorest/autorest/date
@@ -49,6 +51,7 @@ github.com/google/go-containerregistry/pkg/name
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
 # github.com/googleapis/gnostic v0.5.3
+## explicit
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/jsonschema
@@ -480,13 +483,14 @@ k8s.io/klog/v2
 # k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 k8s.io/kube-openapi/pkg/util/proto
 # k8s.io/utils v0.0.0-20210111153108-fddb29f9d009
+## explicit
 k8s.io/utils/buffer
 k8s.io/utils/integer
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20211122162614-813559cefdda
+# knative.dev/hack v0.0.0-20211203062838-e11ac125e707
 ## explicit
 knative.dev/hack
-# knative.dev/networking v0.0.0-20211130074708-cf04ce148c75
+# knative.dev/networking v0.0.0-20211203062838-d65e1ba909fe
 ## explicit
 knative.dev/networking/pkg
 knative.dev/networking/pkg/apis/networking
@@ -494,7 +498,7 @@ knative.dev/networking/pkg/apis/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/scheme
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake
-# knative.dev/pkg v0.0.0-20211129195804-438776b3c87c
+# knative.dev/pkg v0.0.0-20211203062937-d37811b71d6a
 ## explicit
 knative.dev/pkg/apis
 knative.dev/pkg/apis/duck
@@ -508,7 +512,7 @@ knative.dev/pkg/network
 knative.dev/pkg/profiling
 knative.dev/pkg/ptr
 knative.dev/pkg/tracker
-# knative.dev/serving v0.27.1-0.20211130133116-0ed761b9dcae
+# knative.dev/serving v0.27.1-0.20211203144442-d4368953eb3c
 ## explicit
 knative.dev/serving/pkg/apis/autoscaling
 knative.dev/serving/pkg/apis/autoscaling/v1alpha1
