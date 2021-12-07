@@ -73,7 +73,7 @@ kperf service measure --svc-perfix svc --range 1,200 --namespace ns --concurrenc
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options := MeasureServicesOptions{
 				NamespaceChanged:       cmd.Flags().Changed("namespace"),
-				NamespaceRangeChanged:  cmd.Flags().Changed("namespace=range"),
+				NamespaceRangeChanged:  cmd.Flags().Changed("namespace-range"),
 				NamespacePrefixChanged: cmd.Flags().Changed("namespace-prefix"),
 				VerboseChanged:         cmd.Flags().Changed("verbose"),
 			}
