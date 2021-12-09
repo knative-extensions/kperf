@@ -492,7 +492,6 @@ k8s.io/utils/trace
 knative.dev/hack
 # knative.dev/networking v0.0.0-20211207005157-1c6e5ff34dfb
 ## explicit
-knative.dev/networking/pkg
 knative.dev/networking/pkg/apis/networking
 knative.dev/networking/pkg/apis/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/scheme
@@ -512,7 +511,7 @@ knative.dev/pkg/network
 knative.dev/pkg/profiling
 knative.dev/pkg/ptr
 knative.dev/pkg/tracker
-# knative.dev/serving v0.27.1-0.20211207020356-8f36565cbae6
+# knative.dev/serving v0.27.1-0.20211208134539-1537e0bed12b
 ## explicit
 knative.dev/serving/pkg/apis/autoscaling
 knative.dev/serving/pkg/apis/autoscaling/v1alpha1
