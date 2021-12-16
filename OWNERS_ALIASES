@@ -221,10 +221,8 @@ aliases:
   - upodroid
   productivity-wg-leads:
   - chizhg
-  - n3wscott
   productivity-writers:
   - chizhg
-  - n3wscott
   security-wg-leads:
   - evankanderson
   - julz
@@ -252,7 +250,7 @@ aliases:
   - rhuss
   ux-wg-leads:
   - csantanapr
-  - omerbensaadon
+  - snneji
   ux-writers:
   - csantanapr
-  - omerbensaadon
+  - snneji
