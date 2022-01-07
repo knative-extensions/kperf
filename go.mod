@@ -4,21 +4,17 @@ go 1.16
 
 require (
 	bou.ke/monkey v1.0.2
-	github.com/Azure/go-autorest/autorest v0.11.17 // indirect
-	github.com/Azure/go-autorest/autorest/adal v0.9.10 // indirect
-	github.com/googleapis/gnostic v0.5.3 // indirect
 	github.com/kevinburke/go-bindata v3.22.0+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/montanaflynn/stats v0.6.5
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.8.1
 	gotest.tools/v3 v3.0.3
-	k8s.io/api v0.21.4
-	k8s.io/apimachinery v0.21.4
-	k8s.io/client-go v0.21.4
-	k8s.io/utils v0.0.0-20210111153108-fddb29f9d009 // indirect
+	k8s.io/api v0.22.5
+	k8s.io/apimachinery v0.22.5
+	k8s.io/client-go v0.22.5
 	knative.dev/hack v0.0.0-20211222071919-abd085fc43de
-	knative.dev/networking v0.0.0-20211223134928-e40187c3026d
-	knative.dev/pkg v0.0.0-20211216142117-79271798f696
-	knative.dev/serving v0.28.1-0.20211221064617-c69f92cdfce7
+	knative.dev/networking v0.0.0-20220107020122-0dbedcd88acf
+	knative.dev/pkg v0.0.0-20220105211333-96f18522d78d
+	knative.dev/serving v0.28.1-0.20220106165301-26b9a409f8d7
 )
