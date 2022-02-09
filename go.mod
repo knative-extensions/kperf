@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	bou.ke/monkey v1.0.2
-	github.com/kevinburke/go-bindata v3.22.0+incompatible
+	github.com/kevinburke/go-bindata v3.23.0+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/montanaflynn/stats v0.6.5
 	github.com/spf13/cobra v1.3.0
