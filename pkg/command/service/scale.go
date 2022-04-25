@@ -25,6 +25,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -39,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/command/utils"
@@ -241,7 +241,8 @@ func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sc
 
 	client := http.Client{}
 	req, _ := http.NewRequest("GET", endpoint, nil)
-	req.Header.Set("Host", svc.Status.RouteStatusFields.URL.URL().Host)
+	req.Host = svc.Status.RouteStatusFields.URL.URL().Host
+
 	go func() {
 		_, err = Poll(client, req, inputs.MaxRetries, inputs.RequestInterval, inputs.RequestTimeout, endpoint)
 		if err != nil {
@@ -342,7 +343,17 @@ func getIngressEndpoint(ctx context.Context, params *pkg.PerfParams) (address st
 		return "", err
 	}
 
-	endpoint, err := endpointFromService(ingress)
+	var endpoint string
+	// If the ExternalIP of istio-ingressgateway is none or pending, get endpoint with node port
+	if len(ingress.Spec.ExternalIPs) == 0 {
+		endpoint, err = endpointWithNodePortFromService(ingress, ctx, params)
+		if err != nil {
+			return "", err
+		}
+	} else {
+		endpoint, err = endpointFromService(ingress)
+	}
+
 	if err != nil {
 		return "", err
 	}
@@ -366,4 +377,68 @@ func endpointFromService(svc *corev1.Service) (string, error) {
 	default:
 		return "", fmt.Errorf("expected ingress loadbalancer IP or hostname for %s to be set, instead was empty", svc.Name)
 	}
+}
+
+// endpointWithNodePortFromService extracts the endpoint consisted host IP and node port from the ingress service
+func endpointWithNodePortFromService(svc *corev1.Service, ctx context.Context, params *pkg.PerfParams) (string, error) {
+	ingressPod, err := getIngressPod(ctx, params)
+	if err != nil {
+		return "", err
+	}
+
+	hostIP, err := getHostIPFromPod(ingressPod)
+	if err != nil {
+		return "", err
+	}
+
+	nodePort, err := getNodePortFromService(svc)
+	if err != nil {
+		return "", err
+	}
+
+	return hostIP + ":" + nodePort, nil
+}
+
+// getIngressPod gets one of the ingress Pod.
+func getIngressPod(ctx context.Context, params *pkg.PerfParams) (pod *corev1.Pod, err error) {
+	ingressNamespace := "istio-system"
+	if gatewayNsOverride := os.Getenv("GATEWAY_NAMESPACE_OVERRIDE"); gatewayNsOverride != "" {
+		ingressNamespace = gatewayNsOverride
+	}
+
+	ingressPodList, err := params.ClientSet.CoreV1().Pods(ingressNamespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ingressPodList.Items) == 0 {
+		return nil, fmt.Errorf("ingress pod list is empty")
+	}
+
+	return &ingressPodList.Items[0], nil
+}
+
+// getHostIPFromPod gets hostIP of the ingress pod.
+func getHostIPFromPod(pod *corev1.Pod) (string, error) {
+	hostIP := pod.Status.HostIP
+	if hostIP == "" {
+		return "", fmt.Errorf("host IP of the ingress pod is empty")
+	}
+	return hostIP, nil
+}
+
+// getNodePort gets node port(http2) from the ingress service.
+func getNodePortFromService(svc *corev1.Service) (string, error) {
+	ingressPorts := svc.Spec.Ports
+	if len(ingressPorts) == 0 {
+		return "", fmt.Errorf("port list of ingress service is empty")
+	}
+
+	for _, port := range ingressPorts {
+		if port.Name == "http2" {
+			return strconv.FormatInt(int64(port.NodePort), 10), nil
+		}
+	}
+
+	return "", fmt.Errorf("http2 port of ingress service not found")
 }
