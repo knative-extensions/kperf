@@ -18,15 +18,11 @@ stability, scalability and performance bottleneck.
 ```cassandraql
 # format and build kperf
 $ cd {workspace}/src/knative.dev/kperf
-$ go get -u github.com/kevinburke/go-bindata/...
-$ export PATH=$PATH:$GOPATH/bin
 $ ./hack/build.sh
 
 # Move kperf
 $ mv kperf /usr/local/bin/
 ```
-
-Note: [go-bindata](https://github.com/go-bindata/go-bindata) is required in the build process.
 
 ## Knative Serving load test
 
