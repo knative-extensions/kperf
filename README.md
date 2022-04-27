@@ -249,9 +249,9 @@ Measurement saved in JSON file /tmp/20211108115231_ksvc_creation_time.json
 Visualized measurement saved in HTML file /tmp/20211108115231_ksvc_creation_time.html
 ```
 
-- By default, the `scale` command assumes you are using Istio as your networking layer. You can use an alternative networking layer by setting the `GATEWAY_OVERRIDE` and `GATEWAY_NAMESPACE_OVERRIDE` environmental variables. 
+- By default, the `scale` command assumes you are using Istio as your networking layer. You can use an alternative networking layer by setting the `GATEWAY_OVERRIDE` and `GATEWAY_NAMESPACE_OVERRIDE` environmental variables.
 
-For example, to run the `scale` command using Kourier, 
+For example, to run the `scale` command using Kourier,
 
 ``` bash
 GATEWAY_OVERRIDE=kourier GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service scale  --namespace ktest --svc-prefix ktest --range 0,9  --verbose --output /tmp
