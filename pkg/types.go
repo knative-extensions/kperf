@@ -47,6 +47,8 @@ type GenerateArgs struct {
 
 	CheckReady bool
 	Timeout    time.Duration
+
+	Template string
 }
 
 type CleanArgs struct {

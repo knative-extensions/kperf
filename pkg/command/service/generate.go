@@ -18,11 +18,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/yaml"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,6 +84,8 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 	ksvcGenCommand.Flags().BoolVarP(&generateArgs.CheckReady, "wait", "", false, "Whether to wait the previous Knative Service to be ready")
 	ksvcGenCommand.Flags().DurationVarP(&generateArgs.Timeout, "timeout", "", 10*time.Minute, "Duration to wait for previous Knative Service to be ready")
 
+	ksvcGenCommand.Flags().StringVarP(&generateArgs.Template, "template", "", "", "YAML file to use for Knative Service")
+
 	return ksvcGenCommand
 }
 
@@ -129,34 +133,44 @@ func GenerateServices(params *pkg.PerfParams, inputs pkg.GenerateArgs) error {
 		return err
 	}
 	createKSVCFunc := func(ns string, index int) (string, string) {
-		service := servingv1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%d", inputs.SvcPrefix, index),
-				Namespace: ns,
-			},
-		}
-
-		service.Spec.Template = servingv1.RevisionTemplateSpec{
-			Spec: servingv1.RevisionSpec{},
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					"autoscaling.knative.dev/minScale": strconv.Itoa(inputs.MinScale),
-					"autoscaling.knative.dev/maxScale": strconv.Itoa(inputs.MaxScale),
-				},
-			},
-		}
-		service.Spec.Template.Spec.Containers = []corev1.Container{
-			{
-				Image: ServiceImage,
-				Ports: []corev1.ContainerPort{
-					{
-						ContainerPort: 8080,
+		service := &servingv1.Service{}
+		if inputs.Template != "" {
+			template, err := os.Open(inputs.Template)
+			if err != nil {
+				fmt.Errorf("Failed to open template file: %w", err)
+				os.Exit(1)
+			}
+			decoder := yaml.NewYAMLOrJSONDecoder(template, 64)
+			if err := decoder.Decode(service); err != nil {
+				fmt.Errorf("failed to decode YAML content: %w", err)
+				os.Exit(1)
+			}
+		} else {
+			service.Spec.Template = servingv1.RevisionTemplateSpec{
+				Spec: servingv1.RevisionSpec{},
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"autoscaling.knative.dev/minScale": strconv.Itoa(inputs.MinScale),
+						"autoscaling.knative.dev/maxScale": strconv.Itoa(inputs.MaxScale),
 					},
 				},
-			},
+			}
+			service.Spec.Template.Spec.Containers = []corev1.Container{
+				{
+					Image: ServiceImage,
+					Ports: []corev1.ContainerPort{
+						{
+							ContainerPort: 8080,
+						},
+					},
+				},
+			}
 		}
+		service.ObjectMeta.Name = fmt.Sprintf("%s-%d", inputs.SvcPrefix, index)
+		service.ObjectMeta.Namespace = ns
+
 		fmt.Printf("Creating Knative Service %s in namespace %s\n", service.GetName(), service.GetNamespace())
-		_, err := ksvcClient.Services(ns).Create(context.TODO(), &service, metav1.CreateOptions{})
+		_, err := ksvcClient.Services(ns).Create(context.TODO(), service, metav1.CreateOptions{})
 		if err != nil {
 			fmt.Printf("failed to create Knative Service %s in namespace %s : %s\n", service.GetName(), service.GetNamespace(), err)
 		}
