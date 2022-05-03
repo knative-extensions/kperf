@@ -51,3 +51,4 @@ check_license
 go_fmt
 go_build
 go_test
+build_cleanup

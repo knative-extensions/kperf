@@ -93,3 +93,12 @@ function check_license() {
   fi
   rm $check_output
 }
+
+function build_cleanup() {
+  # Remove unwanted vendor files
+  find vendor/ \( -name "OWNERS" \
+    -o -name "OWNERS_ALIASES" \
+    -o -name "BUILD" \
+    -o -name "BUILD.bazel" \
+    -o -name "*_test.go" \) -exec rm -f {} +
+}
