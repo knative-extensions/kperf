@@ -99,8 +99,10 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		_, err := testutil.ExecuteCommand(cmd, "-n", "1", "-b", "10", "-i", "10", "--min-scale", "1", "--max-scale", "2", "--namespace", "test-kperf-1")
 		assert.NilError(t, err)
 
-		ksvcClient, _ := p.NewServingClient()
-		svc, _ := ksvcClient.Services("test-kperf-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
+		ksvcClient, err := p.NewServingClient()
+		assert.NilError(t, err)
+		svc, err := ksvcClient.Services("test-kperf-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
+		assert.NilError(t, err)
 		assert.Equal(t, "ksvc-0", svc.Name)
 		targetAnnotations := make(map[string]string)
 		targetAnnotations["autoscaling.knative.dev/maxScale"] = "2"
@@ -224,8 +226,10 @@ spec:
 		_, err := testutil.ExecuteCommand(cmd, "-n", "1", "-b", "10", "-i", "10", "--namespace", "test-kperf-1", "--template", templatePath)
 		assert.NilError(t, err)
 
-		ksvcClient, _ := p.NewServingClient()
-		svc, _ := ksvcClient.Services("test-kperf-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
+		ksvcClient, err := p.NewServingClient()
+		assert.NilError(t, err)
+		svc, err := ksvcClient.Services("test-kperf-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
+		assert.NilError(t, err)
 		assert.Equal(t, "ksvc-0", svc.Name)
 		assert.Equal(t, "gcr.io/knative-samples/helloworld-rust", svc.Spec.Template.Spec.Containers[0].Image)
 		targetAnnotations := make(map[string]string)

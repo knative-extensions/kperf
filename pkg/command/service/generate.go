@@ -137,12 +137,12 @@ func GenerateServices(params *pkg.PerfParams, inputs pkg.GenerateArgs) error {
 		if inputs.Template != "" {
 			template, err := os.Open(inputs.Template)
 			if err != nil {
-				fmt.Errorf("Failed to open template file: %w", err)
+				fmt.Printf("Error: Failed to open template file: %v", err)
 				os.Exit(1)
 			}
 			decoder := yaml.NewYAMLOrJSONDecoder(template, 64)
 			if err := decoder.Decode(service); err != nil {
-				fmt.Errorf("failed to decode YAML content: %w", err)
+				fmt.Printf("Error: Failed to decode YAML content: %v", err)
 				os.Exit(1)
 			}
 		} else {
