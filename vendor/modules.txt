@@ -127,8 +127,6 @@ github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/prometheus/procfs v0.7.3
-## explicit; go 1.13
 # github.com/spf13/afero v1.8.0
 ## explicit; go 1.13
 github.com/spf13/afero
@@ -159,8 +157,6 @@ github.com/subosito/gotenv
 # go.uber.org/atomic v1.9.0
 ## explicit; go 1.13
 go.uber.org/atomic
-# go.uber.org/goleak v1.1.12
-## explicit; go 1.13
 # go.uber.org/multierr v1.6.0
 ## explicit; go 1.12
 go.uber.org/multierr
@@ -567,10 +563,10 @@ k8s.io/utils/integer
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20220427014036-5f473869d377
+# knative.dev/hack v0.0.0-20220506160929-a8076b0510ed
 ## explicit; go 1.14
 knative.dev/hack
-# knative.dev/networking v0.0.0-20220503045157-a60cb5f99934
+# knative.dev/networking v0.0.0-20220505013701-91dcb36802a9
 ## explicit; go 1.16
 knative.dev/networking/pkg
 knative.dev/networking/pkg/apis/networking
@@ -578,7 +574,7 @@ knative.dev/networking/pkg/apis/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/scheme
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake
-# knative.dev/pkg v0.0.0-20220502225657-4fced0164c9a
+# knative.dev/pkg v0.0.0-20220505013700-a8b7d99374a3
 ## explicit; go 1.17
 knative.dev/pkg/apis
 knative.dev/pkg/apis/duck
@@ -595,7 +591,7 @@ knative.dev/pkg/network
 knative.dev/pkg/profiling
 knative.dev/pkg/ptr
 knative.dev/pkg/tracker
-# knative.dev/serving v0.31.1-0.20220502134557-7aa5d8a21bc9
+# knative.dev/serving v0.31.1-0.20220508100330-69bf45c22fdd
 ## explicit; go 1.17
 knative.dev/serving/pkg/apis/autoscaling
 knative.dev/serving/pkg/apis/autoscaling/v1alpha1
