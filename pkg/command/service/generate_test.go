@@ -16,6 +16,8 @@ package service
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -97,8 +99,10 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		_, err := testutil.ExecuteCommand(cmd, "-n", "1", "-b", "10", "-i", "10", "--min-scale", "1", "--max-scale", "2", "--namespace", "test-kperf-1")
 		assert.NilError(t, err)
 
-		ksvcClient, _ := p.NewServingClient()
-		svc, _ := ksvcClient.Services("test-kperf-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
+		ksvcClient, err := p.NewServingClient()
+		assert.NilError(t, err)
+		svc, err := ksvcClient.Services("test-kperf-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
+		assert.NilError(t, err)
 		assert.Equal(t, "ksvc-0", svc.Name)
 		targetAnnotations := make(map[string]string)
 		targetAnnotations["autoscaling.knative.dev/maxScale"] = "2"
@@ -175,5 +179,64 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		cmd = NewServiceGenerateCommand(p)
 		_, err = testutil.ExecuteCommand(cmd, "-n", "1", "-b", "10", "-i", "10", "--min-scale", "1", "--max-scale", "2", "--namespace-prefix", "test-kperf", "--namespace-range", "1,2")
 		assert.ErrorContains(t, err, "namespace test-kperf-1 not found, please create one")
+	})
+
+	t.Run("create service from template", func(t *testing.T) {
+
+		ns1 := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "test-kperf-1",
+			},
+		}
+		client := k8sfake.NewSimpleClientset(ns1)
+		fakeServing := &servingv1fake.FakeServingV1{Fake: &client.Fake}
+		servingClient := func() (servingv1client.ServingV1Interface, error) {
+			return fakeServing, nil
+		}
+
+		p := &pkg.PerfParams{
+			ClientSet:        client,
+			NewServingClient: servingClient,
+		}
+
+		templatePath := filepath.Join(t.TempDir(), "template.yaml")
+		templateYaml := `apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: hello
+  namespace: default
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "5"
+        autoscaling.knative.dev/maxScale: "6"
+    spec:
+      containers:
+      - image: gcr.io/knative-samples/helloworld-rust
+        env:
+          - name: TARGET
+            value: "Kperf Test"`
+
+		if err := os.WriteFile(templatePath, []byte(templateYaml), 0700); err != nil {
+			t.Fatal(err)
+		}
+
+		cmd := NewServiceGenerateCommand(p)
+		_, err := testutil.ExecuteCommand(cmd, "-n", "1", "-b", "10", "-i", "10", "--namespace", "test-kperf-1", "--template", templatePath)
+		assert.NilError(t, err)
+
+		ksvcClient, err := p.NewServingClient()
+		assert.NilError(t, err)
+		svc, err := ksvcClient.Services("test-kperf-1").Get(context.TODO(), "ksvc-0", metav1.GetOptions{})
+		assert.NilError(t, err)
+		assert.Equal(t, "ksvc-0", svc.Name)
+		assert.Equal(t, "gcr.io/knative-samples/helloworld-rust", svc.Spec.Template.Spec.Containers[0].Image)
+		targetAnnotations := make(map[string]string)
+		targetAnnotations["autoscaling.knative.dev/maxScale"] = "6"
+		targetAnnotations["autoscaling.knative.dev/minScale"] = "5"
+		resultAnnotations := svc.Spec.ConfigurationSpec.GetTemplate().GetAnnotations()
+		assert.DeepEqual(t, targetAnnotations, resultAnnotations)
+
 	})
 }
