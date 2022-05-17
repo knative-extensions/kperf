@@ -563,10 +563,10 @@ k8s.io/utils/integer
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20220506160929-a8076b0510ed
+# knative.dev/hack v0.0.0-20220512014059-f4972b4daff9
 ## explicit; go 1.14
 knative.dev/hack
-# knative.dev/networking v0.0.0-20220505013701-91dcb36802a9
+# knative.dev/networking v0.0.0-20220516202057-7363ea66ba54
 ## explicit; go 1.16
 knative.dev/networking/pkg
 knative.dev/networking/pkg/apis/networking
@@ -574,7 +574,7 @@ knative.dev/networking/pkg/apis/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/scheme
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake
-# knative.dev/pkg v0.0.0-20220505013700-a8b7d99374a3
+# knative.dev/pkg v0.0.0-20220512013937-2d8305b2e59a
 ## explicit; go 1.17
 knative.dev/pkg/apis
 knative.dev/pkg/apis/duck
@@ -591,7 +591,7 @@ knative.dev/pkg/network
 knative.dev/pkg/profiling
 knative.dev/pkg/ptr
 knative.dev/pkg/tracker
-# knative.dev/serving v0.31.1-0.20220508100330-69bf45c22fdd
+# knative.dev/serving v0.31.1-0.20220516213257-08e09bc9547a
 ## explicit; go 1.17
 knative.dev/serving/pkg/apis/autoscaling
 knative.dev/serving/pkg/apis/autoscaling/v1alpha1
