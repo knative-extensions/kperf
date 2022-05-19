@@ -4,7 +4,6 @@ go 1.17
 
 require (
 	bou.ke/monkey v1.0.2
-	github.com/hashicorp/golang-lru v0.5.4
 	github.com/hashicorp/hcl v1.0.0
 	github.com/kevinburke/go-bindata v3.23.0+incompatible
 	github.com/mitchellh/go-homedir v1.1.0
@@ -18,7 +17,7 @@ require (
 	knative.dev/hack v0.0.0-20220518013938-b4d4d73a2995
 	knative.dev/networking v0.0.0-20220518142657-773e2bf8a922
 	knative.dev/pkg v0.0.0-20220518013728-f907b31046d3
-	knative.dev/serving v0.31.1-0.20220518201557-9db81c36a64e
+	knative.dev/serving v0.31.1-0.20220519133059-b2fff2036132
 )
 
 require (
@@ -42,6 +41,7 @@ require (
 	github.com/google/go-containerregistry v0.8.1-0.20220414143355-892d7a808387 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
