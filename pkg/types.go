@@ -16,6 +16,7 @@ package pkg
 import (
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
@@ -85,6 +86,21 @@ type ScaleArgs struct {
 	Output           string
 }
 
+type LoadArgs struct {
+	SvcRange              string
+	Namespace             string
+	SvcPrefix             string
+	NamespaceRange        string
+	NamespacePrefix       string
+	Verbose               bool
+	ResolvableDomain      bool
+	WaitPodsReadyDuration time.Duration
+	Output                string
+	LoadTool              string
+	LoadDuration          string
+	LoadConcurrency       string
+}
+
 type MeasureResult struct {
 	Sums         Sums `json:"-"`
 	Result       Result
@@ -105,6 +121,30 @@ type ScaleFromZeroResult struct {
 	DeploymentLatency float64 `json:"deploymentLatency"`
 }
 
+type LoadResult struct {
+	KnativeInfo KnativeInfo
+	Measurment  []LoadFromZeroResult
+}
+
+type LoadFromZeroResult struct {
+	ServiceName        string
+	ServiceNamespace   string
+	TotalReadyReplicas int
+	TotalReadyPods     int
+	ReplicaResults     []LoadReplicaResult
+	PodResults         []LoadPodResult
+}
+
+type LoadReplicaResult struct {
+	ReadyReplicasCount   int
+	ReplicaReadyTime     time.Time
+	ReplicaReadyDuration float64
+}
+type LoadPodResult struct {
+	PodCreateTime    metav1.Time
+	PodReadyTime     metav1.Time
+	PodReadyDuration float64
+}
 type Sums struct {
 	SvcConfigurationsReadySum         float64
 	SvcRoutesReadySum                 float64

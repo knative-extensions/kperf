@@ -32,4 +32,7 @@ func TestNewServiceCmd(t *testing.T) {
 
 	_, _, err = cmd.Find([]string{"clean"})
 	assert.NilError(t, err, "service command should have clean subcommand")
+
+	_, _, err = cmd.Find([]string{"load"})
+	assert.NilError(t, err, "service command should have load subcommand")
 }
