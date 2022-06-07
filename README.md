@@ -256,3 +256,263 @@ For example, to run the `scale` command using Kourier,
 ``` bash
 GATEWAY_OVERRIDE=kourier GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service scale  --namespace ktest --svc-prefix ktest --range 0,9  --verbose --output /tmp
 ```
+
+### Scale from 0 to N using load test tool and Measure scale up latency
+
+- Scale services from 0 to N concurrently using load test tool([hey](https://github.com/rakyll/hey),  [wrk](https://github.com/wg/wrk))
+- Measure the latency for the pods to come up and the deployment to change
+  - the latency of replicas to change from 0 to N
+  - the latency of pods from creation to ready
+
+**Preparetion**
+
+A load test tool([hey](https://github.com/rakyll/hey) or [wrk](https://github.com/wg/wrk)) should be installed before the load test
+
+- Install wrk
+
+  ```bash
+  # download wrk and build
+  git clone --depth=1 https://github.com/wg/wrk.git wrk
+  cd wrk
+  make
+  # move the executable to somewhere in your PATH
+  sudo cp wrk /usr/local/bin
+  ```
+
+- Install hey
+
+  ```bash
+  go get -u github.com/rakyll/hey
+  go install github.com/rakyll/hey
+  ```
+
+**Usage**
+
+```bash
+Usage:
+  kperf service load [flags]
+
+Flags:
+  -h, --help                      help for load
+  -c, --load-concurrency string   total number of workers to run concurrently for the load test tool (default "30")
+  -d, --load-duration string      Duration of the test for the load test tool (default "60s")
+  -t, --load-tool string          Select the load test tool, support wrk and hey (default "wrk")
+      --namespace string          Service namespace
+      --namespace-prefix string   Service namespace prefix
+      --namespace-range string    Service namespace range
+  -o, --output string             Measure result location (default ".")
+  -r, --range string              Desired service range
+      --resolvable                If Service endpoint resolvable url
+      --svc-prefix string         Service name prefix
+  -v, --verbose                   Service verbose result
+  -w, --wait-time duration        Time to wait for all pods to be ready (default 10s)
+```
+
+**Output**
+
+- Print the load test tool output and measurement if the parameter `verbose` was set
+- Save the latency of replicas in CSV and HTML
+- Save the latency of replicas and pods in JSON
+
+**Example**
+
+Scale up services(ktest-0, ... , ktest-4) in namespace ktest with wrk using 30 workers and lasting for 60 seconds, and measure the scale up latency
+
+```bash
+$ kperf service load --namespace ktest --svc-prefix ktest --range 0,4 --load-tool wrk --load-duration 60s --load-concurrency 30 --verbose --output /tmp
+2022/06/01 08:36:52 Namespace ktest, Service ktest-4, load start
+2022/06/01 08:36:52 Namespace ktest, Service ktest-2, load start
+2022/06/01 08:36:52 Namespace ktest, Service ktest-0, load start
+2022/06/01 08:36:52 Namespace ktest, Service ktest-1, load start
+2022/06/01 08:36:52 Namespace ktest, Service ktest-3, load start
+2022/06/01 08:37:52 Namespace ktest, Service ktest-2, load end, take off 60.075 seconds
+2022/06/01 08:37:52 Namespace ktest, Service ktest-0, load end, take off 60.083 seconds
+2022/06/01 08:37:52 Namespace ktest, Service ktest-4, load end, take off 60.091 seconds
+2022/06/01 08:37:52 Namespace ktest, Service ktest-1, load end, take off 60.102 seconds
+2022/06/01 08:37:52 Namespace ktest, Service ktest-3, load end, take off 60.104 seconds
+
+[Verbose] Namespace ktest, Service ktest-2:
+[Verbose] wrk output:
+Running 1m test @ http://192.168.0.181:32283
+  2 threads and 30 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    39.54ms   15.50ms 171.95ms   70.01%
+    Req/Sec   379.76     83.86   650.00     76.68%
+  Latency Distribution
+     50%   40.63ms
+     75%   42.71ms
+     90%   59.35ms
+     99%   74.10ms
+  23750 requests in 1.00m, 4.21MB read
+  Socket errors: connect 0, read 0, write 0, timeout 30
+Requests/sec:    395.38
+Transfer/sec:     71.79KB
+
+[Verbose] Replicas scale from 0 to 5:
+replica_count   ready_duration(seconds)
+            0                    29.274
+            1                    39.534
+            2                    42.643
+            3                    43.094
+            4                    45.051
+
+[Verbose] Pods scale from 0 to 5:
+pod_count       ready_duration(seconds)
+        0                          31.0
+        1                          35.0
+        2                          35.0
+        3                          24.0
+        4                          35.0
+---------------------------------------------------------------------------------------
+[Verbose] Namespace ktest, Service ktest-0:
+[Verbose] wrk output:
+Running 1m test @ http://192.168.0.181:32283
+  2 threads and 30 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    38.18ms   15.64ms 155.80ms   65.69%
+    Req/Sec   392.67    100.14   740.00     74.93%
+  Latency Distribution
+     50%   40.45ms
+     75%   42.28ms
+     90%   58.92ms
+     99%   73.94ms
+  26660 requests in 1.00m, 4.73MB read
+  Socket errors: connect 0, read 0, write 0, timeout 30
+Requests/sec:    443.77
+Transfer/sec:     80.57KB
+
+[Verbose] Replicas scale from 0 to 5:
+replica_count   ready_duration(seconds)
+            0                    29.927
+            1                    40.642
+            2                    43.488
+            3                    44.649
+            4                    45.451
+
+[Verbose] Pods scale from 0 to 5:
+pod_count       ready_duration(seconds)
+        0                          33.0
+        1                          31.0
+        2                          25.0
+        3                          35.0
+        4                          36.0
+----------------------------------------------------------------------------------------
+[Verbose] Namespace ktest, Service ktest-4:
+[Verbose] wrk output:
+Running 1m test @ http://192.168.0.181:32283
+  2 threads and 30 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    37.15ms   16.23ms 153.30ms   65.58%
+    Req/Sec   401.07    134.50     1.63k    84.21%
+  Latency Distribution
+     50%   40.34ms
+     75%   42.13ms
+     90%   58.59ms
+     99%   74.11ms
+  27636 requests in 1.00m, 4.90MB read
+  Socket errors: connect 0, read 0, write 0, timeout 30
+Requests/sec:    459.96
+Transfer/sec:     83.50KB
+
+[Verbose] Replicas scale from 0 to 5:
+replica_count   ready_duration(seconds)
+            0                    30.758
+            1                    38.034
+            2                    42.267
+            3                    44.243
+            4                    47.250
+
+[Verbose] Pods scale from 0 to 5:
+pod_count       ready_duration(seconds)
+        0                          31.0
+        1                          34.0
+        2                          35.0
+        3                          34.0
+        4                          25.0
+----------------------------------------------------------------------------------------
+[Verbose] Namespace ktest, Service ktest-1:
+[Verbose] wrk output:
+Running 1m test @ http://192.168.0.181:32283
+  2 threads and 30 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    39.49ms   15.56ms 171.76ms   69.22%
+    Req/Sec   380.19     85.63   646.00     76.24%
+  Latency Distribution
+     50%   40.62ms
+     75%   42.76ms
+     90%   59.33ms
+     99%   73.85ms
+  24447 requests in 1.00m, 4.33MB read
+  Socket errors: connect 0, read 0, write 0, timeout 30
+Requests/sec:    406.82
+Transfer/sec:     73.86KB
+
+[Verbose] Replicas scale from 0 to 5:
+replica_count   ready_duration(seconds)
+            0                    31.974
+            1                    41.548
+            2                    46.477
+            3                    46.836
+            4                    47.841
+
+[Verbose] Pods scale from 0 to 5:
+pod_count       ready_duration(seconds)
+        0                          35.0
+        1                          25.0
+        2                          35.0
+        3                          32.0
+        4                          30.0
+----------------------------------------------------------------------------------------
+[Verbose] Namespace ktest, Service ktest-3:
+[Verbose] wrk output:
+Running 1m test @ http://192.168.0.181:32283
+  2 threads and 30 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    37.48ms   16.49ms 234.53ms   66.06%
+    Req/Sec   400.96    183.79     3.42k    94.26%
+  Latency Distribution
+     50%   40.36ms
+     75%   42.13ms
+     90%   58.91ms
+     99%   73.41ms
+  27208 requests in 1.00m, 4.82MB read
+  Socket errors: connect 0, read 0, write 0, timeout 30
+Requests/sec:    452.74
+Transfer/sec:     82.19KB
+
+[Verbose] Replicas scale from 0 to 5:
+replica_count   ready_duration(seconds)
+            0                    31.631
+            1                    37.388
+            2                    41.688
+            3                    43.778
+            4                    45.875
+
+[Verbose] Pods scale from 0 to 5:
+pod_count       ready_duration(seconds)
+        0                          35.0
+        1                          31.0
+        2                          33.0
+        3                          24.0
+        4                          35.0
+----------------------------------------------------------------------------------------
+Measurement saved in CSV file /tmp/20220601083752_ksvc_loading_time.csv
+Measurement saved in JSON file /tmp/20220601083752_ksvc_loading_time.json
+Visualized measurement saved in HTML file /tmp/20220601083752_ksvc_loading_time.html
+```
+
+- CSV result
+
+```bash
+$ cat /tmp/20220602084358_ksvc_loading_time.csv
+svc_name,svc_namespace,replica_1_ready,replica_2_ready,replica_3_ready,replica_4_ready,replica_5_ready,replica_6_ready,replica_7_ready
+ktest-0,ktest,47.002,48.574,52.243,53.943,55.452,58.782,59.586
+ktest-1,ktest,45.176,48.184,50.566,50.902,51.609,54.727,58.331
+ktest-2,ktest,38.084,44.077,44.279,46.016,47.625,59.914,60.824
+ktest-3,ktest,44.560,47.732,49.989,52.944,56.772,57.884,59.263
+ktest-4,ktest,46.383,48.887,49.199,49.907,56.195,57.475,60.374
+```
+
+- HTML result in dashboard
+
+![service_load_replicas_latency measurement](docs/service_load_replicas_latency.png)
