@@ -359,8 +359,8 @@ func getSvcPods(ctx context.Context, params *pkg.PerfParams, namespace string, s
 
 // getReplicasCount gets the maximum count of replicas in each service and the maximum count of replicas in all services
 func getReplicasCount(loadResult pkg.LoadResult) (int, []int) {
-	var replicasCountList []int // the maximum replicas count in each service
-	var maxReplicasCount int    // the maximum count in replicasCountList
+	var maxReplicasCount int     // the maximum count in replicasCountList
+	replicasCountList := []int{} // the maximum replicas count in each service
 	for _, m := range loadResult.Measurment {
 		count := 0
 
