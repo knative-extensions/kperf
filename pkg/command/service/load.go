@@ -1,4 +1,4 @@
-// Copyright 2021 The Knative Authors
+// Copyright 2022 The Knative Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ func NewServiceLoadCommand(p *pkg.PerfParams) *cobra.Command {
 	loadArgs := pkg.LoadArgs{}
 	serviceLoadCommand := &cobra.Command{
 		Use:   "load",
-		Short: "Load and Measure Knative service",
+		Short: "Load test and Measure Knative service",
 		Long: `Scale Knative service from zero using load test tool and measure latency for service to scale form 0 to N
 
 For example:
@@ -264,8 +264,7 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 	}()
 
 	loadStart := time.Now()
-	m := fmt.Sprintf("Namespace %s, Service %s, load start", namespace, svc.Name)
-	log.Println(m)
+	log.Printf("Namespace %s, Service %s, load start\n", namespace, svc.Name)
 
 	go func() {
 		runCmd := exec.Command("/bin/sh", "-c", cmd)
@@ -281,8 +280,7 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 
 		loadEnd := time.Now()
 		loadDuration := loadEnd.Sub(loadStart)
-		m := fmt.Sprintf("Namespace %s, Service %s, load end, take off %.3f seconds", namespace, svc.Name, loadDuration.Seconds())
-		log.Println(m)
+		log.Printf("Namespace %s, Service %s, load end, take off %.3f seconds\n", namespace, svc.Name, loadDuration.Seconds())
 
 		time.Sleep(inputs.WaitPodsReadyDuration * time.Second) //wait for all pods ready
 		pdch <- struct{}{}
