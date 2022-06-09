@@ -249,27 +249,9 @@ GATEWAY_OVERRIDE=kourier GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service
   - the latency of replicas to change from 0 to N
   - the latency of pods from creation to ready
 
-**Preparetion**
+**Preparation**
 
 A load test tool([hey](https://github.com/rakyll/hey) or [wrk](https://github.com/wg/wrk)) should be installed before the load test
-
-- Install wrk
-
-  ```bash
-  # download wrk and build
-  git clone --depth=1 https://github.com/wg/wrk.git wrk
-  cd wrk
-  make
-  # move the executable to somewhere in your PATH
-  sudo cp wrk /usr/local/bin
-  ```
-
-- Install hey
-
-  ```bash
-  go get -u github.com/rakyll/hey
-  go install github.com/rakyll/hey
-  ```
 
 **Usage**
 
@@ -301,7 +283,14 @@ Flags:
 
 **Example**
 
-Scale up services(ktest-0, ... , ktest-4) in namespace ktest with wrk using 30 workers and lasting for 60 seconds, and measure the scale up latency
+1. Prepare namespace and services
+
+```bash
+$ kubectl create ns ktest
+$ kperf service generate -n 5 -b 1 -c 1 -i 1 --namespace ktest --svc-prefix ktest
+```
+
+2. Scale up services(ktest-0, ... , ktest-4) in namespace ktest with wrk using 30 workers and lasting for 60 seconds, and measure the scale up latency
 
 ```bash
 $ kperf service load --namespace ktest --svc-prefix ktest --range 0,4 --load-tool wrk --load-duration 60s --load-concurrency 30 --verbose --output /tmp

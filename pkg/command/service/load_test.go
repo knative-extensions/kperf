@@ -34,7 +34,7 @@ import (
 	servingv1fake "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1/fake"
 )
 
-func TestLoadServces(t *testing.T) {
+func TestLoadServices(t *testing.T) {
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "ns-1",
@@ -76,13 +76,9 @@ func TestLoadServces(t *testing.T) {
 		svc := ServicesToScale{
 			Service: &servingv1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "ksvc-1",
-					Namespace:   "ns-1",
-					UID:         "cccccccc-cccc-cccc-cccc-cccccccccccc",
-					Annotations: map[string]string{
-						// "autoscaling.knative.dev/minScale": "1",
-						// "autoscaling.knative.dev/maxScale": "2",
-					},
+					Name:      "ksvc-1",
+					Namespace: "ns-1",
+					UID:       "cccccccc-cccc-cccc-cccc-cccccccccccc",
 				},
 			},
 			Namespace: "ns-1",
