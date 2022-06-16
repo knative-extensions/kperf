@@ -282,11 +282,11 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 		pdch <- struct{}{}
 	}()
 
-	var preReadyReplicas int
+	preReadyReplicas := 0
 	for {
 		select {
 		case event := <-rdch:
-			getReplicaResult(replicaResults, event, preReadyReplicas, loadStart)
+			replicaResults = getReplicaResult(replicaResults, event, preReadyReplicas, loadStart)
 		case <-pdch:
 			podResults, err = getPodResults(ctx, params, namespace, svc)
 			if err != nil {
@@ -381,7 +381,7 @@ func loadCmdBuilder(inputs pkg.LoadArgs, endpoint string, namespace string, svc 
 }
 
 // getReplicaResult get replicaResult by watching deployment, and append replicaResult to replicaResults
-func getReplicaResult(replicaResults []pkg.LoadReplicaResult, event watch.Event, preReadyReplicas int, loadStart time.Time) {
+func getReplicaResult(replicaResults []pkg.LoadReplicaResult, event watch.Event, preReadyReplicas int, loadStart time.Time) []pkg.LoadReplicaResult {
 	var replicaResult pkg.LoadReplicaResult
 	dm := event.Object.(*v1.Deployment)
 	readyReplicas := int(dm.Status.ReadyReplicas)
@@ -394,6 +394,7 @@ func getReplicaResult(replicaResults []pkg.LoadReplicaResult, event watch.Event,
 
 		replicaResults = append(replicaResults, replicaResult)
 	}
+	return replicaResults
 }
 
 // getPodResults gets podReadyDuration of all pods and append result to podResults
