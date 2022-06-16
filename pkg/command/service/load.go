@@ -223,8 +223,6 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 	var loadResult pkg.LoadFromZeroResult
 	var replicaResults []pkg.LoadReplicaResult
 	var podResults []pkg.LoadPodResult
-	loadResult.ServiceName = svc.Name
-	loadResult.ServiceNamespace = namespace
 
 	watcher, err := params.ClientSet.AppsV1().Deployments(namespace).Watch(
 		context.Background(), metav1.ListOptions{LabelSelector: selector.String()})
@@ -253,12 +251,9 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 	defer func() {
 		// Delete wrk lua script
 		if strings.EqualFold(inputs.LoadTool, "wrk") {
-			_, fileError := os.Stat(wrkLua)
-			if fileError == nil {
-				removeError := os.Remove(wrkLua)
-				if removeError != nil {
-					log.Printf("remove %s error : %s", wrkLua, removeError)
-				}
+			err := deleteFile(wrkLua)
+			if err != nil {
+				fmt.Printf("%s\n", err)
 			}
 		}
 	}()
@@ -275,6 +270,7 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 		if err != nil {
 			m := fmt.Sprintf("run load command error: %s", err)
 			fmt.Println(m)
+			errch <- errors.New(m)
 			return
 		}
 
@@ -290,55 +286,19 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 	for {
 		select {
 		case event := <-rdch:
-			// get replicas ready duration by watching deployment event
-			var r pkg.LoadReplicaResult
-			dm := event.Object.(*v1.Deployment)
-			readyReplicas := int(dm.Status.ReadyReplicas)
-			if event.Type == watch.Modified && readyReplicas > preReadyReplicas {
-				r.ReplicaReadyTime = time.Now()
-				r.ReadyReplicasCount = readyReplicas
-				r.ReplicaReadyDuration = r.ReplicaReadyTime.Sub(loadStart).Seconds()
-				replicaResults = append(replicaResults, r)
-				preReadyReplicas = readyReplicas
-			}
+			getReplicaResult(replicaResults, event, preReadyReplicas, loadStart)
 		case <-pdch:
-			// get pods ready duration by pod conditions
-			var r pkg.LoadPodResult
-			podList, err := getSvcPods(ctx, params, namespace, svc.Name)
+			podResults, err = getPodResults(ctx, params, namespace, svc)
 			if err != nil {
-				return "", loadResult, err
+				return loadOutput, loadResult, err
 			}
-			for i := 0; i < len(podList); i++ {
-				pod := podList[i]
-				podCreatedTime := pod.GetCreationTimestamp().Rfc3339Copy()
-				present, PodReadyCondition := getPodCondition(&pod.Status, corev1.PodReady)
-				if present == -1 {
-					log.Println("failed to find Pod Condition PodReady and skip measuring")
-					continue
-				}
-				podReadyTime := PodReadyCondition.LastTransitionTime.Rfc3339Copy()
-				podReadyDuration := podReadyTime.Sub(podCreatedTime.Time).Seconds()
-				r.PodCreateTime = podCreatedTime
-				r.PodReadyTime = podReadyTime
-				r.PodReadyDuration = podReadyDuration
-				podResults = append(podResults, r)
-			}
-			var totalReadyReplicas int
-			for _, value := range replicaResults {
-				if value.ReadyReplicasCount > totalReadyReplicas {
-					totalReadyReplicas = value.ReadyReplicasCount
-				}
-			}
-			loadResult.TotalReadyReplicas = totalReadyReplicas
-			loadResult.TotalReadyPods = len(podResults)
-			loadResult.ReplicaResults = replicaResults
-			loadResult.PodResults = podResults
+			// set loadResult
+			loadResult = setLoadFromZeroResult(namespace, svc, replicaResults, podResults)
 			return loadOutput, loadResult, nil
 		case err := <-errch:
 			return loadOutput, loadResult, err
 		}
 	}
-
 }
 
 // getSvcPod gets pod list by namespace and service name.
@@ -418,4 +378,80 @@ func loadCmdBuilder(inputs pkg.LoadArgs, endpoint string, namespace string, svc 
 	}
 
 	return "", "", fmt.Errorf("kperf only support hey and wrk now")
+}
+
+// getReplicaResult get replicaResult by watching deployment, and append replicaResult to replicaResults
+func getReplicaResult(replicaResults []pkg.LoadReplicaResult, event watch.Event, preReadyReplicas int, loadStart time.Time) {
+	var replicaResult pkg.LoadReplicaResult
+	dm := event.Object.(*v1.Deployment)
+	readyReplicas := int(dm.Status.ReadyReplicas)
+	if event.Type == watch.Modified && readyReplicas > preReadyReplicas {
+
+		replicaResult.ReplicaReadyTime = time.Now()
+		replicaResult.ReadyReplicasCount = readyReplicas
+		replicaResult.ReplicaReadyDuration = replicaResult.ReplicaReadyTime.Sub(loadStart).Seconds()
+		preReadyReplicas = readyReplicas
+
+		replicaResults = append(replicaResults, replicaResult)
+	}
+}
+
+// getPodResults gets podReadyDuration of all pods and append result to podResults
+func getPodResults(ctx context.Context, params *pkg.PerfParams, namespace string, svc *servingv1.Service) ([]pkg.LoadPodResult, error) {
+	var r pkg.LoadPodResult
+	var podResults []pkg.LoadPodResult
+	podList, err := getSvcPods(ctx, params, namespace, svc.Name)
+	if err != nil {
+		return podResults, err
+	}
+	for i := 0; i < len(podList); i++ {
+		pod := podList[i]
+		podCreatedTime := pod.GetCreationTimestamp().Rfc3339Copy()
+		present, PodReadyCondition := getPodCondition(&pod.Status, corev1.PodReady)
+		if present == -1 {
+			log.Println("failed to find Pod Condition PodReady and skip measuring")
+			continue
+		}
+		podReadyTime := PodReadyCondition.LastTransitionTime.Rfc3339Copy()
+		podReadyDuration := podReadyTime.Sub(podCreatedTime.Time).Seconds()
+		r.PodCreateTime = podCreatedTime
+		r.PodReadyTime = podReadyTime
+		r.PodReadyDuration = podReadyDuration
+		podResults = append(podResults, r)
+	}
+	return podResults, nil
+}
+
+// setLoadFromZeroResult sets every item of LoadFromZeroResult
+func setLoadFromZeroResult(namespace string, svc *servingv1.Service, replicaResults []pkg.LoadReplicaResult, podResults []pkg.LoadPodResult) pkg.LoadFromZeroResult {
+	var loadResult pkg.LoadFromZeroResult
+	var totalReadyReplicas int
+	for _, value := range replicaResults {
+		if value.ReadyReplicasCount > totalReadyReplicas {
+			totalReadyReplicas = value.ReadyReplicasCount
+		}
+	}
+	loadResult.TotalReadyReplicas = totalReadyReplicas
+	loadResult.TotalReadyPods = len(podResults)
+	loadResult.ReplicaResults = replicaResults
+	loadResult.PodResults = podResults
+
+	loadResult.ServiceName = svc.Name
+	loadResult.ServiceNamespace = namespace
+
+	return loadResult
+}
+
+// deleteFile delete a file from the filepath
+func deleteFile(filepath string) error {
+	_, fileError := os.Stat(filepath)
+	if fileError == nil {
+		removeError := os.Remove(filepath)
+		if removeError != nil {
+			fmt.Printf("remove %s error : %s\n", filepath, removeError)
+			return removeError
+		}
+		return nil
+	}
+	return fileError
 }
