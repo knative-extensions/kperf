@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -143,4 +144,18 @@ func GetIngressController(p *pkg.PerfParams) map[string]string {
 	ingressController["ingressController"] = "Unknown"
 	ingressController["version"] = "Unknown"
 	return ingressController
+}
+
+// deleteFile deletes a file from the filepath
+func deleteFile(filepath string) error {
+	_, fileError := os.Stat(filepath)
+	if fileError == nil {
+		removeError := os.Remove(filepath)
+		if removeError != nil {
+			fmt.Printf("remove %s error : %s\n", filepath, removeError)
+			return removeError
+		}
+		return nil
+	}
+	return fileError
 }
