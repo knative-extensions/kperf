@@ -25,7 +25,6 @@ import (
 	"knative.dev/kperf/pkg/command/utils"
 
 	"log"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -192,12 +191,12 @@ func loadAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Load
 					fmt.Printf("[Verbose] Deployment replicas changed from 0 to %d:\n", len(loadResult.ReplicaResults))
 					fmt.Printf("replicas\tready_duration(seconds)\n")
 					for i := 0; i < len(loadResult.ReplicaResults); i++ {
-						fmt.Printf("%13d\t%23.3f\n", i, loadResult.ReplicaResults[i].ReplicaReadyDuration)
+						fmt.Printf("%8d\t%23.3f\n", i, loadResult.ReplicaResults[i].ReplicaReadyDuration)
 					}
 					fmt.Printf("\n[Verbose] Pods changed from 0 to %d:\n", len(loadResult.PodResults))
 					fmt.Printf("pods\tready_duration(seconds)\n")
 					for i := 0; i < len(loadResult.PodResults); i++ {
-						fmt.Printf("%9d\t%23.1f\n", i, loadResult.PodResults[i].PodReadyDuration)
+						fmt.Printf("%4d\t%23.1f\n", i, loadResult.PodResults[i].PodReadyDuration)
 					}
 					fmt.Printf("\n---------------------------------------------------------------------------------\n")
 				}
@@ -282,11 +281,10 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 		pdch <- struct{}{}
 	}()
 
-	preReadyReplicas := 0
 	for {
 		select {
 		case event := <-rdch:
-			replicaResults = getReplicaResult(replicaResults, event, preReadyReplicas, loadStart)
+			replicaResults = getReplicaResult(replicaResults, event, loadStart)
 		case <-pdch:
 			podResults, err = getPodResults(ctx, params, namespace, svc)
 			if err != nil {
@@ -381,17 +379,14 @@ func loadCmdBuilder(inputs pkg.LoadArgs, endpoint string, namespace string, svc 
 }
 
 // getReplicaResult get replicaResult by watching deployment, and append replicaResult to replicaResults
-func getReplicaResult(replicaResults []pkg.LoadReplicaResult, event watch.Event, preReadyReplicas int, loadStart time.Time) []pkg.LoadReplicaResult {
+func getReplicaResult(replicaResults []pkg.LoadReplicaResult, event watch.Event, loadStart time.Time) []pkg.LoadReplicaResult {
 	var replicaResult pkg.LoadReplicaResult
 	dm := event.Object.(*v1.Deployment)
 	readyReplicas := int(dm.Status.ReadyReplicas)
-	if event.Type == watch.Modified && readyReplicas > preReadyReplicas {
-
+	if event.Type == watch.Modified && readyReplicas > len(replicaResults) {
 		replicaResult.ReplicaReadyTime = time.Now()
 		replicaResult.ReadyReplicasCount = readyReplicas
 		replicaResult.ReplicaReadyDuration = replicaResult.ReplicaReadyTime.Sub(loadStart).Seconds()
-		preReadyReplicas = readyReplicas
-
 		replicaResults = append(replicaResults, replicaResult)
 	}
 	return replicaResults
@@ -403,7 +398,7 @@ func getPodResults(ctx context.Context, params *pkg.PerfParams, namespace string
 	var podResults []pkg.LoadPodResult
 	podList, err := getSvcPods(ctx, params, namespace, svc.Name)
 	if err != nil {
-		return podResults, err
+		return nil, err
 	}
 	for i := 0; i < len(podList); i++ {
 		pod := podList[i]
@@ -441,18 +436,4 @@ func setLoadFromZeroResult(namespace string, svc *servingv1.Service, replicaResu
 	loadResult.ServiceNamespace = namespace
 
 	return loadResult
-}
-
-// deleteFile delete a file from the filepath
-func deleteFile(filepath string) error {
-	_, fileError := os.Stat(filepath)
-	if fileError == nil {
-		removeError := os.Remove(filepath)
-		if removeError != nil {
-			fmt.Printf("remove %s error : %s\n", filepath, removeError)
-			return removeError
-		}
-		return nil
-	}
-	return fileError
 }

@@ -470,10 +470,9 @@ func Test_getPodResults(t *testing.T) {
 
 func Test_getReplicaResult(t *testing.T) {
 	type args struct {
-		replicaResults   []pkg.LoadReplicaResult
-		event            watch.Event
-		preReadyReplicas int
-		loadStart        time.Time
+		replicaResults []pkg.LoadReplicaResult
+		event          watch.Event
+		loadStart      time.Time
 	}
 	readyTime := time.Now()
 	readyDuration := time.Second * 10
@@ -491,20 +490,30 @@ func Test_getReplicaResult(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
+		want []pkg.LoadReplicaResult
 	}{
 		{
 			name: "all good",
 			args: args{
-				replicaResults:   []pkg.LoadReplicaResult{},
-				event:            fakeEvent,
-				preReadyReplicas: 0,
-				loadStart:        createTime,
+				replicaResults: []pkg.LoadReplicaResult{},
+				event:          fakeEvent,
+				loadStart:      createTime,
+			},
+			want: []pkg.LoadReplicaResult{
+				{
+					ReadyReplicasCount:   1,
+					ReplicaReadyTime:     readyTime,
+					ReplicaReadyDuration: readyDuration.Seconds(),
+				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			getReplicaResult(tt.args.replicaResults, tt.args.event, tt.args.preReadyReplicas, tt.args.loadStart)
+			got := getReplicaResult(tt.args.replicaResults, tt.args.event, tt.args.loadStart)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getReplicaResult() got = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
