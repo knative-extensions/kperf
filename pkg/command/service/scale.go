@@ -16,7 +16,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -24,7 +23,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -42,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"knative.dev/kperf/pkg"
-	"knative.dev/kperf/pkg/command/utils"
 
 	"knative.dev/serving/pkg/apis/serving"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
@@ -127,37 +124,11 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 	for _, m := range scaleFromZeroResult.Measurment {
 		rows = append(rows, []string{m.ServiceName, m.ServiceNamespace, fmt.Sprintf("%f", m.ServiceLatency), fmt.Sprintf("%f", m.DeploymentLatency)})
 	}
-
-	current := time.Now()
-	outputLocation, err := utils.CheckOutputLocation(inputs.Output)
+	// generate CSV, HTML and JSON outputs from rows and scaleFromZeroResult
+	err = GenerateOutput(inputs.Output, OutputFilename, true, true, true, rows, scaleFromZeroResult)
 	if err != nil {
-		fmt.Printf("failed to check measure output location: %s\n", err)
+		fmt.Printf("failed to generate output: %s\n", err)
 	}
-
-	csvPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.csv", current.Format(DateFormatString), OutputFilename))
-	err = utils.GenerateCSVFile(csvPath, rows)
-	if err != nil {
-		fmt.Printf("failed to generate CSV file and skip %s\n", err)
-	}
-	fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
-
-	jsonPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.json", current.Format(DateFormatString), OutputFilename))
-	jsonData, err := json.Marshal(scaleFromZeroResult)
-	if err != nil {
-		fmt.Printf("failed to generate json data and skip %s\n", err)
-	}
-	err = utils.GenerateJSONFile(jsonData, jsonPath)
-	if err != nil {
-		fmt.Printf("failed to generate json file and skip %s\n", err)
-	}
-	fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
-
-	htmlPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.html", current.Format(DateFormatString), OutputFilename))
-	err = utils.GenerateHTMLFile(csvPath, htmlPath)
-	if err != nil {
-		fmt.Printf("failed to generate HTML file and skip %s\n", err)
-	}
-	fmt.Printf("Visualized measurement saved in HTML file %s\n", htmlPath)
 
 	return nil
 }

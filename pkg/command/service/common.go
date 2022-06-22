@@ -16,15 +16,19 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"knative.dev/kperf/pkg"
+	"knative.dev/kperf/pkg/command/utils"
 )
 
 func GetNamespaces(ctx context.Context, params *pkg.PerfParams, namespace, namespaceRange, namespacePrefix string) ([]string, error) {
@@ -146,16 +150,99 @@ func GetIngressController(p *pkg.PerfParams) map[string]string {
 	return ingressController
 }
 
+// GenerateJSONOutput generates CSV file from the rows data
+func GenerateCSVOutput(rows [][]string, outputPathPrefix string) (csvPath string, err error) {
+	csvPath = outputPathPrefix + ".csv"
+	err = utils.GenerateCSVFile(csvPath, rows)
+	if err != nil {
+		fmt.Printf("failed to generate CSV file and skip %s\n", err)
+		return "", err
+	}
+	return csvPath, nil
+}
+
+// GenerateHTMLOutput generates HTML file from CSV file
+func GenerateHTMLOutput(csvPath string, outputPathPrefix string) (htmlPath string, err error) {
+	htmlPath = outputPathPrefix + ".html"
+	err = utils.GenerateHTMLFile(csvPath, htmlPath)
+	if err != nil {
+		fmt.Printf("failed to generate HTML file and skip %s\n", err)
+		return "", err
+	}
+	return htmlPath, nil
+}
+
+// GenerateJSONOutput generates JSON output from the result
+func GenerateJSONOutput(result interface{}, outputPathPrefix string) (jsonPath string, err error) {
+	jsonData, err := json.Marshal(result)
+	if err != nil {
+		fmt.Printf("failed to generate json data and skip %s\n", err)
+		return "", err
+	}
+	jsonPath = outputPathPrefix + ".json"
+	err = utils.GenerateJSONFile(jsonData, jsonPath)
+	if err != nil {
+		fmt.Printf("failed to generate json file and skip %s\n", err)
+		return "", err
+	}
+	return jsonPath, nil
+}
+
+// GenerateOutputPathPrefix generates the prefix of output path, which can be combined with a suffix name(.csv) to form a complete path
+func GenerateOutputPathPrefix(inputsOutput string, outputFilenameFlag string) (pathPrefix string, err error) {
+	current := time.Now()
+	outputLocation, err := utils.CheckOutputLocation(inputsOutput)
+	if err != nil {
+		fmt.Printf("failed to check measure output location: %s\n", err)
+		return "", err
+	}
+	pathPrefix = filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), outputFilenameFlag))
+	return pathPrefix, nil
+}
+
+// GenerateOutput generates outputs according to flags(csvFlag, htmlFlag and josnFlag) from rows and result
+func GenerateOutput(inputsOutput string, outputFilenameFlag string, csvFlag bool, htmlFlag bool, jsonFlag bool, rows [][]string, result interface{}) error {
+	outputPathPrefix, err := GenerateOutputPathPrefix(inputsOutput, outputFilenameFlag)
+	if err != nil {
+		return err
+	}
+	if csvFlag && rows != nil {
+		// generate csv file from rows
+		csvPath, err := GenerateCSVOutput(rows, outputPathPrefix)
+		if err == nil {
+			fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
+		}
+		// generate html file from csv file
+		if htmlFlag && csvPath != "" {
+			htmlPath, err := GenerateHTMLOutput(csvPath, outputPathPrefix)
+			if err == nil {
+				fmt.Printf("Visualized measurement saved in HTML file %s\n", htmlPath)
+			}
+		}
+	} else if htmlFlag {
+		fmt.Printf("HTML output needs CSV output, please reset CSV Flag.\n")
+	}
+	if jsonFlag {
+		// generate json file from result
+		jsonPath, err := GenerateJSONOutput(result, outputPathPrefix)
+		if err == nil {
+			fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
+		}
+	}
+	return nil
+}
+
 // deleteFile deletes a file from the filepath
 func deleteFile(filepath string) error {
-	_, fileError := os.Stat(filepath)
-	if fileError == nil {
-		removeError := os.Remove(filepath)
-		if removeError != nil {
-			fmt.Printf("remove %s error : %s\n", filepath, removeError)
-			return removeError
+	_, err := os.Stat(filepath)
+	if err == nil {
+		err := os.Remove(filepath)
+		if err != nil {
+			fmt.Printf("remove %s error : %s\n", filepath, err)
+			return err
 		}
 		return nil
 	}
-	return fileError
+	fmt.Printf("stat %s error : %s\n", filepath, err)
+	return err
 }
