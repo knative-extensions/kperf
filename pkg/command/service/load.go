@@ -133,6 +133,7 @@ func LoadServicesUpFromZero(params *pkg.PerfParams, inputs pkg.LoadArgs) error {
 	err = GenerateOutput(inputs.Output, LoadOutputFilename, true, true, true, rows, loadFromZeroResult)
 	if err != nil {
 		fmt.Printf("failed to generate output: %s\n", err)
+		return err
 	}
 
 	return nil

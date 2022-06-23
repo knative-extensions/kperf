@@ -150,7 +150,7 @@ func GetIngressController(p *pkg.PerfParams) map[string]string {
 	return ingressController
 }
 
-// GenerateJSONOutput generates CSV file from the rows data
+// GenerateCSVOutput generates CSV file from the rows data
 func GenerateCSVOutput(rows [][]string, outputPathPrefix string) (csvPath string, err error) {
 	csvPath = outputPathPrefix + ".csv"
 	err = utils.GenerateCSVFile(csvPath, rows)
@@ -209,15 +209,20 @@ func GenerateOutput(inputsOutput string, outputFilenameFlag string, csvFlag bool
 	if csvFlag && rows != nil {
 		// generate csv file from rows
 		csvPath, err := GenerateCSVOutput(rows, outputPathPrefix)
-		if err == nil {
-			fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
+		if err != nil {
+			fmt.Printf("failed to save measurement in CSV file: %s\n", err)
+			return err
 		}
+		fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
+
 		// generate html file from csv file
 		if htmlFlag && csvPath != "" {
 			htmlPath, err := GenerateHTMLOutput(csvPath, outputPathPrefix)
-			if err == nil {
-				fmt.Printf("Visualized measurement saved in HTML file %s\n", htmlPath)
+			if err != nil {
+				fmt.Printf("failed to save visualized measurement in HTML file: %s\n", err)
+				return err
 			}
+			fmt.Printf("Visualized measurement saved in HTML file %s\n", htmlPath)
 		}
 	} else if htmlFlag {
 		fmt.Printf("HTML output needs CSV output, please reset CSV Flag.\n")
@@ -225,9 +230,11 @@ func GenerateOutput(inputsOutput string, outputFilenameFlag string, csvFlag bool
 	if jsonFlag {
 		// generate json file from result
 		jsonPath, err := GenerateJSONOutput(result, outputPathPrefix)
-		if err == nil {
-			fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
+		if err != nil {
+			fmt.Printf("failed to save measurement in JSON file: %s\n", err)
+			return err
 		}
+		fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
 	}
 	return nil
 }
@@ -235,14 +242,14 @@ func GenerateOutput(inputsOutput string, outputFilenameFlag string, csvFlag bool
 // deleteFile deletes a file from the filepath
 func deleteFile(filepath string) error {
 	_, err := os.Stat(filepath)
-	if err == nil {
-		err := os.Remove(filepath)
-		if err != nil {
-			fmt.Printf("remove %s error : %s\n", filepath, err)
-			return err
-		}
-		return nil
+	if err != nil {
+		fmt.Printf("stat %s error : %s\n", filepath, err)
+		return err
 	}
-	fmt.Printf("stat %s error : %s\n", filepath, err)
-	return err
+	err = os.Remove(filepath)
+	if err != nil {
+		fmt.Printf("remove %s error : %s\n", filepath, err)
+		return err
+	}
+	return nil
 }

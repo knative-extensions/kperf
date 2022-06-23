@@ -124,10 +124,12 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 	for _, m := range scaleFromZeroResult.Measurment {
 		rows = append(rows, []string{m.ServiceName, m.ServiceNamespace, fmt.Sprintf("%f", m.ServiceLatency), fmt.Sprintf("%f", m.DeploymentLatency)})
 	}
+
 	// generate CSV, HTML and JSON outputs from rows and scaleFromZeroResult
 	err = GenerateOutput(inputs.Output, OutputFilename, true, true, true, rows, scaleFromZeroResult)
 	if err != nil {
 		fmt.Printf("failed to generate output: %s\n", err)
+		return err
 	}
 
 	return nil

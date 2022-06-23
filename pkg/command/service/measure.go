@@ -665,13 +665,17 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 			return err
 		}
 		rawCSVPath, err := GenerateCSVOutput(rows, rawOutputFilename)
-		if err == nil {
-			fmt.Printf("Raw Timestamp saved in CSV file %s\n", rawCSVPath)
+		if err != nil {
+			fmt.Printf("failed to save Raw Timestamp: %s\n", err)
+			return err
 		}
+		fmt.Printf("Raw Timestamp saved in CSV file %s\n", rawCSVPath)
+
 		// generate CSV, HTML and JSON outputs from rows and measureFinalResult
 		err = GenerateOutput(inputs.Output, MeasureOutputFilename, true, true, true, rows, measureFinalResult)
 		if err != nil {
 			fmt.Printf("failed to generate output: %s\n", err)
+			return err
 		}
 	} else {
 		fmt.Printf("-----------------------------\n")
