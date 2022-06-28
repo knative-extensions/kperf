@@ -16,13 +16,9 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
-
-	"knative.dev/kperf/pkg/command/utils"
 
 	"log"
 	"os/exec"
@@ -133,36 +129,12 @@ func LoadServicesUpFromZero(params *pkg.PerfParams, inputs pkg.LoadArgs) error {
 	}
 	rows = append([][]string{row}, rows...)
 
-	current := time.Now()
-	outputLocation, err := utils.CheckOutputLocation(inputs.Output)
+	// generate CSV, HTML and JSON outputs from rows and loadFromZeroResult
+	err = GenerateOutput(inputs.Output, LoadOutputFilename, true, true, true, rows, loadFromZeroResult)
 	if err != nil {
-		fmt.Printf("failed to check measure output location: %s\n", err)
+		fmt.Printf("failed to generate output: %s\n", err)
+		return err
 	}
-
-	csvPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.csv", current.Format(DateFormatString), LoadOutputFilename))
-	err = utils.GenerateCSVFile(csvPath, rows)
-	if err != nil {
-		fmt.Printf("failed to generate CSV file and skip %s\n", err)
-	}
-	fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
-
-	jsonPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.json", current.Format(DateFormatString), LoadOutputFilename))
-	jsonData, err := json.Marshal(loadFromZeroResult)
-	if err != nil {
-		fmt.Printf("failed to generate json data and skip %s\n", err)
-	}
-	err = utils.GenerateJSONFile(jsonData, jsonPath)
-	if err != nil {
-		fmt.Printf("failed to generate json file and skip %s\n", err)
-	}
-	fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
-
-	htmlPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s.html", current.Format(DateFormatString), LoadOutputFilename))
-	err = utils.GenerateHTMLFile(csvPath, htmlPath)
-	if err != nil {
-		fmt.Printf("failed to generate HTML file and skip %s\n", err)
-	}
-	fmt.Printf("Visualized measurement saved in HTML file %s\n", htmlPath)
 
 	return nil
 }

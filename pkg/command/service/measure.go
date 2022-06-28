@@ -16,10 +16,8 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -39,11 +37,12 @@ import (
 	v1 "knative.dev/serving/pkg/apis/serving/v1"
 
 	"knative.dev/kperf/pkg"
-	"knative.dev/kperf/pkg/command/utils"
 )
 
 const (
-	DateFormatString = "20060102150405"
+	DateFormatString         = "20060102150405"
+	RawMeasureOutputFilename = "raw_ksvc_creation_time"
+	MeasureOutputFilename    = "ksvc_creation_time"
 )
 
 type MeasureServicesOptions struct {
@@ -659,42 +658,25 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 		measureFinalResult.Result.P99, _ = stats.Percentile(measureFinalResult.SvcReadyTime, 99)
 		fmt.Printf("Percentile99: %fs\n", measureFinalResult.Result.P99)
 
-		current := time.Now()
-		outputLocation, err := utils.CheckOutputLocation(inputs.Output)
+		// generate CSV output of raw timestamp from rawRows
+		rawOutputFilename, err := GenerateOutputPathPrefix(inputs.Output, RawMeasureOutputFilename)
 		if err != nil {
-			fmt.Printf("failed to check measure output location: %s\n", err)
+			fmt.Printf("failed to generate raw output filename: %s", err)
+			return err
 		}
-		rawPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "raw_ksvc_creation_time.csv"))
-		err = utils.GenerateCSVFile(rawPath, rawRows)
+		rawCSVPath, err := GenerateCSVOutput(rows, rawOutputFilename)
 		if err != nil {
-			fmt.Printf("failed to generate raw timestamp file and skip %s\n", err)
+			fmt.Printf("failed to save Raw Timestamp: %s\n", err)
+			return err
 		}
-		fmt.Printf("Raw Timestamp saved in CSV file %s\n", rawPath)
+		fmt.Printf("Raw Timestamp saved in CSV file %s\n", rawCSVPath)
 
-		csvPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.csv"))
-		err = utils.GenerateCSVFile(csvPath, rows)
+		// generate CSV, HTML and JSON outputs from rows and measureFinalResult
+		err = GenerateOutput(inputs.Output, MeasureOutputFilename, true, true, true, rows, measureFinalResult)
 		if err != nil {
-			fmt.Printf("failed to generate CSV file and skip %s\n", err)
+			fmt.Printf("failed to generate output: %s\n", err)
+			return err
 		}
-		fmt.Printf("Measurement saved in CSV file %s\n", csvPath)
-
-		jsonPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.json"))
-		jsonData, err := json.Marshal(measureFinalResult)
-		if err != nil {
-			fmt.Printf("failed to generate json data and skip %s\n", err)
-		}
-		err = utils.GenerateJSONFile(jsonData, jsonPath)
-		if err != nil {
-			fmt.Printf("failed to generate json file and skip %s\n", err)
-		}
-		fmt.Printf("Measurement saved in JSON file %s\n", jsonPath)
-
-		htmlPath := filepath.Join(outputLocation, fmt.Sprintf("%s_%s", current.Format(DateFormatString), "ksvc_creation_time.html"))
-		err = utils.GenerateHTMLFile(csvPath, htmlPath)
-		if err != nil {
-			fmt.Printf("failed to generate HTML file and skip %s\n", err)
-		}
-		fmt.Printf("Visualized measurement saved in HTML file %s\n", htmlPath)
 	} else {
 		fmt.Printf("-----------------------------\n")
 		fmt.Printf("Basic Information:\n")
