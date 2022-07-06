@@ -147,7 +147,7 @@ func TestNewServiceLoadCommand(t *testing.T) {
 	})
 }
 
-func Test_getSvcPods(t *testing.T) {
+func TestGetSvcPods(t *testing.T) {
 	readyTime := time.Now()
 	readyDuration := time.Second * 10
 	createTime := readyTime.Add(-readyDuration)
@@ -230,7 +230,7 @@ func Test_getSvcPods(t *testing.T) {
 	}
 }
 
-func Test_loadCmdBuilder(t *testing.T) {
+func TestLoadCmdBuilder(t *testing.T) {
 	type args struct {
 		inputs    pkg.LoadArgs
 		namespace string
@@ -347,7 +347,7 @@ func Test_loadCmdBuilder(t *testing.T) {
 	}
 }
 
-func Test_getReplicasCount(t *testing.T) {
+func TestGetReplicasCount(t *testing.T) {
 	type args struct {
 		loadResult pkg.LoadResult
 	}
@@ -405,7 +405,7 @@ func Test_getReplicasCount(t *testing.T) {
 	}
 }
 
-func Test_getPodResults(t *testing.T) {
+func TestGetPodResults(t *testing.T) {
 	type args struct {
 		ctx       context.Context
 		params    *pkg.PerfParams
@@ -474,7 +474,7 @@ func Test_getPodResults(t *testing.T) {
 	}
 }
 
-func Test_getReplicaResult(t *testing.T) {
+func TestGetReplicaResult(t *testing.T) {
 	type args struct {
 		replicaResults []pkg.LoadReplicaResult
 		event          watch.Event
@@ -524,7 +524,7 @@ func Test_getReplicaResult(t *testing.T) {
 	}
 }
 
-func Test_deleteFile(t *testing.T) {
+func TestDeleteFile(t *testing.T) {
 	type args struct {
 		wrkLua string
 	}
@@ -563,7 +563,7 @@ func Test_deleteFile(t *testing.T) {
 	}
 }
 
-func Test_setLoadFromZeroResult(t *testing.T) {
+func TestSetLoadFromZeroResult(t *testing.T) {
 	type args struct {
 		namespace      string
 		svc            *servingv1.Service
@@ -627,7 +627,7 @@ func Test_setLoadFromZeroResult(t *testing.T) {
 	}
 }
 
-func Test_runLoadFromZero(t *testing.T) {
+func TestRunLoadFromZero(t *testing.T) {
 	// pre-test
 	readyTime := time.Now()
 	readyDuration := time.Second * 10
@@ -739,7 +739,7 @@ func Test_runLoadFromZero(t *testing.T) {
 			LoadConcurrency: "30",
 		}
 		_, _, err = runLoadFromZero(fakeCtx, p, inputs, FakeNamespace, &fakeService)
-		assert.ErrorContains(t, err, "failed to run external load tool")
+		assert.ErrorContains(t, err, "failed to run loadCmdBuilder")
 	})
 
 	t.Run("run internal load test tool error", func(t *testing.T) {
@@ -767,126 +767,16 @@ func Test_runLoadFromZero(t *testing.T) {
 			Output:          "/tmp",
 			LoadTool:        "default",
 			LoadDuration:    "60hms",
-			LoadConcurrency: "",
+			LoadConcurrency: "10",
 		}
 		_, _, err = runLoadFromZero(fakeCtx, p, inputs, FakeNamespace, &fakeService)
-		assert.ErrorContains(t, err, "failed to run internal load tool")
+		assert.ErrorContains(t, err, "failed to get load duration")
+
+		inputs.LoadConcurrency = "2workers"
+		inputs.LoadDuration = "30s"
+		_, _, err = runLoadFromZero(fakeCtx, p, inputs, FakeNamespace, &fakeService)
+		assert.ErrorContains(t, err, "failed to get load concurrency")
 	})
-}
-
-func Test_runInternalLoadTool(t *testing.T) {
-	type args struct {
-		inputs   pkg.LoadArgs
-		endpoint string
-		host     string
-	}
-	tests := []struct {
-		name       string
-		args       args
-		wantOutput string
-		wantErr    bool
-	}{
-		{
-			name: "failed to get load concurrency",
-			args: args{
-				inputs: pkg.LoadArgs{
-					SvcRange:        "0,0",
-					Namespace:       FakeNamespace,
-					SvcPrefix:       FakeServicePrefix,
-					Verbose:         false,
-					Output:          "/tmp",
-					LoadTool:        "default",
-					LoadDuration:    "60hms",
-					LoadConcurrency: "2",
-				},
-				endpoint: "",
-				host:     "",
-			},
-			wantOutput: "",
-			wantErr:    true,
-		},
-		{
-			name: "failed to get load duration",
-			args: args{
-				inputs: pkg.LoadArgs{
-					SvcRange:        "0,0",
-					Namespace:       FakeNamespace,
-					SvcPrefix:       FakeServicePrefix,
-					Verbose:         false,
-					Output:          "/tmp",
-					LoadTool:        "default",
-					LoadDuration:    "60s",
-					LoadConcurrency: "2works",
-				},
-				endpoint: "",
-				host:     "",
-			},
-			wantOutput: "",
-			wantErr:    true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOutput, err := runInternalLoadTool(tt.args.inputs, tt.args.endpoint, tt.args.host)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("runInternalLoadTool() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotOutput != tt.wantOutput {
-				t.Errorf("runInternalLoadTool() gotOutput = %v, want %v", gotOutput, tt.wantOutput)
-			}
-		})
-	}
-}
-
-func Test_runExternalLoadTool(t *testing.T) {
-	type args struct {
-		inputs    pkg.LoadArgs
-		namespace string
-		svcName   string
-		endpoint  string
-		host      string
-	}
-	tests := []struct {
-		name       string
-		args       args
-		wantOutput string
-		wantErr    bool
-	}{
-		{
-			name: "run command error",
-			args: args{
-				inputs: pkg.LoadArgs{
-					SvcRange:        "0,0",
-					Namespace:       FakeNamespace,
-					SvcPrefix:       FakeServicePrefix,
-					Verbose:         false,
-					Output:          "/tmp",
-					LoadTool:        "curl",
-					LoadDuration:    "5s",
-					LoadConcurrency: "2",
-				},
-				namespace: FakeNamespace,
-				svcName:   FakeServiceName,
-				endpoint:  FakeEndpoint,
-				host:      "",
-			},
-			wantOutput: "",
-			wantErr:    true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotOutput, err := runExternalLoadTool(tt.args.inputs, tt.args.namespace, tt.args.svcName, tt.args.endpoint, tt.args.host)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("runExternalLoadTool() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotOutput != tt.wantOutput {
-				t.Errorf("runExternalLoadTool() gotOutput = %v, want %v", gotOutput, tt.wantOutput)
-			}
-		})
-	}
 }
 
 func getFakeServingService(name string, ns string) (fakeServingService servingv1.Service) {

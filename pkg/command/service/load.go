@@ -80,7 +80,7 @@ kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool 
 	serviceLoadCommand.Flags().BoolVarP(&loadArgs.Verbose, "verbose", "v", false, "Service verbose result")
 	serviceLoadCommand.Flags().BoolVarP(&loadArgs.ResolvableDomain, "resolvable", "", false, "If Service endpoint resolvable url")
 	serviceLoadCommand.Flags().DurationVarP(&loadArgs.WaitPodsReadyDuration, "wait-time", "w", 10*time.Second, "Time to wait for all pods to be ready")
-	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadTool, "load-tool", "t", "default", "Select the load test tool, use internal load testing tool (vegeta) by default, also support external load tool(wrk and hey, require preinstallation)")
+	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadTool, "load-tool", "t", "default", "Select the load test tool, use internal load test tool(vegeta) by default, also support external load tool(wrk and hey, require preinstallation)")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadConcurrency, "load-concurrency", "c", "30", "total number of workers to run concurrently for the load test tool")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadDuration, "load-duration", "d", "60s", "Duration of the test for the load test tool")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.Output, "output", "o", ".", "Measure result location")
@@ -223,7 +223,7 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 
 	go func() {
 		if inputs.LoadTool == "default" {
-			loadOutput, err = runInternalLoadTool(inputs, endpoint, host)
+			loadOutput, err = runInternalVegeta(inputs, endpoint, host)
 			if err != nil {
 				errch <- fmt.Errorf("failed to run internal load tool: %w", err)
 				return
@@ -295,18 +295,18 @@ func getReplicasCount(loadResult pkg.LoadResult) (int, []int) {
 	return maxReplicasCount, replicasCountList
 }
 
-// runInternalLoadTool runs internal load test tool(vegeta) using library, returns load output and error
-func runInternalLoadTool(inputs pkg.LoadArgs, endpoint string, host string) (output string, err error) {
+// runInternalVegeta runs internal load test tool(vegeta) using library, returns load output and error
+func runInternalVegeta(inputs pkg.LoadArgs, endpoint string, host string) (output string, err error) {
 	concurrency, err := strconv.ParseUint(inputs.LoadConcurrency, 10, 64)
 	if err != nil {
-		fmt.Printf("failed to get load concurrency: %s\n", err)
-		return "", err
+		m := fmt.Sprintf("failed to get load concurrency: %s", err)
+		return "", errors.New(m)
 	}
 
 	duration, err := time.ParseDuration(inputs.LoadDuration)
 	if err != nil {
-		fmt.Printf("failed to get load duration: %s\n", err)
-		return "", err
+		m := fmt.Sprintf("failed to get load duration: %s", err)
+		return "", errors.New(m)
 	}
 
 	rate := vegeta.Rate{Freq: 8, Per: time.Second}
@@ -341,7 +341,8 @@ func runExternalLoadTool(inputs pkg.LoadArgs, namespace string, svcName string, 
 	// Prepare command for load test tool
 	cmd, wrkLua, err := loadCmdBuilder(inputs, namespace, svcName, endpoint, host)
 	if err != nil {
-		return "", err
+		m := fmt.Sprintf("failed to run loadCmdBuilder: %s", err)
+		return "", errors.New(m)
 	}
 
 	defer func() {
@@ -359,8 +360,8 @@ func runExternalLoadTool(inputs pkg.LoadArgs, namespace string, svcName string, 
 	loadOutput, err = runCmd.Output()
 	output = string(loadOutput)
 	if err != nil {
-		fmt.Printf("run load command error: %s\n", err)
-		return "", err
+		m := fmt.Sprintf("failed to run load command: %s", err)
+		return "", errors.New(m)
 	}
 	return output, nil
 }
