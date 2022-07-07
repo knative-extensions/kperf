@@ -53,6 +53,7 @@ const (
 	FakeIngressServiceName = "istio-ingressgateway"
 	FakeIngressNamespace   = "istio-system"
 	FakeEndpoint           = "http://192.168.0.1:32283"
+	FakeHost               = "ktest-0.ktest.example.com"
 	FakeLoadConcurrency    = "30"
 	FakeLoadDuration       = "60s"
 )
@@ -140,10 +141,13 @@ func TestNewServiceLoadCommand(t *testing.T) {
 
 		_, err = testutil.ExecuteCommand(cmd, "--svc-prefix", FakeServicePrefix, "--namespace", FakeNamespace, "--range", "0,0", "--load-tool", "wrk", "--load-concurrency", FakeLoadConcurrency, "--load-duration", FakeLoadDuration, "--verbose", "--output", "./")
 		assert.NilError(t, err)
+
+		_, err = testutil.ExecuteCommand(cmd, "--svc-prefix", FakeServicePrefix, "--namespace", FakeNamespace, "--range", "0,0", "--load-tool", "default", "--load-concurrency", FakeLoadConcurrency, "--load-duration", FakeLoadDuration, "--verbose", "--output", "./")
+		assert.NilError(t, err)
 	})
 }
 
-func Test_getSvcPods(t *testing.T) {
+func TestGetSvcPods(t *testing.T) {
 	readyTime := time.Now()
 	readyDuration := time.Second * 10
 	createTime := readyTime.Add(-readyDuration)
@@ -226,15 +230,14 @@ func Test_getSvcPods(t *testing.T) {
 	}
 }
 
-func Test_loadCmdBuilder(t *testing.T) {
+func TestLoadCmdBuilder(t *testing.T) {
 	type args struct {
 		inputs    pkg.LoadArgs
-		endpoint  string
 		namespace string
-		svc       *servingv1.Service
+		svcName   string
+		endpoint  string
+		host      string
 	}
-
-	fakeService := getFakeServingService(FakeServiceName, FakeNamespace)
 
 	inputsHey := pkg.LoadArgs{
 		SvcPrefix:       FakeServicePrefix,
@@ -245,7 +248,7 @@ func Test_loadCmdBuilder(t *testing.T) {
 		LoadDuration:    FakeLoadDuration,
 	}
 
-	cmdHey, _, err := loadCmdBuilder(inputsHey, FakeEndpoint, FakeNamespace, &fakeService)
+	cmdHey, _, err := loadCmdBuilder(inputsHey, FakeNamespace, FakeServiceName, FakeEndpoint, FakeHost)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
@@ -259,7 +262,7 @@ func Test_loadCmdBuilder(t *testing.T) {
 		LoadDuration:    FakeLoadDuration,
 	}
 
-	cmdWrk, wrkLua, err := loadCmdBuilder(inputsWrk, FakeEndpoint, FakeNamespace, &fakeService)
+	cmdWrk, wrkLua, err := loadCmdBuilder(inputsWrk, FakeNamespace, FakeServiceName, FakeEndpoint, FakeHost)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
@@ -293,7 +296,8 @@ func Test_loadCmdBuilder(t *testing.T) {
 				inputs:    inputsHey,
 				endpoint:  FakeEndpoint,
 				namespace: FakeNamespace,
-				svc:       &fakeService,
+				svcName:   FakeServiceName,
+				host:      FakeHost,
 			},
 			want:    cmdHey,
 			want1:   "",
@@ -305,7 +309,8 @@ func Test_loadCmdBuilder(t *testing.T) {
 				inputs:    inputsWrk,
 				endpoint:  FakeEndpoint,
 				namespace: FakeNamespace,
-				svc:       &fakeService,
+				svcName:   FakeServiceName,
+				host:      FakeHost,
 			},
 			want:    cmdWrk,
 			want1:   wrkLua,
@@ -317,7 +322,8 @@ func Test_loadCmdBuilder(t *testing.T) {
 				inputs:    inputsUnsupportedTool,
 				endpoint:  FakeEndpoint,
 				namespace: FakeNamespace,
-				svc:       &fakeService,
+				svcName:   FakeServiceName,
+				host:      FakeHost,
 			},
 			want:    "",
 			want1:   "",
@@ -326,7 +332,7 @@ func Test_loadCmdBuilder(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := loadCmdBuilder(tt.args.inputs, tt.args.endpoint, tt.args.namespace, tt.args.svc)
+			got, got1, err := loadCmdBuilder(tt.args.inputs, tt.args.namespace, tt.args.svcName, tt.args.endpoint, tt.args.host)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("loadCmdBuilder() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -341,7 +347,7 @@ func Test_loadCmdBuilder(t *testing.T) {
 	}
 }
 
-func Test_getReplicasCount(t *testing.T) {
+func TestGetReplicasCount(t *testing.T) {
 	type args struct {
 		loadResult pkg.LoadResult
 	}
@@ -399,7 +405,7 @@ func Test_getReplicasCount(t *testing.T) {
 	}
 }
 
-func Test_getPodResults(t *testing.T) {
+func TestGetPodResults(t *testing.T) {
 	type args struct {
 		ctx       context.Context
 		params    *pkg.PerfParams
@@ -468,7 +474,7 @@ func Test_getPodResults(t *testing.T) {
 	}
 }
 
-func Test_getReplicaResult(t *testing.T) {
+func TestGetReplicaResult(t *testing.T) {
 	type args struct {
 		replicaResults []pkg.LoadReplicaResult
 		event          watch.Event
@@ -518,7 +524,7 @@ func Test_getReplicaResult(t *testing.T) {
 	}
 }
 
-func Test_deleteFile(t *testing.T) {
+func TestDeleteFile(t *testing.T) {
 	type args struct {
 		wrkLua string
 	}
@@ -557,7 +563,7 @@ func Test_deleteFile(t *testing.T) {
 	}
 }
 
-func Test_setLoadFromZeroResult(t *testing.T) {
+func TestSetLoadFromZeroResult(t *testing.T) {
 	type args struct {
 		namespace      string
 		svc            *servingv1.Service
@@ -621,7 +627,7 @@ func Test_setLoadFromZeroResult(t *testing.T) {
 	}
 }
 
-func Test_runLoadFromZero(t *testing.T) {
+func TestRunLoadFromZero(t *testing.T) {
 	// pre-test
 	readyTime := time.Now()
 	readyDuration := time.Second * 10
@@ -705,7 +711,7 @@ func Test_runLoadFromZero(t *testing.T) {
 		assert.ErrorContains(t, err, "http2 port of ingress service not found")
 	})
 
-	t.Run("load test tool error", func(t *testing.T) {
+	t.Run("run external load test tool error", func(t *testing.T) {
 		monkey.Patch(time.Now, func() time.Time {
 			return createTime
 		})
@@ -733,7 +739,43 @@ func Test_runLoadFromZero(t *testing.T) {
 			LoadConcurrency: "30",
 		}
 		_, _, err = runLoadFromZero(fakeCtx, p, inputs, FakeNamespace, &fakeService)
-		assert.ErrorContains(t, err, "kperf only support hey and wrk now")
+		assert.ErrorContains(t, err, "failed to run loadCmdBuilder")
+	})
+
+	t.Run("run internal load test tool error", func(t *testing.T) {
+		monkey.Patch(time.Now, func() time.Time {
+			return createTime
+		})
+
+		fakeIngressSvc, err := getFakeIngressService(FakeIngressServiceName, FakeIngressNamespace, false, "", FakeNodePort)
+		if err != nil {
+			return
+		}
+		fakeIngressPod := getFakeIngressPod(FakeIngressServiceName+"fbb76f5df-nzw4c", FakeIngressNamespace, map[string]string{"app": FakeIngressServiceName}, FakeHostIP)
+
+		client := k8sfake.NewSimpleClientset(&fakePodList, &fakeDeployment, &fakeIngressSvc, &fakeIngressPod)
+
+		p := &pkg.PerfParams{
+			ClientSet:        client,
+			NewServingClient: servingClient,
+		}
+		inputs := pkg.LoadArgs{
+			SvcRange:        "0,0",
+			Namespace:       FakeNamespace,
+			SvcPrefix:       FakeServicePrefix,
+			Verbose:         true,
+			Output:          "/tmp",
+			LoadTool:        "default",
+			LoadDuration:    "60hms",
+			LoadConcurrency: "10",
+		}
+		_, _, err = runLoadFromZero(fakeCtx, p, inputs, FakeNamespace, &fakeService)
+		assert.ErrorContains(t, err, "failed to get load duration")
+
+		inputs.LoadConcurrency = "2workers"
+		inputs.LoadDuration = "30s"
+		_, _, err = runLoadFromZero(fakeCtx, p, inputs, FakeNamespace, &fakeService)
+		assert.ErrorContains(t, err, "failed to get load concurrency")
 	})
 }
 

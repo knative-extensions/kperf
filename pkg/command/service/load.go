@@ -15,19 +15,22 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"strconv"
 
 	"log"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
+	vegeta "github.com/tsenart/vegeta/v12/lib"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -77,7 +80,7 @@ kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool 
 	serviceLoadCommand.Flags().BoolVarP(&loadArgs.Verbose, "verbose", "v", false, "Service verbose result")
 	serviceLoadCommand.Flags().BoolVarP(&loadArgs.ResolvableDomain, "resolvable", "", false, "If Service endpoint resolvable url")
 	serviceLoadCommand.Flags().DurationVarP(&loadArgs.WaitPodsReadyDuration, "wait-time", "w", 10*time.Second, "Time to wait for all pods to be ready")
-	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadTool, "load-tool", "t", "wrk", "Select the load test tool, support wrk and hey")
+	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadTool, "load-tool", "t", "default", "Select the load test tool, use internal load test tool(vegeta) by default, also support external load tool(wrk and hey, require preinstallation)")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadConcurrency, "load-concurrency", "c", "30", "total number of workers to run concurrently for the load test tool")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadDuration, "load-duration", "d", "60s", "Duration of the test for the load test tool")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.Output, "output", "o", ".", "Measure result location")
@@ -159,7 +162,7 @@ func loadAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Load
 				// print result(load test tool output, replicas result, pods result)
 				if inputs.Verbose {
 					fmt.Printf("\n[Verbose] Namespace %s, Service %s:\n", loadResult.ServiceNamespace, loadResult.ServiceName)
-					fmt.Printf("\n[Verbose] %s output:\n%s\n", inputs.LoadTool, loadToolOutput)
+					fmt.Printf("\n[Verbose] Load tool(%s) output:\n%s\n", inputs.LoadTool, loadToolOutput)
 					fmt.Printf("[Verbose] Deployment replicas changed from 0 to %d:\n", len(loadResult.ReplicaResults))
 					fmt.Printf("replicas\tready_duration(seconds)\n")
 					for i := 0; i < len(loadResult.ReplicaResults); i++ {
@@ -176,7 +179,7 @@ func loadAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Load
 				result.Measurment = append(result.Measurment, loadResult)
 				m.Unlock()
 			} else {
-				fmt.Printf("result of load is error: %s", err)
+				fmt.Printf("failed in runLoadFromZero: %s\n", err)
 			}
 		}(i, &m)
 	}
@@ -206,45 +209,32 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 
 	rdch := watcher.ResultChan() // replica duration channel
 	pdch := make(chan struct{})  // pod duration channel
-	errch := make(chan error)
+	errch := make(chan error, 1)
 
 	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, svc)
 	if err != nil {
 		return "", loadResult, fmt.Errorf("failed to get the cluster endpoint: %w", err)
 	}
 
-	// Prepare for load test
-	cmd, wrkLua, err := loadCmdBuilder(inputs, endpoint, namespace, svc)
-	if err != nil {
-		return "", loadResult, err
-	}
-
-	defer func() {
-		// Delete wrk lua script
-		if strings.EqualFold(inputs.LoadTool, "wrk") {
-			err := deleteFile(wrkLua)
-			if err != nil {
-				fmt.Printf("%s\n", err)
-			}
-		}
-	}()
+	host := svc.Status.RouteStatusFields.URL.URL().Host
 
 	loadStart := time.Now()
 	log.Printf("Namespace %s, Service %s, load start\n", namespace, svc.Name)
 
 	go func() {
-		runCmd := exec.Command("/bin/sh", "-c", cmd)
-		var output []byte
-		output, err = runCmd.Output()
-		loadOutput = string(output)
-
-		if err != nil {
-			m := fmt.Sprintf("run load command error: %s", err)
-			fmt.Println(m)
-			errch <- errors.New(m)
-			return
+		if inputs.LoadTool == "default" {
+			loadOutput, err = runInternalVegeta(inputs, endpoint, host)
+			if err != nil {
+				errch <- fmt.Errorf("failed to run internal load tool: %w", err)
+				return
+			}
+		} else {
+			loadOutput, err = runExternalLoadTool(inputs, namespace, svc.Name, endpoint, host)
+			if err != nil {
+				errch <- fmt.Errorf("failed to run external load tool: %w", err)
+				return
+			}
 		}
-
 		loadEnd := time.Now()
 		loadDuration := loadEnd.Sub(loadStart)
 		log.Printf("Namespace %s, Service %s, load end, take off %.3f seconds\n", namespace, svc.Name, loadDuration.Seconds())
@@ -266,7 +256,7 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 			loadResult = setLoadFromZeroResult(namespace, svc, replicaResults, podResults)
 			return loadOutput, loadResult, nil
 		case err := <-errch:
-			return loadOutput, loadResult, err
+			return "", loadResult, err
 		}
 	}
 }
@@ -305,8 +295,78 @@ func getReplicasCount(loadResult pkg.LoadResult) (int, []int) {
 	return maxReplicasCount, replicasCountList
 }
 
+// runInternalVegeta runs internal load test tool(vegeta) using library, returns load output and error
+func runInternalVegeta(inputs pkg.LoadArgs, endpoint string, host string) (output string, err error) {
+	concurrency, err := strconv.ParseUint(inputs.LoadConcurrency, 10, 64)
+	if err != nil {
+		return "", fmt.Errorf("failed to get load concurrency: %s", err)
+	}
+
+	duration, err := time.ParseDuration(inputs.LoadDuration)
+	if err != nil {
+		return "", fmt.Errorf("failed to get load duration: %s", err)
+	}
+
+	rate := vegeta.Rate{Freq: 8, Per: time.Second}
+	targeter := vegeta.NewStaticTargeter(vegeta.Target{
+		Method: "GET",
+		URL:    endpoint,
+		Header: http.Header{
+			"Host": []string{
+				host,
+			},
+		},
+	})
+
+	attacker := vegeta.NewAttacker(vegeta.Workers(concurrency))
+
+	var metrics vegeta.Metrics
+	for res := range attacker.Attack(targeter, rate, duration, "Big Bang!") {
+		metrics.Add(res)
+	}
+	defer metrics.Close()
+
+	repText := vegeta.NewTextReporter(&metrics)
+
+	buf := new(bytes.Buffer)
+	err = repText.Report(buf)
+	if err != nil {
+		return "", fmt.Errorf("failed to write result to buffer: %s", err)
+	}
+
+	return buf.String(), nil
+}
+
+// runExternalLoadTool runs external load test tool(wrk or hey) using command line, returns load output and error
+func runExternalLoadTool(inputs pkg.LoadArgs, namespace string, svcName string, endpoint string, host string) (output string, err error) {
+	// Prepare command for load test tool
+	cmd, wrkLua, err := loadCmdBuilder(inputs, namespace, svcName, endpoint, host)
+	if err != nil {
+		return "", fmt.Errorf("failed to run loadCmdBuilder: %s", err)
+	}
+
+	defer func() {
+		// Delete wrk lua script
+		if strings.EqualFold(inputs.LoadTool, "wrk") {
+			err := deleteFile(wrkLua)
+			if err != nil {
+				fmt.Printf("%s\n", err)
+			}
+		}
+	}()
+
+	runCmd := exec.Command("/bin/sh", "-c", cmd)
+	var loadOutput []byte
+	loadOutput, err = runCmd.Output()
+	output = string(loadOutput)
+	if err != nil {
+		return "", fmt.Errorf("failed to run load command: %s", err)
+	}
+	return output, nil
+}
+
 // loadCmdBuilder builds the command to run load tool, returns command and wrk lua script.
-func loadCmdBuilder(inputs pkg.LoadArgs, endpoint string, namespace string, svc *servingv1.Service) (string, string, error) {
+func loadCmdBuilder(inputs pkg.LoadArgs, namespace string, svcName string, endpoint string, host string) (string, string, error) {
 	var cmd strings.Builder
 	var wrkLuaFilename string
 	if strings.EqualFold(inputs.LoadTool, "hey") {
@@ -316,7 +376,7 @@ func loadCmdBuilder(inputs pkg.LoadArgs, endpoint string, namespace string, svc 
 		cmd.WriteString(" -z ")
 		cmd.WriteString(inputs.LoadDuration)
 		cmd.WriteString(" -host ")
-		cmd.WriteString(svc.Status.RouteStatusFields.URL.URL().Host)
+		cmd.WriteString(host)
 		cmd.WriteString(" ")
 		cmd.WriteString(endpoint)
 		return cmd.String(), "", nil
@@ -324,10 +384,10 @@ func loadCmdBuilder(inputs pkg.LoadArgs, endpoint string, namespace string, svc 
 
 	if strings.EqualFold(inputs.LoadTool, "wrk") {
 		// creat lua script to config host of URL
-		wrkLuaFilename = "./wrk_" + namespace + "_" + svc.Name + ".lua"
+		wrkLuaFilename = "./wrk_" + namespace + "_" + svcName + ".lua"
 		var content strings.Builder
 		content.WriteString("wrk.host = \"")
-		content.WriteString(svc.Status.RouteStatusFields.URL.URL().Host)
+		content.WriteString(host)
 		content.WriteString("\"")
 		data := []byte(content.String())
 		err := ioutil.WriteFile(wrkLuaFilename, data, 0644)

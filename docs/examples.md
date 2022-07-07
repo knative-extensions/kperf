@@ -244,14 +244,16 @@ GATEWAY_OVERRIDE=kourier GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service
 
 ### Scale from 0 to N using load test tool and Measure scale up latency
 
-- Scale services from 0 to N concurrently using load test tool([hey](https://github.com/rakyll/hey),  [wrk](https://github.com/wg/wrk))
+- Scale services from 0 to N concurrently using load test tool([vegeta](https://github.com/tsenart/vegeta), [hey](https://github.com/rakyll/hey),  [wrk](https://github.com/wg/wrk))
 - Measure the latency for the pods to come up and the deployment to change
   - the latency of replicas to change from 0 to N
   - the latency of pods from creation to ready
 
-**Preparation**
+**Load test tools**
 
-A load test tool([hey](https://github.com/rakyll/hey) or [wrk](https://github.com/wg/wrk)) should be installed before the load test
+Two types of load test tools are supported
+- Internal load test tool(default) uses vegeta library
+- External load test tool uses third-party load test tool, support [wrk](https://github.com/wg/wrk) and [hey](https://github.com/rakyll/hey), which requires **preinstallation** before running `kperf load`
 
 **Usage**
 
@@ -263,7 +265,7 @@ Flags:
   -h, --help                      help for load
   -c, --load-concurrency string   total number of workers to run concurrently for the load test tool (default "30")
   -d, --load-duration string      Duration of the test for the load test tool (default "60s")
-  -t, --load-tool string          Select the load test tool, support wrk and hey (default "wrk")
+  -t, --load-tool string          Select the load test tool, use internal load testing tool (vegeta) by default, also support external load tool(wrk and hey, require preinstallation) (default "default")
       --namespace string          Service namespace
       --namespace-prefix string   Service namespace prefix
       --namespace-range string    Service namespace range
@@ -290,7 +292,7 @@ $ kubectl create ns ktest
 $ kperf service generate -n 5 -b 1 -c 1 -i 1 --namespace ktest --svc-prefix ktest
 ```
 
-2. Scale up services(ktest-0, ... , ktest-4) in namespace ktest with wrk using 30 workers and lasting for 60 seconds, and measure the scale up latency
+2. Scale up services(ktest-0, ... , ktest-4) in namespace ktest with **wrk** using 30 workers and lasting for 60 seconds, and measure the scale up latency
 
 ```bash
 $ kperf service load --namespace ktest --svc-prefix ktest --range 0,4 --load-tool wrk --load-duration 60s --load-concurrency 30 --verbose --output /tmp
@@ -490,3 +492,170 @@ ktest-4,ktest,46.383,48.887,49.199,49.907,56.195,57.475,60.374
 - HTML result in dashboard
 
 ![service_load_replicas_latency measurement](docs/service_load_replicas_latency.png)
+
+3. Scale up services(ktest-0, ... , ktest-4) in namespace ktest with **vegeta**(default) using 30 workers and lasting for 60 seconds, and measure the scale up latency
+
+```bash
+$ kperf service load --namespace ktest --svc-prefix ktest --range 0,4 --load-duration 60s --load-concurrency 40 --verbose --output /tmp
+2022/07/05 04:40:59 Namespace ktest, Service ktest-3, load start
+2022/07/05 04:41:00 Namespace ktest, Service ktest-4, load start
+2022/07/05 04:41:00 Namespace ktest, Service ktest-2, load start
+2022/07/05 04:41:00 Namespace ktest, Service ktest-1, load start
+2022/07/05 04:41:00 Namespace ktest, Service ktest-0, load start
+2022/07/05 04:42:00 Namespace ktest, Service ktest-3, load end, take off 60.004 seconds
+2022/07/05 04:42:00 Namespace ktest, Service ktest-2, load end, take off 60.004 seconds
+2022/07/05 04:42:00 Namespace ktest, Service ktest-4, load end, take off 60.004 seconds
+2022/07/05 04:42:00 Namespace ktest, Service ktest-1, load end, take off 60.004 seconds
+
+[Verbose] Namespace ktest, Service ktest-4:
+
+[Verbose] Load tool(default) output:
+Requests      [total, rate, throughput]         480, 0.00, 0.00
+Duration      [total, attack, wait]             0s, 0s, 0s
+Latencies     [min, mean, 50, 90, 95, 99, max]  1.68ms, 0s, 0s, 0s, 0s, 0s, 3.393s
+Bytes In      [total, mean]                     6240, 0.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           0.00%
+Status Codes  [code:count]                      200:480
+Error Set:
+
+[Verbose] Deployment replicas changed from 0 to 2:
+replicas        ready_duration(seconds)
+       0                          4.040
+       1                         17.554
+
+[Verbose] Pods changed from 0 to 2:
+pods    ready_duration(seconds)
+   0                        3.0
+   1                        4.0
+
+---------------------------------------------------------------------------------
+
+[Verbose] Namespace ktest, Service ktest-2:
+
+[Verbose] Load tool(default) output:
+Requests      [total, rate, throughput]         480, 0.00, 0.00
+Duration      [total, attack, wait]             0s, 0s, 0s
+Latencies     [min, mean, 50, 90, 95, 99, max]  1.789ms, 0s, 0s, 0s, 0s, 0s, 3.346s
+Bytes In      [total, mean]                     6240, 0.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           0.00%
+Status Codes  [code:count]                      200:480
+Error Set:
+
+[Verbose] Deployment replicas changed from 0 to 2:
+replicas        ready_duration(seconds)
+       0                          3.511
+       1                         11.814
+
+[Verbose] Pods changed from 0 to 2:
+pods    ready_duration(seconds)
+   0                        3.0
+   1                        3.0
+
+---------------------------------------------------------------------------------
+
+[Verbose] Namespace ktest, Service ktest-1:
+
+[Verbose] Load tool(default) output:
+Requests      [total, rate, throughput]         480, 0.00, 0.00
+Duration      [total, attack, wait]             0s, 0s, 0s
+Latencies     [min, mean, 50, 90, 95, 99, max]  1.678ms, 0s, 0s, 0s, 0s, 0s, 4.215s
+Bytes In      [total, mean]                     6240, 0.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           0.00%
+Status Codes  [code:count]                      200:480
+Error Set:
+
+[Verbose] Deployment replicas changed from 0 to 3:
+replicas        ready_duration(seconds)
+       0                          5.419
+       1                         15.158
+       2                         17.953
+
+[Verbose] Pods changed from 0 to 3:
+pods    ready_duration(seconds)
+   0                        4.0
+   1                        5.0
+   2                        3.0
+
+---------------------------------------------------------------------------------
+
+[Verbose] Namespace ktest, Service ktest-3:
+
+[Verbose] Load tool(default) output:
+Requests      [total, rate, throughput]         480, 0.00, 0.00
+Duration      [total, attack, wait]             0s, 0s, 0s
+Latencies     [min, mean, 50, 90, 95, 99, max]  1.933ms, 0s, 0s, 0s, 0s, 0s, 6.621s
+Bytes In      [total, mean]                     6240, 0.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           0.00%
+Status Codes  [code:count]                      200:480
+Error Set:
+
+[Verbose] Deployment replicas changed from 0 to 6:
+replicas        ready_duration(seconds)
+       0                          6.646
+       1                         16.367
+       2                         17.159
+       3                         18.758
+       4                         19.159
+       5                         20.356
+
+[Verbose] Pods changed from 0 to 6:
+pods    ready_duration(seconds)
+   0                        5.0
+   1                        4.0
+   2                        3.0
+   3                        5.0
+   4                        5.0
+   5                        5.0
+
+---------------------------------------------------------------------------------
+2022/07/05 04:42:00 Namespace ktest, Service ktest-0, load end, take off 60.004 seconds
+
+[Verbose] Namespace ktest, Service ktest-0:
+
+[Verbose] Load tool(default) output:
+Requests      [total, rate, throughput]         480, 0.00, 0.00
+Duration      [total, attack, wait]             0s, 0s, 0s
+Latencies     [min, mean, 50, 90, 95, 99, max]  1.954ms, 0s, 0s, 0s, 0s, 0s, 10.259s
+Bytes In      [total, mean]                     6240, 0.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           0.00%
+Status Codes  [code:count]                      200:480
+Error Set:
+
+[Verbose] Deployment replicas changed from 0 to 10:
+replicas        ready_duration(seconds)
+       0                         11.198
+       1                         14.193
+       2                         15.390
+       3                         16.592
+       4                         18.195
+       5                         19.797
+       6                         20.591
+       7                         21.395
+       8                         21.791
+       9                         22.597
+
+[Verbose] Pods changed from 0 to 10:
+pods    ready_duration(seconds)
+   0                        3.0
+   1                        5.0
+   2                        4.0
+   3                        5.0
+   4                        5.0
+   5                        4.0
+   6                        4.0
+   7                        5.0
+   8                        5.0
+   9                        4.0
+
+---------------------------------------------------------------------------------
+Measurement saved in CSV file /tmp/20220705044200_ksvc_loading_time.csv
+Visualized measurement saved in HTML file /tmp/20220705044200_ksvc_loading_time.html
+Measurement saved in JSON file /tmp/20220705044200_ksvc_loading_time.json
+```
+
+- CSV, HTML and JSON results are same as using wrk
