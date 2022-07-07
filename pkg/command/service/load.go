@@ -299,14 +299,12 @@ func getReplicasCount(loadResult pkg.LoadResult) (int, []int) {
 func runInternalVegeta(inputs pkg.LoadArgs, endpoint string, host string) (output string, err error) {
 	concurrency, err := strconv.ParseUint(inputs.LoadConcurrency, 10, 64)
 	if err != nil {
-		m := fmt.Sprintf("failed to get load concurrency: %s", err)
-		return "", errors.New(m)
+		return "", fmt.Errorf("failed to get load concurrency: %s", err)
 	}
 
 	duration, err := time.ParseDuration(inputs.LoadDuration)
 	if err != nil {
-		m := fmt.Sprintf("failed to get load duration: %s", err)
-		return "", errors.New(m)
+		return "", fmt.Errorf("failed to get load duration: %s", err)
 	}
 
 	rate := vegeta.Rate{Freq: 8, Per: time.Second}
@@ -331,7 +329,10 @@ func runInternalVegeta(inputs pkg.LoadArgs, endpoint string, host string) (outpu
 	repText := vegeta.NewTextReporter(&metrics)
 
 	buf := new(bytes.Buffer)
-	repText.Report(buf)
+	err = repText.Report(buf)
+	if err != nil {
+		return "", fmt.Errorf("failed to write result to buffer: %s", err)
+	}
 
 	return buf.String(), nil
 }
@@ -341,8 +342,7 @@ func runExternalLoadTool(inputs pkg.LoadArgs, namespace string, svcName string, 
 	// Prepare command for load test tool
 	cmd, wrkLua, err := loadCmdBuilder(inputs, namespace, svcName, endpoint, host)
 	if err != nil {
-		m := fmt.Sprintf("failed to run loadCmdBuilder: %s", err)
-		return "", errors.New(m)
+		return "", fmt.Errorf("failed to run loadCmdBuilder: %s", err)
 	}
 
 	defer func() {
@@ -360,8 +360,7 @@ func runExternalLoadTool(inputs pkg.LoadArgs, namespace string, svcName string, 
 	loadOutput, err = runCmd.Output()
 	output = string(loadOutput)
 	if err != nil {
-		m := fmt.Sprintf("failed to run load command: %s", err)
-		return "", errors.New(m)
+		return "", fmt.Errorf("failed to run load command: %s", err)
 	}
 	return output, nil
 }
