@@ -15,15 +15,11 @@
 package core
 
 import (
-	"fmt"
-	"os"
-
 	"knative.dev/kperf/pkg/command/service"
 	"knative.dev/kperf/pkg/command/version"
+	"knative.dev/kperf/pkg/config"
 
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"knative.dev/kperf/pkg"
 )
 
@@ -40,34 +36,38 @@ func NewPerfCommand(params ...pkg.PerfParams) *cobra.Command {
 		Short: "A CLI to help with Knative performance test",
 		Long:  `A CLI to help with Knative performance test.`,
 	}
-	cobra.OnInitialize(initConfig)
 	rootCmd.AddCommand(service.NewServiceCmd(p))
 	rootCmd.AddCommand(version.NewVersionCommand())
+
+	cobra.OnInitialize(initConfig)
+	config.AddBootstrapFlags(rootCmd.PersistentFlags())
+
 	rootCmd.InitDefaultHelpCmd()
 	return rootCmd
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".kperf")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	config.BootstrapConfig()
+	//if cfgFile != "" {
+	//	// Use config file from the flag.
+	//	viper.SetConfigFile(cfgFile)
+	//} else {
+	//	// Find home directory.
+	//	home, err := homedir.Dir()
+	//	if err != nil {
+	//		fmt.Println(err)
+	//		os.Exit(1)
+	//	}
+	//
+	//	viper.AddConfigPath(home)
+	//	viper.SetConfigName(".kperf")
+	//}
+	//
+	//viper.AutomaticEnv() // read in environment variables that match
+	//
+	//// If a config file is found, read it in.
+	//if err := viper.ReadInConfig(); err == nil {
+	//	fmt.Println("Using config file:", viper.ConfigFileUsed())
+	//}
 }

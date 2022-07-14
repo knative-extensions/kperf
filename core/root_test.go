@@ -15,13 +15,9 @@
 package core
 
 import (
-	"fmt"
-	"os"
 	"strings"
 	"testing"
 
-	homedir "github.com/mitchellh/go-homedir"
-	"github.com/spf13/viper"
 	"gotest.tools/v3/assert"
 
 	"knative.dev/kperf/pkg/testutil"
@@ -65,22 +61,22 @@ func TestNewPerfCommand(t *testing.T) {
 	})
 }
 
-func TestInitConfig(t *testing.T) {
-	t.Run("init conifg if cfgFile is none", func(t *testing.T) {
-		initConfig()
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		err = viper.ReadInConfig()
-		assert.ErrorContains(t, err, fmt.Sprintf("Config File \".kperf\" Not Found in \"[%s]\"", home))
-	})
-
-	t.Run("init config if cfgFile is found", func(t *testing.T) {
-		cfgFile = "../test/asset/cfg_test.yaml"
-		initConfig()
-		assert.Equal(t, viper.ConfigFileUsed(), "../test/asset/cfg_test.yaml")
-		assert.Equal(t, "testCfgFile", viper.Get("name"))
-	})
-}
+//func TestInitConfig(t *testing.T) {
+//	t.Run("init conifg if cfgFile is none", func(t *testing.T) {
+//		initConfig()
+//		home, err := homedir.Dir()
+//		if err != nil {
+//			fmt.Println(err)
+//			os.Exit(1)
+//		}
+//		err = viper.ReadInConfig()
+//		assert.ErrorContains(t, err, fmt.Sprintf("Config File \".kperf\" Not Found in \"[%s]\"", home))
+//	})
+//
+//	t.Run("init config if cfgFile is found", func(t *testing.T) {
+//		cfgFile = "../test/asset/cfg_test.yaml"
+//		initConfig()
+//		assert.Equal(t, viper.ConfigFileUsed(), "../test/asset/cfg_test.yaml")
+//		assert.Equal(t, "testCfgFile", viper.Get("name"))
+//	})
+//}

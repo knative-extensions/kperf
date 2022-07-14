@@ -17,7 +17,12 @@ package service
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	"log"
+	_ "log"
 	"os"
 	"strconv"
 	"strings"
@@ -44,6 +49,12 @@ const (
 	ServiceImage     = "gcr.io/knative-samples/helloworld-go"
 )
 
+var requiredFlagsSet = map[string]bool{
+	"number":   true,
+	"interval": true,
+	"batch": 	true,
+}
+
 func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
 	generateArgs := pkg.GenerateArgs{}
 
@@ -57,21 +68,27 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
+			BindFlags(cmd, "service.generate.", requiredFlagsSet)
 			if flags.Changed("namespace-prefix") && flags.Changed("namespace") {
 				return errors.New("expected either namespace with prefix & range or only namespace name")
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.Println("test cfg, batch=", generateArgs.Batch)
+			log.Println("test cfg, Concurrency=", generateArgs.Concurrency)
+			log.Println("test cfg, MinScale=", generateArgs.MinScale)
 			return GenerateServices(p, generateArgs)
 		},
 	}
+
+	// Define cobra flags, the default value has the lowest (least significant) precedence
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Number, "number", "n", 0, "Total number of Knative Service to be created")
-	ksvcGenCommand.MarkFlagRequired("number")
+	//ksvcGenCommand.MarkFlagRequired("number")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Interval, "interval", "i", 0, "Interval for each batch generation")
-	ksvcGenCommand.MarkFlagRequired("interval")
+	//ksvcGenCommand.MarkFlagRequired("interval")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Batch, "batch", "b", 0, "Number of Knative Service each time to be created")
-	ksvcGenCommand.MarkFlagRequired("batch")
+	//ksvcGenCommand.MarkFlagRequired("batch")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Concurrency, "concurrency", "c", 10, "Number of multiple Knative Services to make at a time")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.MinScale, "min-scale", "", 0, "For autoscaling.knative.dev/minScale")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.MaxScale, "max-scale", "", 0, "For autoscaling.knative.dev/minScale")
@@ -198,4 +215,49 @@ func GenerateServices(params *pkg.PerfParams, inputs pkg.GenerateArgs) error {
 	}
 
 	return nil
+}
+
+// BindFlags binds each cobra flag to its associated viper configuration (config file and environment variable)
+func BindFlags1(cmd *cobra.Command, configPrefix string, set map[string]bool) {
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		// Environment variables can't have dashes in them, so bind them to their equivalent
+		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
+		//if strings.Contains(configPrefix + f.Name, "-") {
+		//	envVarSuffix := strings.ToUpper(strings.ReplaceAll(configPrefix + f.Name, "-", "_"))
+		//	v.BindEnv(configPrefix + f.Name, fmt.Sprintf("%s_%s", envPrefix, envVarSuffix))
+		//}
+
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		log.Println(configPrefix+f.Name, "=", f.Value, "f.Changed:", f.Changed, "viper.value:", viper.Get(configPrefix+f.Name), "viper.IsSet:", viper.IsSet(configPrefix+f.Name))
+		if !f.Changed && viper.IsSet(configPrefix+f.Name) {
+			log.Println("f.Changed && viper.IsSet", configPrefix+f.Name)
+			val := viper.Get(configPrefix + f.Name)
+			cmd.Flags().Set(configPrefix+f.Name, fmt.Sprintf("%v", val))
+		}
+		// Validate required flags
+		if set[f.Name] && !f.Changed && !viper.IsSet(configPrefix+f.Name) {
+
+		}
+	})
+}
+
+func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) {
+	f := cmd.Flags()
+	if len(f.formal) == 0 {
+		return
+	}
+
+	var flags []*Flag
+	if f.SortFlags {
+		if len(f.formal) != len(f.sortedFormal) {
+			f.sortedFormal = sortFlags(f.formal)
+		}
+		flags = f.sortedFormal
+	} else {
+		flags = f.orderedFormal
+	}
+
+	for _, flag := range flags {
+		fn(flag)
+	}
 }
