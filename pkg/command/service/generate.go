@@ -17,7 +17,7 @@ package service
 import (
 	"context"
 	"errors"
-	"flag"
+	//"flag"
 	"fmt"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -49,10 +49,11 @@ const (
 	ServiceImage     = "gcr.io/knative-samples/helloworld-go"
 )
 
+// Required flags of generate command
 var requiredFlagsSet = map[string]bool{
-	"number":   true,
+	"batch":    true,
 	"interval": true,
-	"batch": 	true,
+	"number":   true,
 }
 
 func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
@@ -68,7 +69,10 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
-			BindFlags(cmd, "service.generate.", requiredFlagsSet)
+			err := BindFlags(cmd, "service.generate.", requiredFlagsSet)
+			if err != nil {
+				return err
+			}
 			if flags.Changed("namespace-prefix") && flags.Changed("namespace") {
 				return errors.New("expected either namespace with prefix & range or only namespace name")
 			}
@@ -217,8 +221,10 @@ func GenerateServices(params *pkg.PerfParams, inputs pkg.GenerateArgs) error {
 	return nil
 }
 
-// BindFlags binds each cobra flag to its associated viper configuration (config file and environment variable)
-func BindFlags1(cmd *cobra.Command, configPrefix string, set map[string]bool) {
+// BindFlags binds each cobra flag to its associated viper configuration (config file and environment variable),
+// and validate required falg(s)
+func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) error {
+	keys := make([]string, 0)
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		// Environment variables can't have dashes in them, so bind them to their equivalent
 		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
@@ -226,38 +232,62 @@ func BindFlags1(cmd *cobra.Command, configPrefix string, set map[string]bool) {
 		//	envVarSuffix := strings.ToUpper(strings.ReplaceAll(configPrefix + f.Name, "-", "_"))
 		//	v.BindEnv(configPrefix + f.Name, fmt.Sprintf("%s_%s", envPrefix, envVarSuffix))
 		//}
-
-		// Apply the viper config value to the flag when the flag is not set and viper has a value
-		log.Println(configPrefix+f.Name, "=", f.Value, "f.Changed:", f.Changed, "viper.value:", viper.Get(configPrefix+f.Name), "viper.IsSet:", viper.IsSet(configPrefix+f.Name))
-		if !f.Changed && viper.IsSet(configPrefix+f.Name) {
-			log.Println("f.Changed && viper.IsSet", configPrefix+f.Name)
-			val := viper.Get(configPrefix + f.Name)
-			cmd.Flags().Set(configPrefix+f.Name, fmt.Sprintf("%v", val))
+		if f.Changed && !viper.IsSet(configPrefix+f.Name) {
+			log.Println(f.Name, "changed to", f.Value)
 		}
-		// Validate required flags
-		if set[f.Name] && !f.Changed && !viper.IsSet(configPrefix+f.Name) {
-
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		if !f.Changed {
+			if viper.IsSet(configPrefix + f.Name) {
+				log.Println("f.Changed && viper.IsSet", configPrefix+f.Name)
+				val := viper.Get(configPrefix + f.Name)
+				cmd.Flags().Set(configPrefix+f.Name, fmt.Sprintf("%v", val))
+			} else {
+				// Validate required flags
+				if set[f.Name] {
+					log.Println(f.Name, "is not changed and not set")
+					set[f.Name] = false
+					keys = append(keys, f.Name)
+				}
+			}
 		}
 	})
-}
-
-func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) {
-	f := cmd.Flags()
-	if len(f.formal) == 0 {
-		return
-	}
-
-	var flags []*Flag
-	if f.SortFlags {
-		if len(f.formal) != len(f.sortedFormal) {
-			f.sortedFormal = sortFlags(f.formal)
+	m := ""
+	for _, k := range keys {
+		if !set[k] {
+			if m == "" {
+				m = "failed to get required flags, required flag(s) \"" + k + "\""
+			} else {
+				m = m + ", \"" + k + "\""
+			}
+			// Reset the value
+			set[k] = true
 		}
-		flags = f.sortedFormal
-	} else {
-		flags = f.orderedFormal
 	}
-
-	for _, flag := range flags {
-		fn(flag)
+	if m != "" {
+		return fmt.Errorf(m)
 	}
+	return nil
 }
+
+//func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) {
+//	//var ff *flag.FlagSet
+//	ff := cmd.Flags()
+//	f := cmd.Flags()
+//	if len(f.formal) == 0 {
+//		return
+//	}
+//
+//	var flags []*Flag
+//	if f.SortFlags {
+//		if len(f.formal) != len(f.sortedFormal) {
+//			f.sortedFormal = sortFlags(f.formal)
+//		}
+//		flags = f.sortedFormal
+//	} else {
+//		flags = f.orderedFormal
+//	}
+//
+//	for _, flag := range flags {
+//		fn(flag)
+//	}
+//}

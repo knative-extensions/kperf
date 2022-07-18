@@ -195,4 +195,3 @@ func defaultConfigFileForUsageMessage() string {
 	}
 	return "~/.config/kperf/config.yaml"
 }
-
