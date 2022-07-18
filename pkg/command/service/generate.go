@@ -18,11 +18,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"knative.dev/kperf/pkg/config"
+	"log"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"knative.dev/kperf/pkg/config"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -33,6 +36,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/generator"
@@ -75,6 +79,13 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			value := reflect.ValueOf(generateArgs)
+			for i := 0; i < value.NumField(); i++ {
+				log.Println(i, "=", value.Field(i))
+			}
+			cmd.Flags().VisitAll(func(f *pflag.Flag) {
+				log.Println(f.Name, "=", f.Value)
+			})
 			return GenerateServices(p, generateArgs)
 		},
 	}

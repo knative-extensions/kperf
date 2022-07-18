@@ -16,11 +16,12 @@ package config
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/pflag"
@@ -199,8 +200,8 @@ func defaultConfigFileForUsageMessage() string {
 }
 
 // BindFlags binds each cobra flag to its associated viper configuration (config file and environment variable),
-// and validate required falg(s)
-func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) error {
+// and validate required flag(s)
+func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (err error) {
 	keys := make([]string, 0)
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		// Environment variables can't have dashes in them, so bind them to their equivalent
@@ -209,26 +210,32 @@ func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) err
 		//	envVarSuffix := strings.ToUpper(strings.ReplaceAll(configPrefix + f.Name, "-", "_"))
 		//	v.BindEnv(configPrefix + f.Name, fmt.Sprintf("%s_%s", envPrefix, envVarSuffix))
 		//}
+		// log
 		if f.Changed && !viper.IsSet(configPrefix+f.Name) {
 			log.Println(f.Name, "changed to", f.Value)
 		}
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed {
 			if viper.IsSet(configPrefix + f.Name) {
-				log.Println("f.Changed && viper.IsSet", configPrefix+f.Name)
 				val := viper.Get(configPrefix + f.Name)
-				cmd.Flags().Set(configPrefix+f.Name, fmt.Sprintf("%v", val))
+				err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+				if err != nil {
+					log.Println("failed to set flags: ", err)
+					return
+				}
 			} else {
 				// Validate required flags
 				if set[f.Name] {
-					log.Println(f.Name, "is not changed and not set")
 					set[f.Name] = false
 					keys = append(keys, f.Name)
 				}
 			}
 		}
 	})
-	m := ""
+	if err != nil {
+		return err
+	}
+	var m string
 	for _, k := range keys {
 		if !set[k] {
 			if m == "" {
@@ -241,7 +248,8 @@ func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) err
 		}
 	}
 	if m != "" {
-		return fmt.Errorf(m)
+		err = fmt.Errorf(m)
+		return err
 	}
 	return nil
 }
