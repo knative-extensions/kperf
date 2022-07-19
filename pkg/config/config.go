@@ -16,7 +16,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -112,10 +111,6 @@ func BootstrapConfig() error {
 
 	viper.AutomaticEnv() // read in environment variables that match
 
-	// Defaults are taken from the parsed flags, which in turn have bootstrap defaults
-	// For now default handling is happening directly in the getter of GlobalConfig
-	// viper.SetDefault(keyPluginsDirectory, bootstrapDefaults.pluginsDir)
-
 	// If a config file is found, read it in.
 	err = viper.ReadInConfig()
 	if err != nil {
@@ -210,17 +205,12 @@ func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (er
 		//	envVarSuffix := strings.ToUpper(strings.ReplaceAll(configPrefix + f.Name, "-", "_"))
 		//	v.BindEnv(configPrefix + f.Name, fmt.Sprintf("%s_%s", envPrefix, envVarSuffix))
 		//}
-		// log
-		if f.Changed && !viper.IsSet(configPrefix+f.Name) {
-			log.Println(f.Name, "changed to", f.Value)
-		}
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed {
 			if viper.IsSet(configPrefix + f.Name) {
 				val := viper.Get(configPrefix + f.Name)
 				err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 				if err != nil {
-					log.Println("failed to set flags: ", err)
 					return
 				}
 			} else {
@@ -235,6 +225,7 @@ func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (er
 	if err != nil {
 		return err
 	}
+	// Return error on required flag(s)
 	var m string
 	for _, k := range keys {
 		if !set[k] {

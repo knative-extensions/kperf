@@ -64,17 +64,18 @@ func TestBootstrapConfigWithoutConfigFile(t *testing.T) {
 
 func setupConfig(t *testing.T, configContent string) (string, func()) {
 	// Avoid being fooled by the things in the real homedir
-	tmpDir := "/tmp"
+	tmpHome := "/tmp"
+	tmpPath := "/tmp/.config/kperf/"
 	oldHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
+	os.Setenv("HOME", tmpHome)
 	// Save old args
 	backupArgs := os.Args
 
 	// Write out a temporary configContent file
 	var cfgFile string
 	if configContent != "" {
-		cfgFile = filepath.Join("/tmp/.config/kperf/", "config.yaml")
-		err := os.MkdirAll("/tmp/.config/kperf/", os.ModePerm)
+		cfgFile = filepath.Join(tmpPath, "config.yaml")
+		err := os.MkdirAll(tmpPath, os.ModePerm)
 		if err != nil {
 			fmt.Println("failed to mkdir")
 		}
