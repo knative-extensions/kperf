@@ -2,7 +2,7 @@
 
 * [Serving load test](#knative-serving-load-test)
     * [Prepare namespaces](#prepare-namespaces)
-    * [Generate deployment load](#generate-knative-service-deployment-load)
+    * [Generate deployment load](#Generate-knative-service-deployment-load)
     * [Measure deployment time](#measure-knative-dervice-deployment-time)
     * [Clean up](#clean-knative-service-generated-for-test)
     * [Analyze results with Dashboard](#analyze-load-test-result-through-dashboard)
@@ -26,7 +26,44 @@ kubectl create ns {namespace-name}
 for name in {1..10};do kubectl create ns test-$name;done
 ```
 
-### generate Knative Service deployment load
+### Generate Knative Service deployment load
+- Use config file to specify flags
+  - Create `~/.config/kperf/config.yaml` and specify flags in it
+  - Use the `config.yaml` in generate command
+
+```yaml
+# config file
+service:
+  generate:
+    number: 10
+    interval: 10
+    batch: 10
+    concurrency: 5
+    namespace: test
+    namespace-prefix:
+    namespace-range:
+    svc-prefix: ktest
+    min-scale: 0
+    max-scale: 0
+```
+
+```shell script
+# create and write config file
+$ vim ~/.config/kperf/config.yaml
+
+# Use the config.yaml in generate command
+# Generate total 10 knative service, for each 10 seconds create 10 ksvc with 5 concurrency in namespace test
+# and the ksvc names are ktest-0, ktest-1.....ktest-9.
+$ kperf service generate --config ~/.config/kperf/config.yaml
+
+Creating Knative Service ktest-4 in namespace test
+Creating Knative Service ktest-0 in namespace test
+
+Creating Knative Service ktest-9 in namespace test
+```
+
+- Use command to specify flags
+
 ```shell script
 # Generate total 30 knative service, for each 15 seconds create 10 ksvc with 5 concurrency in namespace test-1, test-2
 # and test-3, and the ksvc names are ktest-0, ktest-1.....ktest-29.

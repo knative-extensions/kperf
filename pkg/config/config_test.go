@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -53,46 +52,30 @@ service:
 	assert.Equal(t, globalConfig.ConfigFile(), configFile)
 }
 
-func TestBootstrapConfigWithoutConfigFile(t *testing.T) {
-	_, cleanup := setupConfig(t, "")
-	defer cleanup()
-
-	err := BootstrapConfig()
-	assert.NilError(t, err)
-	assert.Equal(t, globalConfig.ConfigFile(), bootstrapDefaults.configFile)
-}
-
 func setupConfig(t *testing.T, configContent string) (string, func()) {
-	// Avoid being fooled by the things in the real homedir
-	tmpHome := "/tmp"
-	tmpPath := "/tmp/.config/kperf/"
-	oldHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpHome)
+	tmpPath := "./config.yaml"
+	globalConfig.configFile = tmpPath
+
 	// Save old args
 	backupArgs := os.Args
 
 	// Write out a temporary configContent file
-	var cfgFile string
 	if configContent != "" {
-		cfgFile = filepath.Join(tmpPath, "config.yaml")
-		err := os.MkdirAll(tmpPath, os.ModePerm)
+		os.Args = []string{"kperf", "--config", tmpPath}
+		err := ioutil.WriteFile(tmpPath, []byte(configContent), 0644)
 		if err != nil {
-			fmt.Println("failed to mkdir")
+			fmt.Println(err)
+			return "", nil
 		}
-		os.Args = []string{"kperf", "--config", cfgFile}
-		err = ioutil.WriteFile(cfgFile, []byte(configContent), 0644)
-		assert.NilError(t, err)
 	}
 
 	// Reset various global state
 	oldHomeDirDisableCache := homedir.DisableCache
 	homedir.DisableCache = true
 	viper.Reset()
-	globalConfig = config{}
 	bootstrapDefaults = initDefaults()
-	return cfgFile, func() {
+	return tmpPath, func() {
 		// Cleanup everything
-		os.Setenv("HOME", oldHome)
 		os.Args = backupArgs
 		bootstrapDefaults = initDefaults()
 		viper.Reset()

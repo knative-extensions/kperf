@@ -71,7 +71,7 @@ func BootstrapConfig() error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 // AddBootstrapFlags adds bootstrap flags used in a separate bootstrap proceeds
