@@ -76,24 +76,14 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// value := reflect.ValueOf(generateArgs)
-			// for i := 0; i < value.NumField(); i++ {
-			// 	log.Println(i, "=", value.Field(i))
-			// }
-			// cmd.Flags().VisitAll(func(f *pflag.Flag) {
-			// 	log.Println(f.Name, "=", f.Value)
-			// })
 			return GenerateServices(p, generateArgs)
 		},
 	}
 
 	// Define cobra flags, the default value has the lowest (least significant) precedence
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Number, "number", "n", 0, "Total number of Knative Service to be created")
-	//ksvcGenCommand.MarkFlagRequired("number")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Interval, "interval", "i", 0, "Interval for each batch generation")
-	//ksvcGenCommand.MarkFlagRequired("interval")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Batch, "batch", "b", 0, "Number of Knative Service each time to be created")
-	//ksvcGenCommand.MarkFlagRequired("batch")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Concurrency, "concurrency", "c", 10, "Number of multiple Knative Services to make at a time")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.MinScale, "min-scale", "", 0, "For autoscaling.knative.dev/minScale")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.MaxScale, "max-scale", "", 0, "For autoscaling.knative.dev/minScale")

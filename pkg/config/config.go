@@ -27,32 +27,16 @@ import (
 	"github.com/spf13/viper"
 )
 
-// bootstrapDefaults are the defaults values to use
 type defaultConfig struct {
 	configFile string
 }
 
-// Initialize defaults
+// Initialize defaults, bootstrapDefaults are the defaults values to use
 var bootstrapDefaults = initDefaults()
 
-//const configContentDefaults = `#
-//# service:
-//# 	namespace:
-//# 	svc-prefix:
-//# 	svc-range:
-//#	output: /tmp
-//# 	create:
-//# 		batch:
-//# 		concurrency:
-//# 	load:
-//# 		load-tool:
-//# 		load-concurrency:
-//# 		load-duration:
-//`
-
-// config contains the variables for the kperf config
+// Config contains the variables for the kperf config
 type config struct {
-	// configFile is the config file location
+	// ConfigFile is the config file location
 	configFile string
 }
 
@@ -68,30 +52,8 @@ func (c *config) ConfigFile() string {
 // Config used for flag binding, available for every sub-command
 var globalConfig = config{}
 
-//// GlobalConfig is the global configuration available for every sub-command
-//var GlobalConfig = &globalConfig
-
 // BootstrapConfig reads in config file
 func BootstrapConfig() error {
-
-	//Create a new FlagSet for the bootstrap flags and parse those. This will
-	//initialize the config file to use (obtained via globalConfig.ConfigFile())
-	//bootstrapFlagSet := pflag.NewFlagSet("kperf", pflag.ContinueOnError)
-	//AddBootstrapFlags(bootstrapFlagSet)
-	//bootstrapFlagSet.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
-	//bootstrapFlagSet.Usage = func() {}
-	//err := bootstrapFlagSet.Parse(os.Args)
-	//if err != nil && !errors.Is(err, pflag.ErrHelp) {
-	//	return err
-	//}
-	//
-	//// Bind flags so that options that have been provided have priority.
-	//// Important: Always read options via GlobalConfig methods
-	////err = viper.BindPFlag(keyPluginsDirectory, bootstrapFlagSet.Lookup(flagPluginsDir))
-	//if err != nil {
-	//	return err
-	//}
-
 	configFile := globalConfig.ConfigFile()
 	viper.SetConfigFile(configFile)
 	_, err := os.Lstat(configFile)
@@ -99,14 +61,6 @@ func BootstrapConfig() error {
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("cannot stat configfile %s: %w", configFile, err)
 		}
-		//if err := os.MkdirAll(filepath.Dir(viper.ConfigFileUsed()), 0775); err != nil {
-		//	// Can't create config directory, proceed silently without reading the config
-		//	return nil
-		//}
-		//if err := os.WriteFile(viper.ConfigFileUsed(), []byte(configContentDefaults), 0600); err != nil {
-		//	// Can't create config file, proceed silently without reading the config
-		//	return nil
-		//}
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -199,12 +153,6 @@ func defaultConfigFileForUsageMessage() string {
 func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (err error) {
 	keys := make([]string, 0)
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		// Environment variables can't have dashes in them, so bind them to their equivalent
-		// keys with underscores, e.g. --favorite-color to STING_FAVORITE_COLOR
-		//if strings.Contains(configPrefix + f.Name, "-") {
-		//	envVarSuffix := strings.ToUpper(strings.ReplaceAll(configPrefix + f.Name, "-", "_"))
-		//	v.BindEnv(configPrefix + f.Name, fmt.Sprintf("%s_%s", envPrefix, envVarSuffix))
-		//}
 		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed {
 			if viper.IsSet(configPrefix + f.Name) {
