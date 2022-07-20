@@ -15,7 +15,9 @@
 package config
 
 import (
+	"flag"
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,6 +27,11 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+)
+
+const (
+	DefaultConfigLocationUnix    = "~/.config/kperf/config.yaml"
+	DefaultConfigLocationWindows = "%APPDATA%\\kperf\\config.yaml"
 )
 
 type defaultConfig struct {
@@ -54,12 +61,32 @@ var globalConfig = config{}
 
 // BootstrapConfig reads in config file
 func BootstrapConfig() error {
+	// Create a new FlagSet for the bootstrap flags and parse those. This will
+	// initialize the config file to use (obtained via GlobalConfig.ConfigFile())
+	bootstrapFlagSet := pflag.NewFlagSet("kperf", pflag.ContinueOnError)
+	AddBootstrapFlags(bootstrapFlagSet)
+	bootstrapFlagSet.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
+	bootstrapFlagSet.Usage = func() {}
+	err := bootstrapFlagSet.Parse(os.Args)
+	if err != nil && !errors.Is(err, flag.ErrHelp) {
+		return err
+	}
+
 	configFile := globalConfig.ConfigFile()
 	viper.SetConfigFile(configFile)
-	_, err := os.Lstat(configFile)
+	_, err = os.Lstat(configFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("cannot stat configfile %s: %w", configFile, err)
+		}
+		// If file or directory not exist, then mkdir and write file
+		if err := os.MkdirAll(filepath.Dir(viper.ConfigFileUsed()), 0775); err != nil {
+			// Can't create config directory, proceed silently without reading the config
+			return nil
+		}
+		if err := os.WriteFile(viper.ConfigFileUsed(), []byte(""), 0600); err != nil {
+			// Can't create config file, proceed silently without reading the config
+			return nil
 		}
 	}
 
@@ -143,9 +170,9 @@ func dirExists(path string) bool {
 // Prepare the default config file for the usage message
 func defaultConfigFileForUsageMessage() string {
 	if runtime.GOOS == "windows" {
-		return "%APPDATA%\\kperf\\config.yaml"
+		return DefaultConfigLocationWindows
 	}
-	return "~/.config/kperf/config.yaml"
+	return DefaultConfigLocationUnix
 }
 
 // BindFlags binds each cobra flag to its associated viper configuration (config file and environment variable),
