@@ -16,6 +16,9 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,7 +50,16 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		_, err := testutil.ExecuteCommand(cmd)
 		assert.ErrorContains(t, err, "required flag(s) \"batch\", \"interval\", \"number\"")
 
-		_, err = testutil.ExecuteCommand(cmd, "-b", "1")
+		_, err = testutil.ExecuteCommand(cmd, "-b", "1", "--config", "~/.config/kperf/config.yaml")
+		// log
+		cmd.Flags().VisitAll(func(f *pflag.Flag) {
+			if f.Name == "batch" {
+				val := viper.Get("service.generate.batch")
+				fmt.Println("config batch=", fmt.Sprintf("%v", val))
+				fmt.Println("generate batch=", f.Value.String())
+			}
+
+		})
 		assert.ErrorContains(t, err, "required flag(s) \"interval\", \"number\"")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1", "-i", "1")

@@ -54,13 +54,22 @@ func TestBootstrapConfig(t *testing.T) {
 		err := BootstrapConfig()
 		assert.ErrorContains(t, err, "cannot stat configfile")
 	})
+	t.Run("configFile is not set", func(t *testing.T) {
+		_, cleanup := setupConfig(t, "")
+		defer cleanup()
+
+		err := BootstrapConfig()
+		fmt.Println("globalConfig.ConfigFile():",globalConfig.ConfigFile())
+		assert.NilError(t, err)
+		assert.Equal(t, globalConfig.ConfigFile(), defaultConfigFileForUsageMessage())
+	})
 	t.Run("configFile is none", func(t *testing.T) {
 		_, cleanup := setupConfig(t, "")
 		defer cleanup()
 
 		err := BootstrapConfig()
 		assert.NilError(t, err)
-		assert.Equal(t, globalConfig.ConfigFile(), bootstrapDefaults.configFile)
+		assert.Equal(t, globalConfig.ConfigFile(), defaultConfigFileForUsageMessage())
 	})
 	t.Run("configFile is not none", func(t *testing.T) {
 		configFile, cleanup := setupConfig(t, FakeConfigYaml)
@@ -93,6 +102,8 @@ func setupConfig(t *testing.T, configContent string) (string, func()) {
 
 		err = ioutil.WriteFile(cfgFile, []byte(configContent), 0644)
 		assert.NilError(t, err)
+	}else{
+		os.Args = []string{"kperf"}
 	}
 
 	// Reset various global state

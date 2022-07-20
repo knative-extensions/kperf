@@ -15,9 +15,8 @@
 package config
 
 import (
-	"flag"
 	"fmt"
-	"github.com/pkg/errors"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -63,18 +62,18 @@ var globalConfig = config{}
 func BootstrapConfig() error {
 	// Create a new FlagSet for the bootstrap flags and parse those. This will
 	// initialize the config file to use (obtained via GlobalConfig.ConfigFile())
-	bootstrapFlagSet := pflag.NewFlagSet("kperf", pflag.ContinueOnError)
-	AddBootstrapFlags(bootstrapFlagSet)
-	bootstrapFlagSet.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
-	bootstrapFlagSet.Usage = func() {}
-	err := bootstrapFlagSet.Parse(os.Args)
-	if err != nil && !errors.Is(err, flag.ErrHelp) {
-		return err
-	}
+	//bootstrapFlagSet := pflag.NewFlagSet("kperf", pflag.ContinueOnError)
+	//AddBootstrapFlags(bootstrapFlagSet)
+	//bootstrapFlagSet.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
+	//bootstrapFlagSet.Usage = func() {}
+	//err := bootstrapFlagSet.Parse(os.Args)
+	//if err != nil && !errors.Is(err, flag.ErrHelp) {
+	//	return err
+	//}
 
 	configFile := globalConfig.ConfigFile()
 	viper.SetConfigFile(configFile)
-	_, err = os.Lstat(configFile)
+	_, err := os.Lstat(configFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("cannot stat configfile %s: %w", configFile, err)
@@ -97,13 +96,14 @@ func BootstrapConfig() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("viper.Get()=",fmt.Sprintf("%v", viper.Get("service.generate.batch")))
 
 	return nil
 }
 
 // AddBootstrapFlags adds bootstrap flags used in a separate bootstrap proceeds
 func AddBootstrapFlags(flags *pflag.FlagSet) {
-	flags.StringVar(&globalConfig.configFile, "config", "", fmt.Sprintf("kperf configuration file (default: %s)", defaultConfigFileForUsageMessage()))
+	flags.StringVar(&globalConfig.configFile, "config", defaultConfigFileForUsageMessage(), fmt.Sprintf("kperf configuration file (default: %s)", defaultConfigFileForUsageMessage()))
 }
 
 // Initialize defaults. This happens lazily go allow to change the
@@ -184,11 +184,14 @@ func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (er
 		if !f.Changed {
 			if viper.IsSet(configPrefix + f.Name) {
 				val := viper.Get(configPrefix + f.Name)
+				// log
+				log.Println("viper-",f.Name,"=", fmt.Sprintf("%v", val))
 				err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 				if err != nil {
 					return
 				}
 			} else {
+				log.Println("viper-",f.Name," is set?", viper.IsSet(configPrefix + f.Name))
 				// Validate required flags
 				if set[f.Name] {
 					set[f.Name] = false
