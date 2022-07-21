@@ -28,11 +28,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	DefaultConfigLocationUnix    = "~/.config/kperf/config.yaml"
-	DefaultConfigLocationWindows = "%APPDATA%\\kperf\\config.yaml"
-)
-
 type defaultConfig struct {
 	configFile string
 }
@@ -59,18 +54,10 @@ func (c *config) ConfigFile() string {
 var globalConfig = config{}
 
 // BootstrapConfig reads in config file
+// if config file is set, read into viper
+// if config file location is not set, read from default config file location;
+// while default config file doesn't exist, create a nil file
 func BootstrapConfig() error {
-	// Create a new FlagSet for the bootstrap flags and parse those. This will
-	// initialize the config file to use (obtained via GlobalConfig.ConfigFile())
-	//bootstrapFlagSet := pflag.NewFlagSet("kperf", pflag.ContinueOnError)
-	//AddBootstrapFlags(bootstrapFlagSet)
-	//bootstrapFlagSet.ParseErrorsWhitelist = pflag.ParseErrorsWhitelist{UnknownFlags: true}
-	//bootstrapFlagSet.Usage = func() {}
-	//err := bootstrapFlagSet.Parse(os.Args)
-	//if err != nil && !errors.Is(err, flag.ErrHelp) {
-	//	return err
-	//}
-
 	configFile := globalConfig.ConfigFile()
 	viper.SetConfigFile(configFile)
 	_, err := os.Lstat(configFile)
@@ -81,10 +68,12 @@ func BootstrapConfig() error {
 		// If file or directory not exist, then mkdir and write file
 		if err := os.MkdirAll(filepath.Dir(viper.ConfigFileUsed()), 0775); err != nil {
 			// Can't create config directory, proceed silently without reading the config
+			log.Println("Can't create config directory, proceed silently without reading the config")
 			return nil
 		}
 		if err := os.WriteFile(viper.ConfigFileUsed(), []byte(""), 0600); err != nil {
 			// Can't create config file, proceed silently without reading the config
+			log.Println("Can't create config file, proceed silently without reading the config")
 			return nil
 		}
 	}
@@ -96,14 +85,12 @@ func BootstrapConfig() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("viper.Get()=",fmt.Sprintf("%v", viper.Get("service.generate.batch")))
-
 	return nil
 }
 
 // AddBootstrapFlags adds bootstrap flags used in a separate bootstrap proceeds
 func AddBootstrapFlags(flags *pflag.FlagSet) {
-	flags.StringVar(&globalConfig.configFile, "config", defaultConfigFileForUsageMessage(), fmt.Sprintf("kperf configuration file (default: %s)", defaultConfigFileForUsageMessage()))
+	flags.StringVar(&globalConfig.configFile, "config", defaultConfigLocation("config.yaml"), fmt.Sprintf("kperf configuration file"))
 }
 
 // Initialize defaults. This happens lazily go allow to change the
@@ -167,14 +154,6 @@ func dirExists(path string) bool {
 	return false
 }
 
-// Prepare the default config file for the usage message
-func defaultConfigFileForUsageMessage() string {
-	if runtime.GOOS == "windows" {
-		return DefaultConfigLocationWindows
-	}
-	return DefaultConfigLocationUnix
-}
-
 // BindFlags binds each cobra flag to its associated viper configuration (config file and environment variable),
 // and validate required flag(s)
 func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (err error) {
@@ -184,14 +163,11 @@ func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (er
 		if !f.Changed {
 			if viper.IsSet(configPrefix + f.Name) {
 				val := viper.Get(configPrefix + f.Name)
-				// log
-				log.Println("viper-",f.Name,"=", fmt.Sprintf("%v", val))
 				err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
 				if err != nil {
 					return
 				}
 			} else {
-				log.Println("viper-",f.Name," is set?", viper.IsSet(configPrefix + f.Name))
 				// Validate required flags
 				if set[f.Name] {
 					set[f.Name] = false

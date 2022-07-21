@@ -44,35 +44,25 @@ service:
 )
 
 func TestBootstrapConfig(t *testing.T) {
-	t.Run("cannot stat configFile", func(t *testing.T) {
-		backupArgs := os.Args
-		os.Args = []string{"kperf", "--config", "\000x"}
-		defer func() {
-			os.Args = backupArgs
-			viper.Reset()
-		}()
-		err := BootstrapConfig()
-		assert.ErrorContains(t, err, "cannot stat configfile")
-	})
-	t.Run("configFile is not set", func(t *testing.T) {
-		_, cleanup := setupConfig(t, "")
-		defer cleanup()
-
-		err := BootstrapConfig()
-		fmt.Println("globalConfig.ConfigFile():",globalConfig.ConfigFile())
-		assert.NilError(t, err)
-		assert.Equal(t, globalConfig.ConfigFile(), defaultConfigFileForUsageMessage())
-	})
-	t.Run("configFile is none", func(t *testing.T) {
-		_, cleanup := setupConfig(t, "")
+	t.Run("config is not set and default config file doesn't exist", func(t *testing.T) {
+		_, cleanup := setupConfig(t, "", "")
 		defer cleanup()
 
 		err := BootstrapConfig()
 		assert.NilError(t, err)
-		assert.Equal(t, globalConfig.ConfigFile(), defaultConfigFileForUsageMessage())
+		assert.Equal(t, globalConfig.ConfigFile(), defaultConfigLocation("config.yaml"))
 	})
-	t.Run("configFile is not none", func(t *testing.T) {
-		configFile, cleanup := setupConfig(t, FakeConfigYaml)
+	t.Run("config is not set and default config file exists", func(t *testing.T) {
+		_, cleanup := setupConfig(t, FakeConfigYaml, "")
+		defer cleanup()
+
+		err := BootstrapConfig()
+		assert.NilError(t, err)
+		assert.Equal(t, globalConfig.ConfigFile(), defaultConfigLocation("config.yaml"))
+	})
+	t.Run("config is set", func(t *testing.T) {
+		fakePath := "./abc/config.yaml"
+		configFile, cleanup := setupConfig(t, FakeConfigYaml, fakePath)
 		defer cleanup()
 
 		err := BootstrapConfig()
@@ -81,36 +71,49 @@ func TestBootstrapConfig(t *testing.T) {
 	})
 }
 
-func setupConfig(t *testing.T, configContent string) (string, func()) {
-	tmpDir := t.TempDir()
-
+func setupConfig(t *testing.T, configContent string, configPath string) (string, func()) {
 	// Avoid to be fooled by the things in real homedir
+	tmpDir := t.TempDir()
 	oldHome := os.Getenv("HOME")
 	os.Setenv("HOME", tmpDir)
-
+	homedir.DisableCache = true
 	// Save old args
 	backupArgs := os.Args
 
 	// Write out a temporary configContent file
 	var cfgFile string
-	if configContent != "" {
-		cfgFile = filepath.Join(tmpDir, "./.config/kperf/config.yaml")
-		os.Args = []string{"kperf", "--config", cfgFile}
+	if configPath != "" {
+		cfgFile = filepath.Join(tmpDir, configPath)
+		if configContent != "" {
+			err := os.MkdirAll(filepath.Dir(cfgFile), 0775)
+			assert.NilError(t, err)
 
-		err := os.MkdirAll(filepath.Dir(cfgFile), 0775)
-		assert.NilError(t, err)
+			err = ioutil.WriteFile(cfgFile, []byte(configContent), 0644)
+			assert.NilError(t, err)
 
-		err = ioutil.WriteFile(cfgFile, []byte(configContent), 0644)
-		assert.NilError(t, err)
-	}else{
-		os.Args = []string{"kperf"}
+			os.Args = []string{"kperf", "--config", cfgFile}
+			globalConfig = config{cfgFile}
+		}
+	} else {
+		cfgFile = defaultConfigLocation("config.yaml")
+		if configContent != "" {
+			err := os.MkdirAll(filepath.Dir(cfgFile), 0775)
+			assert.NilError(t, err)
+
+			err = ioutil.WriteFile(cfgFile, []byte(configContent), 0644)
+			assert.NilError(t, err)
+
+			os.Args = []string{"kperf"}
+			globalConfig = config{cfgFile}
+		} else {
+			os.Args = []string{"kperf"}
+			globalConfig = config{cfgFile}
+		}
 	}
 
 	// Reset various global state
 	oldHomeDirDisableCache := homedir.DisableCache
-	homedir.DisableCache = true
 	viper.Reset()
-	globalConfig = config{}
 	bootstrapDefaults = initDefaults()
 
 	return cfgFile, func() {
@@ -128,37 +131,3 @@ func setupConfig(t *testing.T, configContent string) (string, func()) {
 		}
 	}
 }
-
-//func setupConfig1(t *testing.T, configContent string) (string, func()) {
-//	tmpPath := "./config.yaml"
-//	globalConfig.configFile = tmpPath
-//
-//	// Save old args
-//	backupArgs := os.Args
-//
-//	// Write out a temporary configContent file
-//	if configContent != "" {
-//		tmpPath := "./config.yaml"
-//		globalConfig.configFile = tmpPath
-//		os.Args = []string{"kperf", "--config", tmpPath}
-//		err := ioutil.WriteFile(tmpPath, []byte(configContent), 0644)
-//		if err != nil {
-//			fmt.Println(err)
-//			return "", nil
-//		}
-//	}
-//
-//	// Reset various global state
-//	oldHomeDirDisableCache := homedir.DisableCache
-//	homedir.DisableCache = true
-//	viper.Reset()
-//	bootstrapDefaults = initDefaults()
-//	return tmpPath, func() {
-//		// Cleanup everything
-//		os.Args = backupArgs
-//		bootstrapDefaults = initDefaults()
-//		viper.Reset()
-//		homedir.DisableCache = oldHomeDirDisableCache
-//		globalConfig = config{}
-//	}
-//}
