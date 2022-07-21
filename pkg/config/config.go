@@ -55,7 +55,7 @@ var globalConfig = config{}
 
 // BootstrapConfig reads in config file
 // if config file is set, read into viper
-// if config file location is not set, read from default config file location;
+// if config file location is not set, read from default config file location,
 // while default config file doesn't exist, create a nil file
 func BootstrapConfig() error {
 	configFile := globalConfig.ConfigFile()
@@ -65,7 +65,7 @@ func BootstrapConfig() error {
 		if !os.IsNotExist(err) {
 			return fmt.Errorf("cannot stat configfile %s: %w", configFile, err)
 		}
-		// If file or directory not exist, then mkdir and write file
+		// If file or directory doesn't exist, create it
 		if err := os.MkdirAll(filepath.Dir(viper.ConfigFileUsed()), 0775); err != nil {
 			// Can't create config directory, proceed silently without reading the config
 			log.Println("Can't create config directory, proceed silently without reading the config")
@@ -80,7 +80,7 @@ func BootstrapConfig() error {
 
 	viper.AutomaticEnv() // read in environment variables that match
 
-	// If a config file is found, read it in.
+	// If a config file is found, read into viper
 	err = viper.ReadInConfig()
 	if err != nil {
 		return err
@@ -90,25 +90,25 @@ func BootstrapConfig() error {
 
 // AddBootstrapFlags adds bootstrap flags used in a separate bootstrap proceeds
 func AddBootstrapFlags(flags *pflag.FlagSet) {
-	flags.StringVar(&globalConfig.configFile, "config", defaultConfigLocation("config.yaml"), fmt.Sprintf("kperf configuration file"))
+	flags.StringVar(&globalConfig.configFile, "config", defaultConfigLocation(), "kperf configuration file")
 }
 
 // Initialize defaults. This happens lazily go allow to change the
 // home directory for e.g. tests
 func initDefaults() *defaultConfig {
 	return &defaultConfig{
-		configFile: defaultConfigLocation("config.yaml"),
+		configFile: defaultConfigLocation(),
 	}
 }
 
-func defaultConfigLocation(subpath string) string {
+func defaultConfigLocation() string {
 	var base string
 	if runtime.GOOS == "windows" {
 		base = defaultConfigDirWindows()
 	} else {
 		base = defaultConfigDirUnix()
 	}
-	return filepath.Join(base, subpath)
+	return filepath.Join(base, "config.yaml")
 }
 
 func defaultConfigDirUnix() string {
