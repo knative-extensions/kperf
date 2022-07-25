@@ -37,7 +37,7 @@ func GetNamespaces(ctx context.Context, params *pkg.PerfParams, namespace, names
 	if namespacePrefix != "" {
 		r := strings.Split(namespaceRange, ",")
 		if len(r) != 2 {
-			return nsNameList, fmt.Errorf("expected range like 1,500, given %s\n", namespaceRange)
+			return nsNameList, fmt.Errorf("expected range like 1,500, given %s", namespaceRange)
 		}
 		start, err := strconv.Atoi(r[0])
 		if err != nil {
@@ -52,7 +52,7 @@ func GetNamespaces(ctx context.Context, params *pkg.PerfParams, namespace, names
 				namespaceRangeMap[fmt.Sprintf("%s-%d", namespacePrefix, i)] = true
 			}
 		} else {
-			return nsNameList, fmt.Errorf("failed to parse namespace range %s\n", namespaceRange)
+			return nsNameList, fmt.Errorf("failed to parse namespace range %s", namespaceRange)
 		}
 	}
 

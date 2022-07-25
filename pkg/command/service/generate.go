@@ -109,7 +109,7 @@ func GenerateServices(params *pkg.PerfParams, inputs pkg.GenerateArgs) error {
 	} else if inputs.NamespacePrefix != "" {
 		r := strings.Split(inputs.NamespaceRange, ",")
 		if len(r) != 2 {
-			return fmt.Errorf("expected range like 1,500, given %s\n", inputs.NamespaceRange)
+			return fmt.Errorf("expected range like 1,500, given %s", inputs.NamespaceRange)
 		}
 		start, err := strconv.Atoi(r[0])
 		if err != nil {
