@@ -30,9 +30,11 @@ for name in {1..10};do kubectl create ns test-$name;done
 - Use config file to specify flags
   - Create `~/.config/kperf/config.yaml` and specify flags in it
   - Use the `config.yaml` in generate command
+    - You should specify `--config` unless you use the default config location(~/.config/kperf/config.yaml)
+    - Precedence: flags in command > config file values > flags default
 
 ```yaml
-# config file
+# create config file
 service:
   generate:
     number: 10
@@ -48,13 +50,10 @@ service:
 ```
 
 ```shell script
-# create and write config file
-$ vim ~/.config/kperf/config.yaml
-
 # Use the config.yaml in generate command
 # Generate total 10 knative service, for each 10 seconds create 10 ksvc with 5 concurrency in namespace test
 # and the ksvc names are ktest-0, ktest-1.....ktest-9.
-$ kperf service generate --config ~/.config/kperf/config.yaml
+$ kperf service generate
 
 Creating Knative Service ktest-4 in namespace test
 Creating Knative Service ktest-0 in namespace test
