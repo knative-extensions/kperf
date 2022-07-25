@@ -25,7 +25,7 @@ import (
 func GenerateCSVFile(path string, rows [][]string) error {
 	file, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("failed to create csv file %s\n", err)
+		return fmt.Errorf("failed to create csv file %s", err)
 	}
 	defer file.Close()
 
@@ -77,16 +77,15 @@ func CheckOutputLocation(outputLocation string) (string, error) {
 	dirInfo, err := os.Stat(outputLocation)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return outputLocation, fmt.Errorf("output location (%s) is not existed: %s\n", outputLocation, err)
-		} else {
-			return outputLocation, fmt.Errorf("output location (%s) has error: %s\n", outputLocation, err)
+			return outputLocation, fmt.Errorf("output location (%s) is not existed: %s", outputLocation, err)
 		}
+		return outputLocation, fmt.Errorf("output location (%s) has error: %s", outputLocation, err)
 	} else {
 		if !dirInfo.IsDir() {
-			return outputLocation, fmt.Errorf("output location (%s) is not directory, please check!\n", outputLocation)
+			return outputLocation, fmt.Errorf("output location (%s) is not directory", outputLocation)
 		}
 		if dirInfo.Mode().Perm()&(1<<(uint(7))) == 0 {
-			return outputLocation, fmt.Errorf("output location (%s) is not writable, please check!\n", outputLocation)
+			return outputLocation, fmt.Errorf("output location (%s) is not writable", outputLocation)
 		}
 	}
 	return outputLocation, nil

@@ -100,7 +100,7 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 	if options.NamespaceChanged {
 		r := strings.Split(inputs.SvcRange, ",")
 		if len(r) != 2 {
-			return fmt.Errorf("expected range like 1,500, given %s\n", inputs.SvcRange)
+			return fmt.Errorf("expected range like 1,500, given %s", inputs.SvcRange)
 		}
 
 		start, err := strconv.Atoi(r[0])
@@ -120,17 +120,17 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 
 	autoscalingClient, err := params.NewAutoscalingClient()
 	if err != nil {
-		return fmt.Errorf("failed to create autoscaling client%s\n", err)
+		return fmt.Errorf("failed to create autoscaling client %s", err)
 	}
 	servingClient, err := params.NewServingClient()
 	if err != nil {
-		return fmt.Errorf("failed to create serving client%s\n", err)
+		return fmt.Errorf("failed to create serving client %s", err)
 	}
 
 	if options.NamespaceRangeChanged && options.NamespacePrefixChanged {
 		r := strings.Split(inputs.NamespaceRange, ",")
 		if len(r) != 2 {
-			return fmt.Errorf("expected namespace-range like 1,500, given %s\n", inputs.NamespaceRange)
+			return fmt.Errorf("expected namespace-range like 1,500, given %s", inputs.NamespaceRange)
 		}
 
 		start, err := strconv.Atoi(r[0])
@@ -165,7 +165,7 @@ func MeasureServices(params *pkg.PerfParams, inputs pkg.MeasureArgs, options Mea
 
 	nwclient, err := params.NewNetworkingClient()
 	if err != nil {
-		return fmt.Errorf("failed to create networking client%s\n", err)
+		return fmt.Errorf("failed to create networking client %s", err)
 	}
 
 	svcChannel := make(chan []string)
