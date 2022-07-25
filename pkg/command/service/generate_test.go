@@ -45,19 +45,19 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		cmd := NewServiceGenerateCommand(p)
 
 		_, err := testutil.ExecuteCommand(cmd)
-		assert.ErrorContains(t, err, "required flag(s) \"batch\", \"interval\", \"number\" not set")
+		assert.ErrorContains(t, err, "required flag(s) \"batch\", \"interval\", \"number\"")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1")
-		assert.ErrorContains(t, err, "required flag(s) \"interval\", \"number\" not set")
+		assert.ErrorContains(t, err, "required flag(s) \"interval\", \"number\"")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1", "-i", "1")
-		assert.ErrorContains(t, err, "required flag(s) \"number\" not set")
+		assert.ErrorContains(t, err, "required flag(s) \"number\"")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1", "-i", "1", "--min-scale", "1")
-		assert.ErrorContains(t, err, "required flag(s) \"number\" not set")
+		assert.ErrorContains(t, err, "required flag(s) \"number\"")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1", "-i", "1", "--min-scale", "1", "--max-scale", "2")
-		assert.ErrorContains(t, err, "required flag(s) \"number\" not set")
+		assert.ErrorContains(t, err, "required flag(s) \"number\"")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1", "-i", "1", "--min-scale", "1", "--max-scale", "2", "--number", "1")
 		assert.ErrorContains(t, err, "namespace default not found, please create one")

@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"knative.dev/kperf/pkg/config"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
@@ -44,6 +46,13 @@ const (
 	ServiceImage     = "gcr.io/knative-samples/helloworld-go"
 )
 
+// Required flags of generate command
+var generateRequiredFlagsSet = map[string]bool{
+	"batch":    true,
+	"interval": true,
+	"number":   true,
+}
+
 func NewServiceGenerateCommand(p *pkg.PerfParams) *cobra.Command {
 	generateArgs := pkg.GenerateArgs{}
 
@@ -57,6 +66,10 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 `,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			flags := cmd.Flags()
+			err := config.BindFlags(cmd, "service.generate.", generateRequiredFlagsSet)
+			if err != nil {
+				return err
+			}
 			if flags.Changed("namespace-prefix") && flags.Changed("namespace") {
 				return errors.New("expected either namespace with prefix & range or only namespace name")
 			}
@@ -66,12 +79,11 @@ kperf service generate -n 500 --interval 20 --batch 20 --min-scale 0 --max-scale
 			return GenerateServices(p, generateArgs)
 		},
 	}
+
+	// Define cobra flags, the default value has the lowest (least significant) precedence
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Number, "number", "n", 0, "Total number of Knative Service to be created")
-	ksvcGenCommand.MarkFlagRequired("number")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Interval, "interval", "i", 0, "Interval for each batch generation")
-	ksvcGenCommand.MarkFlagRequired("interval")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Batch, "batch", "b", 0, "Number of Knative Service each time to be created")
-	ksvcGenCommand.MarkFlagRequired("batch")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.Concurrency, "concurrency", "c", 10, "Number of multiple Knative Services to make at a time")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.MinScale, "min-scale", "", 0, "For autoscaling.knative.dev/minScale")
 	ksvcGenCommand.Flags().IntVarP(&generateArgs.MaxScale, "max-scale", "", 0, "For autoscaling.knative.dev/minScale")
