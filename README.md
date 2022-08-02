@@ -38,12 +38,15 @@ Available Commands:
   clean       clean ksvc
   generate    generate Knative Service
   help        Help about any command
-  load        Load and Measure Knative service
+  load        Load test and Measure Knative service
   measure     Measure Knative service
   scale       Scale and Measure Knative service
 
 Flags:
   -h, --help   help for service
+
+Global Flags:
+      --config string   kperf configuration file (default "/home/ubuntu/.config/kperf/config.yaml")
 
 Use "kperf service [command] --help" for more information about a command.
 ```
