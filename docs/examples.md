@@ -294,6 +294,13 @@ Two types of load test tools are supported
 **Usage**
 
 ```bash
+$ kperf service load --help
+Scale Knative service from zero using load test tool and measure latency for service to scale form 0 to N
+
+For example:
+# To measure a Knative Service scaling from zero to N
+kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool wrk --load-duration 60s --load-concurrency 40 --verbose --output /tmp
+
 Usage:
   kperf service load [flags]
 
@@ -301,7 +308,7 @@ Flags:
   -h, --help                      help for load
   -c, --load-concurrency string   total number of workers to run concurrently for the load test tool (default "30")
   -d, --load-duration string      Duration of the test for the load test tool (default "60s")
-  -t, --load-tool string          Select the load test tool, use internal load testing tool (vegeta) by default, also support external load tool(wrk and hey, require preinstallation) (default "default")
+  -t, --load-tool string          Select the load test tool, use internal load test tool(vegeta) by default, also support external load tool(wrk and hey, require preinstallation) (default "default")
       --namespace string          Service namespace
       --namespace-prefix string   Service namespace prefix
       --namespace-range string    Service namespace range
@@ -311,6 +318,9 @@ Flags:
       --svc-prefix string         Service name prefix
   -v, --verbose                   Service verbose result
   -w, --wait-time duration        Time to wait for all pods to be ready (default 10s)
+
+Global Flags:
+      --config string   kperf configuration file (default "/home/ubuntu/.config/kperf/config.yaml")
 ```
 
 **Output**
