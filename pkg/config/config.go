@@ -167,7 +167,7 @@ func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (er
 				if err != nil {
 					return
 				}
-			} else {
+			} else if set != nil {
 				// Validate required flags
 				if set[f.Name] {
 					set[f.Name] = false
