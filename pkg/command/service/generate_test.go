@@ -43,7 +43,6 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 			NewServingClient: servingClient,
 		}
 		cmd := NewServiceGenerateCommand(p)
-
 		_, err := testutil.ExecuteCommand(cmd)
 		assert.ErrorContains(t, err, "required flag(s)")
 		assert.ErrorContains(t, err, "batch")

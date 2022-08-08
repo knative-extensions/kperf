@@ -200,7 +200,7 @@ func GenerateServices(params *pkg.PerfParams, inputs pkg.GenerateArgs) error {
 			}
 		}
 		fmt.Printf("Error: Knative Service %s in namespace %s is not ready after %s\n", name, ns, inputs.Timeout)
-		return fmt.Errorf("Knative Service %s in namespace %s is not ready after %s ", name, ns, inputs.Timeout)
+		return fmt.Errorf("Knative Service %s in namespace %s is not ready after %s", name, ns, inputs.Timeout)
 
 	}
 	if inputs.CheckReady {

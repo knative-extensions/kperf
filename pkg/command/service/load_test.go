@@ -91,7 +91,7 @@ func TestNewServiceLoadCommand(t *testing.T) {
 	t.Run("uncompleted or wrong args for service load", func(t *testing.T) {
 		cmd := NewServiceLoadCommand(p)
 		_, err := testutil.ExecuteCommand(cmd)
-		assert.ErrorContains(t, err, "'service load' requires flag(s)")
+		assert.ErrorContains(t, err, "both namespace and namespace-prefix are empty")
 
 		_, err = testutil.ExecuteCommand(cmd, "--namespace-prefix", FakeNamespace, "--namespace-range", "1200")
 		assert.ErrorContains(t, err, "expected range like 1,500, given 1200")
