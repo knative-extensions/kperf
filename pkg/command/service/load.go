@@ -74,9 +74,10 @@ kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool 
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			t := reflect.TypeOf(loadArgs)
 			value := reflect.ValueOf(loadArgs)
 			for i := 0; i < value.NumField(); i++ {
-				log.Println(i, "=", value.Field(i))
+				log.Println(t.Field(i).Name, ": ", value.Field(i).Interface())
 			}
 			return LoadServicesUpFromZero(p, loadArgs)
 		},

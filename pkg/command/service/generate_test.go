@@ -45,10 +45,16 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		cmd := NewServiceGenerateCommand(p)
 
 		_, err := testutil.ExecuteCommand(cmd)
-		assert.ErrorContains(t, err, "required flag(s) \"batch\", \"interval\", \"number\"")
+		assert.ErrorContains(t, err, "required flag(s)")
+		assert.ErrorContains(t, err, "batch")
+		assert.ErrorContains(t, err, "interval")
+		assert.ErrorContains(t, err, "number")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1")
-		assert.ErrorContains(t, err, "required flag(s) \"interval\", \"number\"")
+		// assert.ErrorContains(t, err, "required flag(s) \"interval\", \"number\"")
+		assert.ErrorContains(t, err, "required flag(s)")
+		assert.ErrorContains(t, err, "interval")
+		assert.ErrorContains(t, err, "number")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1", "-i", "1")
 		assert.ErrorContains(t, err, "required flag(s) \"number\"")

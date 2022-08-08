@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -31,6 +32,18 @@ import (
 type defaultConfig struct {
 	configFile string
 }
+
+var serviceCommonFlagsSet = map[string]bool{
+	"namespace":        true,
+	"namespace-prefix": true,
+	"namespace-range":  true,
+	"svc-prefix":       true,
+	"range":            true,
+	"output":           true,
+}
+
+// Initialize common flags in config file
+var commonFlags = initCommonConfig()
 
 // Initialize defaults, bootstrapDefaults are the defaults values to use
 var bootstrapDefaults = initDefaults()
@@ -159,42 +172,108 @@ func dirExists(path string) bool {
 func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (err error) {
 	keys := make([]string, 0)
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		// Apply the viper config value to the flag when the flag is not set and viper has a value
-		if !f.Changed {
-			if viper.IsSet(configPrefix + f.Name) {
-				val := viper.Get(configPrefix + f.Name)
-				err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
-				if err != nil {
-					return
-				}
-			} else if set != nil {
-				// Validate required flags
-				if set[f.Name] {
-					set[f.Name] = false
-					keys = append(keys, f.Name)
-				}
-			}
+		err = setFlagsByConfig(cmd.Flags(), f, configPrefix, &set, &keys)
+		if err != nil {
+			return
 		}
+		// Apply the viper config value to the flag when the flag is not set and viper has a value
+		// if !f.Changed {
+		// 	prefixArray := strings.Split(configPrefix, ".")
+		// 	// Search from common flags firstly
+		// 	parentCommand := prefixArray[0]
+		// 	if viper.IsSet(configPrefix + f.Name) {
+		// 		val := viper.Get(configPrefix + f.Name)
+		// 		err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		// 		if err != nil {
+		// 			return
+		// 		}
+		// 	} else if viper.IsSet(parentCommand + f.Name) {
+		// 		val := viper.Get(parentCommand + f.Name)
+		// 		err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
+		// 		if err != nil {
+		// 			return
+		// 		}
+		// 	} else if set != nil {
+		// 		// Validate required flags
+		// 		if set[f.Name] {
+		// 			set[f.Name] = false
+		// 			keys = append(keys, f.Name)
+		// 		}
+		// 	}
+		// }
 	})
 	if err != nil {
 		return err
 	}
+	return validateRequiredFlags(&set, keys)
 	// Return error on required flag(s)
+	// var m string
+	// for _, k := range keys {
+	// 	if !set[k] {
+	// 		if m == "" {
+	// 			m = "failed to get required flags, required flag(s) \"" + k + "\""
+	// 		} else {
+	// 			m = m + ", \"" + k + "\""
+	// 		}
+	// 		// Reset the value
+	// 		set[k] = true
+	// 	}
+	// }
+	// if m != "" {
+	// 	err = fmt.Errorf(m)
+	// 	return err
+	// }
+	// return nil
+}
+
+// Initialize common flags in config file
+// TODO: add common flags for eventing subcommands
+func initCommonConfig() map[string]map[string]bool {
+	common := make(map[string]map[string]bool)
+	common["service"] = serviceCommonFlagsSet
+	return common
+}
+
+// setFlagsByConfig applies viper config value to flag when flag is not set in command and config has a value
+func setFlagsByConfig(flagSet *pflag.FlagSet, f *pflag.Flag, configPrefix string, set *map[string]bool, keys *[]string) error {
+	parentCommand := strings.Split(configPrefix, ".")[0]
+	// Precedure:flag value in configPrefix > flag value in parent common
+	var val interface{}
+	if viper.IsSet(configPrefix + f.Name) { // flag value in
+		val = viper.Get(configPrefix + f.Name)
+	} else if viper.IsSet(parentCommand + f.Name) { // Common flag value
+		val = viper.Get(parentCommand + f.Name)
+	} else if set != nil {
+		// Validate required flags
+		if (*set)[f.Name] {
+			(*set)[f.Name] = false
+			*keys = append(*keys, f.Name) // a stable order to iterate a map for print err info
+		}
+		return nil
+	}
+	err := flagSet.Set(f.Name, fmt.Sprintf("%v", val))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//	// Return error on required flag(s)
+func validateRequiredFlags(set *map[string]bool, keys []string) error {
 	var m string
 	for _, k := range keys {
-		if !set[k] {
+		if !(*set)[k] {
 			if m == "" {
 				m = "failed to get required flags, required flag(s) \"" + k + "\""
 			} else {
 				m = m + ", \"" + k + "\""
 			}
 			// Reset the value
-			set[k] = true
+			(*set)[k] = true
 		}
 	}
 	if m != "" {
-		err = fmt.Errorf(m)
-		return err
+		return fmt.Errorf(m)
 	}
 	return nil
 }
