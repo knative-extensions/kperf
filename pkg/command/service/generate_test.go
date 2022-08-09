@@ -50,7 +50,6 @@ func TestNewServiceGenerateCommand(t *testing.T) {
 		assert.ErrorContains(t, err, "number")
 
 		_, err = testutil.ExecuteCommand(cmd, "-b", "1")
-		// assert.ErrorContains(t, err, "required flag(s) \"interval\", \"number\"")
 		assert.ErrorContains(t, err, "required flag(s)")
 		assert.ErrorContains(t, err, "interval")
 		assert.ErrorContains(t, err, "number")

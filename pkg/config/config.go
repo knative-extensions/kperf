@@ -33,7 +33,7 @@ type defaultConfig struct {
 	configFile string
 }
 
-var serviceCommonFlagsSet = map[string]bool{
+var defaultServiceCommonFlags = map[string]bool{
 	"namespace":        true,
 	"namespace-prefix": true,
 	"namespace-range":  true,
@@ -170,98 +170,44 @@ func dirExists(path string) bool {
 // BindFlags binds each cobra flag to its associated viper configuration (config file and environment variable),
 // and validate required flag(s)
 func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (err error) {
-	keys := make([]string, 0)
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
 		if !f.Changed {
-			fmt.Println("#", f.Name, "is not set in command, setFlagFromConfig")
-			err = setFlagFromConfig(cmd.Flags(), f, configPrefix, set, &keys)
-			if err != nil {
-				return
-			}
-		} else {
-			fmt.Println("#", f.Name, " is set in command")
+			err = setFlagFromConfig(cmd.Flags(), f, configPrefix, set)
 		}
-
-		// Apply the viper config value to the flag when the flag is not set and viper has a value
-		// if !f.Changed {
-		// 	prefixArray := strings.Split(configPrefix, ".")
-		// 	// Search from common flags firstly
-		// 	parentCommand := prefixArray[0]
-		// 	if viper.IsSet(configPrefix + f.Name) {
-		// 		val := viper.Get(configPrefix + f.Name)
-		// 		err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
-		// 		if err != nil {
-		// 			return
-		// 		}
-		// 	} else if viper.IsSet(parentCommand + f.Name) {
-		// 		val := viper.Get(parentCommand + f.Name)
-		// 		err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
-		// 		if err != nil {
-		// 			return
-		// 		}
-		// 	} else if set != nil {
-		// 		// Validate required flags
-		// 		if set[f.Name] {
-		// 			set[f.Name] = false
-		// 			keys = append(keys, f.Name)
-		// 		}
-		// 	}
-		// }
 	})
 	if err != nil {
 		return err
 	}
-	return validateRequiredFlags(set, keys)
-	// Return error on required flag(s)
-	// var m string
-	// for _, k := range keys {
-	// 	if !set[k] {
-	// 		if m == "" {
-	// 			m = "failed to get required flags, required flag(s) \"" + k + "\""
-	// 		} else {
-	// 			m = m + ", \"" + k + "\""
-	// 		}
-	// 		// Reset the value
-	// 		set[k] = true
-	// 	}
-	// }
-	// if m != "" {
-	// 	err = fmt.Errorf(m)
-	// 	return err
-	// }
-	// return nil
+	return validateRequiredFlags(set)
 }
 
-// Initialize common flags in config file
-// TODO: add common flags for eventing subcommands
+// initCommonConfig initializes common flags in config file
+// TODO: add common flags for eventing commands
 func initCommonConfig() map[string]map[string]bool {
 	common := make(map[string]map[string]bool)
-	common["service"] = serviceCommonFlagsSet
+	common["service"] = defaultServiceCommonFlags
 	return common
 }
 
 // setFlagsByConfig applies viper config value to flag when flag is not set in command and config has a value
-func setFlagFromConfig(flagSet *pflag.FlagSet, f *pflag.Flag, configPrefix string, set map[string]bool, keys *[]string) error {
-	commonPrefix := strings.Split(configPrefix, ".")[0]
-	// Precedure:flag value in configPrefix > flag value in parent common
+func setFlagFromConfig(flagSet *pflag.FlagSet, f *pflag.Flag, prefix string, set map[string]bool) error {
+	parentCommand := strings.Split(prefix, ".")[0]
+	parentPrefixName := parentCommand + "." + f.Name
+	configPrefixName := prefix + f.Name
+
 	var val interface{}
-	if viper.IsSet(configPrefix + f.Name) { // flag value in flags
-		val = viper.Get(configPrefix + f.Name)
-		fmt.Println("	find in config prefix, val = ", val)
-	} else if viper.IsSet(commonPrefix + "." + f.Name) { // flag value in common flags
-		// TODO: get nil value
-		val = viper.Get(commonPrefix + f.Name)
-		fmt.Println("	find in common, val = ", val)
+	// Precedure: flag value found by prefix from config > flag value found by parent prefix(common) from config
+	if viper.IsSet(configPrefixName) { // flag value found by prefix from config
+		val = viper.Get(configPrefixName)
+	} else if commonFlags[parentCommand][f.Name] && viper.IsSet(parentPrefixName) { // common flag value found by parent prefix(common) from config
+		val = viper.Get(parentPrefixName)
 	} else if set != nil {
 		// Validate required flags
-		fmt.Println(f.Name, " not find in config")
 		if set[f.Name] {
 			set[f.Name] = false
-			// *keys = append(*keys, f.Name) // a stable order to iterate a map for print err info
 		}
 		return nil
 	}
-
 	if val != nil {
 		err := flagSet.Set(f.Name, fmt.Sprintf("%v", val))
 		if err != nil {
@@ -272,13 +218,12 @@ func setFlagFromConfig(flagSet *pflag.FlagSet, f *pflag.Flag, configPrefix strin
 	return nil
 }
 
-//	// Return error on required flag(s)
-func validateRequiredFlags(set map[string]bool, keys []string) error {
+// validateRequiredFlags validates required flags
+// and returns error when any required flag in the map was not specified in command and config
+func validateRequiredFlags(set map[string]bool) error {
 	var m string
-	log.Printf("%v\n", set)
 	for k, v := range set {
 		if !v {
-			log.Println("required flag(s) - " + k)
 			if m == "" {
 				m = "failed to get required flags, required flag(s) \"" + k + "\""
 			} else {
@@ -287,19 +232,10 @@ func validateRequiredFlags(set map[string]bool, keys []string) error {
 			// Reset the value
 			set[k] = true
 		}
-		// for _, k := range keys {
-		// 	if !set[k] {
-		// 		if m == "" {
-		// 			m = "failed to get required flags, required flag(s) \"" + k + "\""
-		// 		} else {
-		// 			m = m + ", \"" + k + "\""
-		// 		}
-		// 		// Reset the value
-		// 		set[k] = true
-		// 	}
 	}
 	if m != "" {
 		return fmt.Errorf(m)
 	}
+
 	return nil
 }

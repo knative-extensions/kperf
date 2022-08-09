@@ -25,7 +25,6 @@ import (
 
 	"log"
 	"os/exec"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -68,23 +67,9 @@ kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool 
 			if err != nil {
 				return err
 			}
-			// t := reflect.TypeOf(loadArgs)
-			// value := reflect.ValueOf(loadArgs)
-			// for i := 0; i < value.NumField(); i++ {
-			// 	fmt.Println(t.Field(i).Name, ": ", value.Field(i).Interface())
-			// }
-
-			// if cmd.Flags().NFlag() == 0 {
-			// 	return fmt.Errorf("'service load' requires flag(s)")
-			// }
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			t := reflect.TypeOf(loadArgs)
-			value := reflect.ValueOf(loadArgs)
-			for i := 0; i < value.NumField(); i++ {
-				fmt.Println(t.Field(i).Name, ": ", value.Field(i).Interface())
-			}
 			return LoadServicesUpFromZero(p, loadArgs)
 		},
 	}
@@ -96,7 +81,7 @@ kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool 
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.SvcRange, "range", "r", "", "Desired service range")
 	serviceLoadCommand.Flags().BoolVarP(&loadArgs.Verbose, "verbose", "v", false, "Service verbose result")
 	serviceLoadCommand.Flags().BoolVarP(&loadArgs.ResolvableDomain, "resolvable", "", false, "If Service endpoint resolvable url")
-	serviceLoadCommand.Flags().DurationVarP(&loadArgs.WaitPodsReadyDuration, "wait-time", "", 10*time.Second, "Time to wait for all pods to be ready")
+	serviceLoadCommand.Flags().DurationVarP(&loadArgs.WaitPodsReadyDuration, "wait-time", "w", 10*time.Second, "Time to wait for all pods to be ready")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadTool, "load-tool", "t", "default", "Select the load test tool, use internal load test tool(vegeta) by default, also support external load tool(wrk and hey, require preinstallation)")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadConcurrency, "load-concurrency", "c", "30", "total number of workers to run concurrently for the load test tool")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadDuration, "load-duration", "d", "60s", "Duration of the test for the load test tool")
