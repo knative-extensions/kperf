@@ -196,7 +196,7 @@ func setFlagFromConfig(flagSet *pflag.FlagSet, f *pflag.Flag, prefix string, set
 	configPrefixName := prefix + f.Name
 
 	var val interface{}
-	// Precedure: flag value found by prefix from config > flag value found by parent prefix(common) from config
+	// Procedure: flag value found by prefix from config > flag value found by parent prefix(common) from config
 	if viper.IsSet(configPrefixName) { // flag value found by prefix from config
 		val = viper.Get(configPrefixName)
 	} else if commonFlags[parentCommand][f.Name] && viper.IsSet(parentPrefixName) { // common flag value found by parent prefix(common) from config

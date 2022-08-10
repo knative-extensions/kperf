@@ -340,6 +340,82 @@ $ kperf service generate -n 5 -b 1 -c 1 -i 1 --namespace ktest --svc-prefix ktes
 
 2. Scale up services(ktest-0, ... , ktest-4) in namespace ktest with **wrk** using 30 workers and lasting for 60 seconds, and measure the scale up latency
 
+- Use config file to specify flags(refer to [Generate deployment load](#Generate-knative-service-deployment-load))
+  - `namespace`, `namespace-prefix`, `namespace-range`, `svc-prefix`, `range`, `output` are default **common flags** of all service subcommands
+  - Procedure of common flag in config
+    - Common flag specified in subcommand(such as `load.namespace`)  > common flag specified in parent command(such as `service.namespace`)
+
+```yaml
+# create config file
+service:
+  namespace: ktest
+  svc-prefix: ktest
+  range: 0,4
+  output: /tmp
+  generate:
+    batch: 5
+    interval: 1
+    number: 5
+  load:
+    load-concurrency: 30
+    load-duration: 60s
+    verbose: true
+```
+
+```bash
+$ kperf service load
+2022/08/09 09:55:37 Namespace ktest, Service ktest-1, load start
+2022/08/09 09:55:37 Namespace ktest, Service ktest-3, load start
+2022/08/09 09:55:37 Namespace ktest, Service ktest-4, load start
+2022/08/09 09:55:37 Namespace ktest, Service ktest-0, load start
+2022/08/09 09:55:37 Namespace ktest, Service ktest-2, load start
+2022/08/09 09:56:37 Namespace ktest, Service ktest-1, load end, take off 60.003 seconds
+2022/08/09 09:56:37 Namespace ktest, Service ktest-3, load end, take off 60.004 seconds
+2022/08/09 09:56:37 Namespace ktest, Service ktest-4, load end, take off 60.003 seconds
+2022/08/09 09:56:37 Namespace ktest, Service ktest-0, load end, take off 60.003 seconds
+2022/08/09 09:56:37 Namespace ktest, Service ktest-2, load end, take off 60.003 seconds
+...
+
+[Verbose] Namespace ktest, Service ktest-2:
+
+[Verbose] Load tool(default) output:
+Requests      [total, rate, throughput]         480, 0.00, 0.00
+Duration      [total, attack, wait]             0s, 0s, 0s
+Latencies     [min, mean, 50, 90, 95, 99, max]  1.55ms, 0s, 0s, 0s, 0s, 0s, 8.027s
+Bytes In      [total, mean]                     6240, 0.00
+Bytes Out     [total, mean]                     0, 0.00
+Success       [ratio]                           0.00%
+Status Codes  [code:count]                      200:480
+Error Set:
+
+[Verbose] Deployment replicas changed from 0 to 7:
+replicas        ready_duration(seconds)
+       0                          9.543
+       1                         15.961
+       2                         18.533
+       3                         20.946
+       4                         21.733
+       5                         24.531
+       6                         25.733
+
+[Verbose] Pods changed from 0 to 7:
+pods    ready_duration(seconds)
+   0                        4.0
+   1                        3.0
+   2                        3.0
+   3                        5.0
+   4                        5.0
+   5                        5.0
+   6                        4.0
+
+---------------------------------------------------------------------------------
+Measurement saved in CSV file /tmp/20220809095647_ksvc_loading_time.csv
+Visualized measurement saved in HTML file /tmp/20220809095647_ksvc_loading_time.html
+Measurement saved in JSON file /tmp/20220809095647_ksvc_loading_time.json
+```
+
+- Use command to specify flags
+
 ```bash
 $ kperf service load --namespace ktest --svc-prefix ktest --range 0,4 --load-tool wrk --load-duration 60s --load-concurrency 30 --verbose --output /tmp
 2022/06/01 08:36:52 Namespace ktest, Service ktest-4, load start
