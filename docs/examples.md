@@ -352,10 +352,6 @@ service:
   svc-prefix: ktest
   range: 0,4
   output: /tmp
-  generate:
-    batch: 5
-    interval: 1
-    number: 5
   load:
     load-concurrency: 30
     load-duration: 60s

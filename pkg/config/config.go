@@ -189,7 +189,7 @@ func initCommonConfig() map[string]map[string]bool {
 	return common
 }
 
-// setFlagsByConfig applies viper config value to flag when flag is not set in command and config has a value
+// setFlagFromConfig applies viper config value to flag when flag is not set in command and config has a value
 func setFlagFromConfig(flagSet *pflag.FlagSet, f *pflag.Flag, prefix string, set map[string]bool) error {
 	parentCommand := strings.Split(prefix, ".")[0]
 	parentPrefixName := parentCommand + "." + f.Name
