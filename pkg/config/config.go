@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -31,6 +32,18 @@ import (
 type defaultConfig struct {
 	configFile string
 }
+
+var defaultServiceCommonFlags = map[string]bool{
+	"namespace":        true,
+	"namespace-prefix": true,
+	"namespace-range":  true,
+	"svc-prefix":       true,
+	"range":            true,
+	"output":           true,
+}
+
+// Initialize common flags in config file
+var commonFlags = initCommonConfig()
 
 // Initialize defaults, bootstrapDefaults are the defaults values to use
 var bootstrapDefaults = initDefaults()
@@ -157,32 +170,60 @@ func dirExists(path string) bool {
 // BindFlags binds each cobra flag to its associated viper configuration (config file and environment variable),
 // and validate required flag(s)
 func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (err error) {
-	keys := make([]string, 0)
 	cmd.Flags().VisitAll(func(f *pflag.Flag) {
-		// Apply the viper config value to the flag when the flag is not set and viper has a value
 		if !f.Changed {
-			if viper.IsSet(configPrefix + f.Name) {
-				val := viper.Get(configPrefix + f.Name)
-				err = cmd.Flags().Set(f.Name, fmt.Sprintf("%v", val))
-				if err != nil {
-					return
-				}
-			} else {
-				// Validate required flags
-				if set[f.Name] {
-					set[f.Name] = false
-					keys = append(keys, f.Name)
-				}
-			}
+			err = setFlagFromConfig(cmd.Flags(), f, configPrefix, set)
 		}
 	})
 	if err != nil {
 		return err
 	}
-	// Return error on required flag(s)
+	return validateRequiredFlags(set)
+}
+
+// initCommonConfig initializes common flags in config file
+// TODO: add common flags for eventing commands
+func initCommonConfig() map[string]map[string]bool {
+	common := make(map[string]map[string]bool)
+	common["service"] = defaultServiceCommonFlags
+	return common
+}
+
+// setFlagFromConfig applies viper config value to flag when flag is not set in command and config has a value
+func setFlagFromConfig(flagSet *pflag.FlagSet, f *pflag.Flag, prefix string, set map[string]bool) error {
+	parentCommand := strings.Split(prefix, ".")[0]
+	parentPrefixName := parentCommand + "." + f.Name
+	configPrefixName := prefix + f.Name
+
+	var val interface{}
+	// Procedure: flag value found by prefix from config > flag value found by parent prefix(common) from config
+	if viper.IsSet(configPrefixName) { // flag value found by prefix from config
+		val = viper.Get(configPrefixName)
+	} else if commonFlags[parentCommand][f.Name] && viper.IsSet(parentPrefixName) { // common flag value found by parent prefix(common) from config
+		val = viper.Get(parentPrefixName)
+	} else if set != nil {
+		// Validate required flags
+		if set[f.Name] {
+			set[f.Name] = false
+		}
+		return nil
+	}
+	if val != nil {
+		err := flagSet.Set(f.Name, fmt.Sprintf("%v", val))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateRequiredFlags validates required flags
+// and returns error when any required flag in the map was not specified in command and config
+func validateRequiredFlags(set map[string]bool) error {
 	var m string
-	for _, k := range keys {
-		if !set[k] {
+	for k, v := range set {
+		if !v {
 			if m == "" {
 				m = "failed to get required flags, required flag(s) \"" + k + "\""
 			} else {
@@ -193,8 +234,8 @@ func BindFlags(cmd *cobra.Command, configPrefix string, set map[string]bool) (er
 		}
 	}
 	if m != "" {
-		err = fmt.Errorf(m)
-		return err
+		return fmt.Errorf(m)
 	}
+
 	return nil
 }

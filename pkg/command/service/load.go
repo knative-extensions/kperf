@@ -42,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"knative.dev/kperf/pkg"
+	"knative.dev/kperf/pkg/config"
 	"knative.dev/serving/pkg/apis/serving"
 	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
@@ -62,8 +63,9 @@ For example:
 # To measure a Knative Service scaling from zero to N
 kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool wrk --load-duration 60s --load-concurrency 40 --verbose --output /tmp`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if cmd.Flags().NFlag() == 0 {
-				return fmt.Errorf("'service load' requires flag(s)")
+			err := config.BindFlags(cmd, "service.load.", nil)
+			if err != nil {
+				return err
 			}
 			return nil
 		},
@@ -239,7 +241,7 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 		loadDuration := loadEnd.Sub(loadStart)
 		log.Printf("Namespace %s, Service %s, load end, take off %.3f seconds\n", namespace, svc.Name, loadDuration.Seconds())
 
-		time.Sleep(inputs.WaitPodsReadyDuration * time.Second) //wait for all pods ready
+		time.Sleep(inputs.WaitPodsReadyDuration) //wait for all pods ready
 		pdch <- struct{}{}
 	}()
 
