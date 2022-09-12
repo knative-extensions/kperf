@@ -13,13 +13,13 @@ require (
 	github.com/spf13/viper v1.10.1
 	github.com/tsenart/vegeta/v12 v12.8.4
 	gotest.tools/v3 v3.1.0
-	k8s.io/api v0.23.9
-	k8s.io/apimachinery v0.23.9
-	k8s.io/client-go v0.23.9
-	knative.dev/hack v0.0.0-20220908170219-36b2b3c7a245
+	k8s.io/api v0.24.4
+	k8s.io/apimachinery v0.24.4
+	k8s.io/client-go v0.24.4
+	knative.dev/hack v0.0.0-20220912134332-103cdb35f0d3
 	knative.dev/networking v0.0.0-20220909015323-aded181b1709
-	knative.dev/pkg v0.0.0-20220826162920-93b66e6a8700
-	knative.dev/serving v0.34.1-0.20220907152620-8eb8629b1c89
+	knative.dev/pkg v0.0.0-20220912140433-cc6e435120a7
+	knative.dev/serving v0.34.1-0.20220912134139-a92d508fc2dc
 )
 
 require (
@@ -81,7 +81,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.70.2-0.20220707122935-0990e81f1a8f // indirect
-	k8s.io/kube-openapi v0.0.0-20220124234850-424119656bbf // indirect
+	k8s.io/kube-openapi v0.0.0-20220328201542-3ee0da9b0b42 // indirect
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
