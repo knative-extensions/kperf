@@ -317,8 +317,8 @@ func getIngressEndpoint(ctx context.Context, params *pkg.PerfParams) (address st
 	}
 
 	var endpoint string
-	// If the ExternalIP of istio-ingressgateway is none or pending, get endpoint with node port
-	if len(ingress.Spec.ExternalIPs) == 0 {
+	// If the ExternalIP of LoadBalancer is none or pending, get endpoint with node port
+	if len(ingress.Status.LoadBalancer.Ingress) == 0 {
 		endpoint, err = endpointWithNodePortFromService(ingress, ctx, params)
 		if err != nil {
 			return "", err
