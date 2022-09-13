@@ -189,7 +189,7 @@ func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sc
 	sdch := make(chan struct{})
 	errch := make(chan error)
 
-	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, svc)
+	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, false, svc)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get the cluster endpoint: %w", err)
 	}
@@ -270,20 +270,20 @@ func Poll(httpClient http.Client, request *http.Request, maxRetries int, request
 }
 
 // resolveEndpoint resolves the endpoint address considering whether the domain is resolvable
-func resolveEndpoint(ctx context.Context, params *pkg.PerfParams, resolvable bool, svc *servingv1.Service) (string, error) {
+func resolveEndpoint(ctx context.Context, params *pkg.PerfParams, resolvable bool, https bool, svc *servingv1.Service) (string, error) {
 	// If the domain is resolvable, it can be used directly
 	if resolvable {
 		url := svc.Status.RouteStatusFields.URL.URL()
 		return url.String(), nil
 	}
 	// Otherwise, use the actual cluster endpoint
-	return getIngressEndpoint(ctx, params)
+	return getIngressEndpoint(ctx, params, https)
 }
 
 // getIngressEndpoint gets the ingress public IP or hostname.
 // address - is the endpoint to which we should actually connect.
 // err - an error when address cannot be established.
-func getIngressEndpoint(ctx context.Context, params *pkg.PerfParams) (address string, err error) {
+func getIngressEndpoint(ctx context.Context, params *pkg.PerfParams, https bool) (address string, err error) {
 	ingressName := "istio-ingressgateway"
 	if gatewayOverride := os.Getenv("GATEWAY_OVERRIDE"); gatewayOverride != "" {
 		ingressName = gatewayOverride
@@ -301,7 +301,7 @@ func getIngressEndpoint(ctx context.Context, params *pkg.PerfParams) (address st
 	var endpoint string
 	// If the ExternalIP of LoadBalancer is none or pending, get endpoint with node port
 	if len(ingress.Status.LoadBalancer.Ingress) == 0 {
-		endpoint, err = endpointWithNodePortFromService(ingress, ctx, params)
+		endpoint, err = endpointWithNodePortFromService(ingress, ctx, params, https)
 		if err != nil {
 			return "", err
 		}
@@ -312,8 +312,15 @@ func getIngressEndpoint(ctx context.Context, params *pkg.PerfParams) (address st
 	if err != nil {
 		return "", err
 	}
-	url := url.URL{Scheme: "http", Host: endpoint}
-	return url.String(), nil
+
+	var urlScheme string
+	if https {
+		urlScheme = "https"
+	} else {
+		urlScheme = "http"
+	}
+	endpointURL := url.URL{Scheme: urlScheme, Host: endpoint}
+	return endpointURL.String(), nil
 }
 
 // endpointFromService extracts the endpoint from the service's ingress.
@@ -335,7 +342,7 @@ func endpointFromService(svc *corev1.Service) (string, error) {
 }
 
 // endpointWithNodePortFromService extracts the endpoint consisted host IP and node port from the ingress service
-func endpointWithNodePortFromService(svc *corev1.Service, ctx context.Context, params *pkg.PerfParams) (string, error) {
+func endpointWithNodePortFromService(svc *corev1.Service, ctx context.Context, params *pkg.PerfParams, https bool) (string, error) {
 	ingressPod, err := getIngressPod(ctx, params)
 	if err != nil {
 		return "", err
@@ -346,7 +353,14 @@ func endpointWithNodePortFromService(svc *corev1.Service, ctx context.Context, p
 		return "", err
 	}
 
-	nodePort, err := getNodePortFromService(svc)
+	var protcol string
+	if https {
+		protcol = "https"
+	} else {
+		protcol = "http2"
+	}
+
+	nodePort, err := getNodePortFromService(svc, protcol)
 	if err != nil {
 		return "", err
 	}
@@ -383,17 +397,17 @@ func getHostIPFromPod(pod *corev1.Pod) (string, error) {
 }
 
 // getNodePort gets node port(http2) from the ingress service.
-func getNodePortFromService(svc *corev1.Service) (string, error) {
+func getNodePortFromService(svc *corev1.Service, protocol string) (string, error) {
 	ingressPorts := svc.Spec.Ports
 	if len(ingressPorts) == 0 {
 		return "", fmt.Errorf("port list of ingress service is empty")
 	}
 
 	for _, port := range ingressPorts {
-		if port.Name == "http2" {
+		if port.Name == protocol {
 			return strconv.FormatInt(int64(port.NodePort), 10), nil
 		}
 	}
 
-	return "", fmt.Errorf("http2 port of ingress service not found")
+	return "", fmt.Errorf("%s port of ingress service not found", protocol)
 }

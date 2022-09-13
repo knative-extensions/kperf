@@ -101,6 +101,7 @@ type LoadArgs struct {
 	LoadTool              string
 	LoadDuration          string
 	LoadConcurrency       string
+	Https                 bool
 }
 
 type MeasureResult struct {
