@@ -24,7 +24,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -49,11 +48,6 @@ import (
 const (
 	OutputFilename = "ksvc_scaling_time"
 )
-
-type ServicesToScale struct {
-	Namespace string
-	Service   *servingv1.Service
-}
 
 type Response struct {
 	Status     string
@@ -84,6 +78,7 @@ kperf service scale --svc-perfix svc --range 1,200 --namespace ns --concurrency 
 		},
 	}
 
+	serviceScaleCommand.Flags().StringVarP(&scaleArgs.Svc, "svc", "", "", "Service name")
 	serviceScaleCommand.Flags().StringVarP(&scaleArgs.SvcRange, "range", "r", "", "Desired service range")
 	serviceScaleCommand.Flags().StringVarP(&scaleArgs.Namespace, "namespace", "", "", "Service namespace")
 	serviceScaleCommand.Flags().StringVarP(&scaleArgs.SvcPrefix, "svc-prefix", "", "", "Service name prefix")
@@ -135,13 +130,16 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 	return nil
 }
 
-func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []string, servicesListFunc func(context.Context, servingv1client.ServingV1Interface, []string, string) []ServicesToScale) (pkg.ScaleResult, error) {
+func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, nsNameList []string, servicesListFunc func(context.Context, servingv1client.ServingV1Interface, []string, string, string, string) ([]ServicesToScale, error)) (pkg.ScaleResult, error) {
 	result := pkg.ScaleResult{}
 	ksvcClient, err := params.NewServingClient()
 	if err != nil {
 		return result, err
 	}
-	objs := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.SvcPrefix)
+	objs, err := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.Svc, inputs.SvcPrefix, inputs.SvcRange)
+	if err != nil {
+		return result, err
+	}
 	count := len(objs)
 
 	var wg sync.WaitGroup
@@ -170,22 +168,6 @@ func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sca
 	wg.Wait()
 
 	return result, nil
-}
-
-func getServices(ctx context.Context, servingClient servingv1client.ServingV1Interface, nsNameList []string, svcPrefix string) []ServicesToScale {
-	objs := []ServicesToScale{}
-	for _, ns := range nsNameList {
-		svcList, err := servingClient.Services(ns).List(ctx, metav1.ListOptions{})
-		if err == nil {
-			for _, s := range svcList.Items {
-				svc := s
-				if strings.HasPrefix(s.Name, svcPrefix) {
-					objs = append(objs, ServicesToScale{Namespace: ns, Service: &svc})
-				}
-			}
-		}
-	}
-	return objs
 }
 
 func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.ScaleArgs, namespace string, svc *servingv1.Service) (

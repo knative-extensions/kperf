@@ -144,13 +144,16 @@ func LoadServicesUpFromZero(params *pkg.PerfParams, inputs pkg.LoadArgs) error {
 	return nil
 }
 
-func loadAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.LoadArgs, nsNameList []string, servicesListFunc func(context.Context, servingv1client.ServingV1Interface, []string, string) []ServicesToScale) (pkg.LoadResult, error) {
+func loadAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.LoadArgs, nsNameList []string, servicesListFunc func(context.Context, servingv1client.ServingV1Interface, []string, string, string, string) ([]ServicesToScale, error)) (pkg.LoadResult, error) {
 	result := pkg.LoadResult{}
 	ksvcClient, err := params.NewServingClient()
 	if err != nil {
 		return result, err
 	}
-	objs := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.SvcPrefix)
+	objs, err := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.Svc, inputs.SvcPrefix, inputs.SvcRange)
+	if err != nil {
+		return result, err
+	}
 	count := len(objs)
 
 	var wg sync.WaitGroup

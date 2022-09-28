@@ -65,7 +65,13 @@ func TestNewServiceLoadCommand(t *testing.T) {
 			Name: FakeNamespace,
 		},
 	}
-	client := k8sfake.NewSimpleClientset(ns)
+	svc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      FakeServiceName,
+			Namespace: FakeNamespace,
+		},
+	}
+	client := k8sfake.NewSimpleClientset(ns, &svc)
 	fakeAutoscaling := &autoscalingv1fake.FakeAutoscalingV1alpha1{Fake: &clienttesting.Fake{}}
 	autoscalingClient := func() (autoscalingv1client.AutoscalingV1alpha1Interface, error) {
 		return fakeAutoscaling, nil
