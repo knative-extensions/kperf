@@ -101,7 +101,7 @@ func GetNamespaces(ctx context.Context, params *pkg.PerfParams, namespace, names
 }
 
 // getServices gets existed services by svc or (svc-prefix, svcRange)
-func getServices(ctx context.Context, servingClient servingv1client.ServingV1Interface, nsNameList []string, service string, svcPrefix string, svcRange string) ([]ServicesToScale, error) {
+func getServices(ctx context.Context, servingClient servingv1client.ServingV1Interface, nsNameList []string, svcPrefix string, svcRange string, service string) ([]ServicesToScale, error) {
 	objs := []ServicesToScale{}
 	// generate a svcRange map by svcPrefix and svcRange
 	var svcRangeMap map[string]bool = map[string]bool{}
@@ -123,7 +123,7 @@ func getServices(ctx context.Context, servingClient servingv1client.ServingV1Int
 				svcRangeMap[fmt.Sprintf("%s-%d", svcPrefix, i)] = true
 			}
 		} else {
-			return objs, fmt.Errorf("failed to parse namespace range %s", svcRange)
+			return objs, fmt.Errorf("failed to parse svc range %s", svcRange)
 		}
 	}
 	if service != "" { // get existed service by given svc name
@@ -132,7 +132,9 @@ func getServices(ctx context.Context, servingClient servingv1client.ServingV1Int
 			if err != nil {
 				return objs, err
 			}
-			objs = append(objs, ServicesToScale{Namespace: ns, Service: svc})
+			if service == svc.Name {
+				objs = append(objs, ServicesToScale{Namespace: ns, Service: svc})
+			}
 		}
 		if len(objs) == 0 {
 			return objs, fmt.Errorf("svc with name %s not found", service)

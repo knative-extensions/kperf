@@ -136,7 +136,7 @@ func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sca
 	if err != nil {
 		return result, err
 	}
-	objs, err := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.Svc, inputs.SvcPrefix, inputs.SvcRange)
+	objs, err := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.SvcPrefix, inputs.SvcRange, inputs.Svc)
 	if err != nil {
 		return result, err
 	}

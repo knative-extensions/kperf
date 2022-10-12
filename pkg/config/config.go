@@ -40,6 +40,7 @@ var defaultServiceCommonFlags = map[string]bool{
 	"svc-prefix":       true,
 	"range":            true,
 	"output":           true,
+	"svc":              true,
 }
 
 // Initialize common flags in config file

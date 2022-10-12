@@ -77,6 +77,7 @@ kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool 
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.Namespace, "namespace", "", "", "Service namespace")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.NamespaceRange, "namespace-range", "", "", "Service namespace range")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.NamespacePrefix, "namespace-prefix", "", "", "Service namespace prefix")
+	serviceLoadCommand.Flags().StringVarP(&loadArgs.Svc, "svc", "", "", "Service name")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.SvcPrefix, "svc-prefix", "", "", "Service name prefix")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.SvcRange, "range", "r", "", "Desired service range")
 	serviceLoadCommand.Flags().BoolVarP(&loadArgs.Verbose, "verbose", "v", false, "Service verbose result")
@@ -150,7 +151,7 @@ func loadAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Load
 	if err != nil {
 		return result, err
 	}
-	objs, err := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.Svc, inputs.SvcPrefix, inputs.SvcRange)
+	objs, err := servicesListFunc(ctx, ksvcClient, nsNameList, inputs.SvcPrefix, inputs.SvcRange, inputs.Svc)
 	if err != nil {
 		return result, err
 	}

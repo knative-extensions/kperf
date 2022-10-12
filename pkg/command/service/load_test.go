@@ -65,13 +65,7 @@ func TestNewServiceLoadCommand(t *testing.T) {
 			Name: FakeNamespace,
 		},
 	}
-	svc := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      FakeServiceName,
-			Namespace: FakeNamespace,
-		},
-	}
-	client := k8sfake.NewSimpleClientset(ns, &svc)
+	client := k8sfake.NewSimpleClientset(ns)
 	fakeAutoscaling := &autoscalingv1fake.FakeAutoscalingV1alpha1{Fake: &clienttesting.Fake{}}
 	autoscalingClient := func() (autoscalingv1client.AutoscalingV1alpha1Interface, error) {
 		return fakeAutoscaling, nil
@@ -143,13 +137,13 @@ func TestNewServiceLoadCommand(t *testing.T) {
 
 		cmd := NewServiceLoadCommand(p)
 		_, err := testutil.ExecuteCommand(cmd, "--svc-prefix", FakeServicePrefix, "--namespace", FakeNamespace, "--range", "0,0", "--load-tool", "hey", "--load-concurrency", FakeLoadConcurrency, "--load-duration", FakeLoadDuration, "--output", "./")
-		assert.NilError(t, err)
+		assert.ErrorContains(t, err, "no ksvc found with prefix "+FakeServicePrefix)
 
 		_, err = testutil.ExecuteCommand(cmd, "--svc-prefix", FakeServicePrefix, "--namespace", FakeNamespace, "--range", "0,0", "--load-tool", "wrk", "--load-concurrency", FakeLoadConcurrency, "--load-duration", FakeLoadDuration, "--verbose", "--output", "./")
-		assert.NilError(t, err)
+		assert.ErrorContains(t, err, "no ksvc found with prefix "+FakeServicePrefix)
 
 		_, err = testutil.ExecuteCommand(cmd, "--svc-prefix", FakeServicePrefix, "--namespace", FakeNamespace, "--range", "0,0", "--load-tool", "default", "--load-concurrency", FakeLoadConcurrency, "--load-duration", FakeLoadDuration, "--verbose", "--output", "./")
-		assert.NilError(t, err)
+		assert.ErrorContains(t, err, "no ksvc found with prefix "+FakeServicePrefix)
 	})
 }
 
