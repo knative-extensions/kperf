@@ -29,7 +29,14 @@ import (
 
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/command/utils"
+	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
+	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 )
+
+type ServicesToScale struct {
+	Namespace string
+	Service   *servingv1.Service
+}
 
 func GetNamespaces(ctx context.Context, params *pkg.PerfParams, namespace, namespaceRange, namespacePrefix string) ([]string, error) {
 	nsNameList := []string{}
@@ -91,6 +98,75 @@ func GetNamespaces(ctx context.Context, params *pkg.PerfParams, namespace, names
 		return nsNameList, errors.New("both namespace and namespace-prefix are empty")
 	}
 	return nsNameList, nil
+}
+
+// getServices gets existed services by svc or (svc-prefix, svcRange)
+func getServices(ctx context.Context, servingClient servingv1client.ServingV1Interface, nsNameList []string, svcPrefix string, svcRange string, service string) ([]ServicesToScale, error) {
+	objs := []ServicesToScale{}
+	// generate a svcRange map by svcPrefix and svcRange
+	var svcRangeMap map[string]bool = map[string]bool{}
+	if svcPrefix != "" && svcRange != "" {
+		r := strings.Split(svcRange, ",")
+		if len(r) != 2 {
+			return objs, fmt.Errorf("expected svc range like 1,500, given %s", svcRange)
+		}
+		start, err := strconv.Atoi(r[0])
+		if err != nil {
+			return objs, err
+		}
+		end, err := strconv.Atoi(r[1])
+		if err != nil {
+			return objs, err
+		}
+		if start >= 0 && end >= 0 && start <= end {
+			for i := start; i <= end; i++ {
+				svcRangeMap[fmt.Sprintf("%s-%d", svcPrefix, i)] = true
+			}
+		} else {
+			return objs, fmt.Errorf("failed to parse svc range %s", svcRange)
+		}
+	}
+	if service != "" { // get existed service by given svc name
+		for _, ns := range nsNameList {
+			svc, err := servingClient.Services(ns).Get(ctx, service, metav1.GetOptions{})
+			if err != nil {
+				return objs, err
+			}
+			if service == svc.Name {
+				objs = append(objs, ServicesToScale{Namespace: ns, Service: svc})
+			}
+		}
+		if len(objs) == 0 {
+			return objs, fmt.Errorf("svc with name %s not found", service)
+		}
+	} else if svcPrefix != "" { // get existed services by svcRangeMap and svcPrefix in nsNameList
+		for _, ns := range nsNameList {
+			svcList, err := servingClient.Services(ns).List(ctx, metav1.ListOptions{})
+			if err == nil {
+				if len(svcRangeMap) >= 0 { // get existed services in svcRangeMap
+					for _, s := range svcList.Items {
+						svc := s
+						if _, exists := svcRangeMap[svc.Name]; exists {
+							objs = append(objs, ServicesToScale{Namespace: ns, Service: &svc})
+						}
+					}
+				} else { // get existed services by svcPrefix if svcRangeMap is empty
+					for _, s := range svcList.Items {
+						svc := s
+						if strings.HasPrefix(s.Name, svcPrefix) {
+							objs = append(objs, ServicesToScale{Namespace: ns, Service: &svc})
+						}
+					}
+				}
+			}
+		}
+		if len(objs) == 0 {
+			return objs, fmt.Errorf("no ksvc found with prefix %s", svcPrefix)
+		}
+	} else {
+		return objs, errors.New("both svc and svc-prefix are empty")
+	}
+	return objs, nil
 }
 
 // Get Knative Serving and Eventing version

@@ -72,6 +72,7 @@ type MeasureArgs struct {
 }
 
 type ScaleArgs struct {
+	Svc              string
 	SvcRange         string
 	Namespace        string
 	SvcPrefix        string
@@ -87,6 +88,7 @@ type ScaleArgs struct {
 }
 
 type LoadArgs struct {
+	Svc                   string
 	SvcRange              string
 	Namespace             string
 	SvcPrefix             string

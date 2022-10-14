@@ -26,10 +26,9 @@ import (
 	"knative.dev/kperf/pkg"
 	networkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1"
 	fakenetworkingv1alpha1 "knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake"
+	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	autoscalingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1"
 	autoscalingv1fake "knative.dev/serving/pkg/client/clientset/versioned/typed/autoscaling/v1alpha1/fake"
-
-	servingv1 "knative.dev/serving/pkg/apis/serving/v1"
 	servingv1client "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1"
 	servingv1fake "knative.dev/serving/pkg/client/clientset/versioned/typed/serving/v1/fake"
 )
@@ -66,12 +65,12 @@ func TestScaleServces(t *testing.T) {
 
 	//"--svc-prefix", "svc", "--namespace", "ns1", "--range", "1,1")
 	scaleArgs := pkg.ScaleArgs{
-		SvcPrefix: "ksvc-",
+		SvcPrefix: "ksvc",
 		Namespace: "ns-1",
 		SvcRange:  "1,1",
 	}
 
-	getFakeServices := func(context.Context, servingv1client.ServingV1Interface, []string, string) []ServicesToScale {
+	getFakeServices := func(context.Context, servingv1client.ServingV1Interface, []string, string, string, string) ([]ServicesToScale, error) {
 		objs := []ServicesToScale{}
 		svc := ServicesToScale{
 			Service: &servingv1.Service{
@@ -89,7 +88,7 @@ func TestScaleServces(t *testing.T) {
 		}
 
 		objs = append(objs, svc)
-		return objs
+		return objs, nil
 	}
 
 	_, err := scaleAndMeasure(context.TODO(), p, scaleArgs, []string{"ns-1"}, getFakeServices)
