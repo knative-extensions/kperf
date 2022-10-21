@@ -87,6 +87,7 @@ kperf service load --namespace ktest --svc-prefix ktest --range 0,3 --load-tool 
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadConcurrency, "load-concurrency", "c", "30", "total number of workers to run concurrently for the load test tool")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.LoadDuration, "load-duration", "d", "60s", "Duration of the test for the load test tool")
 	serviceLoadCommand.Flags().StringVarP(&loadArgs.Output, "output", "o", ".", "Measure result location")
+	serviceLoadCommand.Flags().BoolVarP(&loadArgs.Https, "https", "", false, "Use https with TLS")
 
 	return serviceLoadCommand
 }
@@ -217,11 +218,10 @@ func runLoadFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Loa
 	pdch := make(chan struct{})  // pod duration channel
 	errch := make(chan error, 1)
 
-	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, svc)
+	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, inputs.Https, svc)
 	if err != nil {
 		return "", loadResult, fmt.Errorf("failed to get the cluster endpoint: %w", err)
 	}
-
 	host := svc.Status.RouteStatusFields.URL.URL().Host
 
 	loadStart := time.Now()
@@ -350,7 +350,6 @@ func runExternalLoadTool(inputs pkg.LoadArgs, namespace string, svcName string, 
 	if err != nil {
 		return "", fmt.Errorf("failed to run loadCmdBuilder: %s", err)
 	}
-
 	defer func() {
 		// Delete wrk lua script
 		if strings.EqualFold(inputs.LoadTool, "wrk") {

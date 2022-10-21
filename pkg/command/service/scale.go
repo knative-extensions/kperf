@@ -21,9 +21,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
-	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -32,7 +29,6 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	v1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -91,6 +87,7 @@ kperf service scale --svc-perfix svc --range 1,200 --namespace ns --concurrency 
 	serviceScaleCommand.Flags().IntVarP(&scaleArgs.MaxRetries, "MaxRetries", "", 10, "Maximum number of trying to poll the service")
 	serviceScaleCommand.Flags().DurationVarP(&scaleArgs.RequestInterval, "wait", "", 2*time.Second, "Time to wait before retring to call the Knatice Service")
 	serviceScaleCommand.Flags().DurationVarP(&scaleArgs.RequestTimeout, "timeout", "", 2*time.Second, "Duration to wait for Knative Service to be ready")
+	serviceScaleCommand.Flags().BoolVarP(&scaleArgs.Https, "https", "", false, "Use https with TLS")
 	return serviceScaleCommand
 }
 
@@ -189,7 +186,7 @@ func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sc
 	sdch := make(chan struct{})
 	errch := make(chan error)
 
-	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, svc)
+	endpoint, err := resolveEndpoint(ctx, params, inputs.ResolvableDomain, inputs.Https, svc)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to get the cluster endpoint: %w", err)
 	}
@@ -267,133 +264,4 @@ func Poll(httpClient http.Client, request *http.Request, maxRetries int, request
 	}
 
 	return resp, nil
-}
-
-// resolveEndpoint resolves the endpoint address considering whether the domain is resolvable
-func resolveEndpoint(ctx context.Context, params *pkg.PerfParams, resolvable bool, svc *servingv1.Service) (string, error) {
-	// If the domain is resolvable, it can be used directly
-	if resolvable {
-		url := svc.Status.RouteStatusFields.URL.URL()
-		return url.String(), nil
-	}
-	// Otherwise, use the actual cluster endpoint
-	return getIngressEndpoint(ctx, params)
-}
-
-// getIngressEndpoint gets the ingress public IP or hostname.
-// address - is the endpoint to which we should actually connect.
-// err - an error when address cannot be established.
-func getIngressEndpoint(ctx context.Context, params *pkg.PerfParams) (address string, err error) {
-	ingressName := "istio-ingressgateway"
-	if gatewayOverride := os.Getenv("GATEWAY_OVERRIDE"); gatewayOverride != "" {
-		ingressName = gatewayOverride
-	}
-	ingressNamespace := "istio-system"
-	if gatewayNsOverride := os.Getenv("GATEWAY_NAMESPACE_OVERRIDE"); gatewayNsOverride != "" {
-		ingressNamespace = gatewayNsOverride
-	}
-
-	ingress, err := params.ClientSet.CoreV1().Services(ingressNamespace).Get(ctx, ingressName, metav1.GetOptions{})
-	if err != nil {
-		return "", err
-	}
-
-	var endpoint string
-	// If the ExternalIP of LoadBalancer is none or pending, get endpoint with node port
-	if len(ingress.Status.LoadBalancer.Ingress) == 0 {
-		endpoint, err = endpointWithNodePortFromService(ingress, ctx, params)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		endpoint, err = endpointFromService(ingress)
-	}
-
-	if err != nil {
-		return "", err
-	}
-	url := url.URL{Scheme: "http", Host: endpoint}
-	return url.String(), nil
-}
-
-// endpointFromService extracts the endpoint from the service's ingress.
-func endpointFromService(svc *corev1.Service) (string, error) {
-	ingresses := svc.Status.LoadBalancer.Ingress
-	if len(ingresses) != 1 {
-		return "", fmt.Errorf("expected exactly one ingress load balancer, instead had %d: %v", len(ingresses), ingresses)
-	}
-	itu := ingresses[0]
-
-	switch {
-	case itu.IP != "":
-		return itu.IP, nil
-	case itu.Hostname != "":
-		return itu.Hostname, nil
-	default:
-		return "", fmt.Errorf("expected ingress loadbalancer IP or hostname for %s to be set, instead was empty", svc.Name)
-	}
-}
-
-// endpointWithNodePortFromService extracts the endpoint consisted host IP and node port from the ingress service
-func endpointWithNodePortFromService(svc *corev1.Service, ctx context.Context, params *pkg.PerfParams) (string, error) {
-	ingressPod, err := getIngressPod(ctx, params)
-	if err != nil {
-		return "", err
-	}
-
-	hostIP, err := getHostIPFromPod(ingressPod)
-	if err != nil {
-		return "", err
-	}
-
-	nodePort, err := getNodePortFromService(svc)
-	if err != nil {
-		return "", err
-	}
-
-	return hostIP + ":" + nodePort, nil
-}
-
-// getIngressPod gets one of the ingress Pod.
-func getIngressPod(ctx context.Context, params *pkg.PerfParams) (pod *corev1.Pod, err error) {
-	ingressNamespace := "istio-system"
-	if gatewayNsOverride := os.Getenv("GATEWAY_NAMESPACE_OVERRIDE"); gatewayNsOverride != "" {
-		ingressNamespace = gatewayNsOverride
-	}
-
-	ingressPodList, err := params.ClientSet.CoreV1().Pods(ingressNamespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-
-	if len(ingressPodList.Items) == 0 {
-		return nil, fmt.Errorf("ingress pod list is empty")
-	}
-
-	return &ingressPodList.Items[0], nil
-}
-
-// getHostIPFromPod gets hostIP of the ingress pod.
-func getHostIPFromPod(pod *corev1.Pod) (string, error) {
-	hostIP := pod.Status.HostIP
-	if hostIP == "" {
-		return "", fmt.Errorf("host IP of the ingress pod is empty")
-	}
-	return hostIP, nil
-}
-
-// getNodePort gets node port(http2) from the ingress service.
-func getNodePortFromService(svc *corev1.Service) (string, error) {
-	ingressPorts := svc.Spec.Ports
-	if len(ingressPorts) == 0 {
-		return "", fmt.Errorf("port list of ingress service is empty")
-	}
-
-	for _, port := range ingressPorts {
-		if port.Name == "http2" {
-			return strconv.FormatInt(int64(port.NodePort), 10), nil
-		}
-	}
-
-	return "", fmt.Errorf("http2 port of ingress service not found")
 }

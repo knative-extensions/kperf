@@ -85,6 +85,7 @@ type ScaleArgs struct {
 	ResolvableDomain bool
 	Verbose          bool
 	Output           string
+	Https            bool
 }
 
 type LoadArgs struct {
@@ -101,6 +102,7 @@ type LoadArgs struct {
 	LoadTool              string
 	LoadDuration          string
 	LoadConcurrency       string
+	Https                 bool
 }
 
 type MeasureResult struct {
