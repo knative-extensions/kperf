@@ -350,7 +350,6 @@ func runExternalLoadTool(inputs pkg.LoadArgs, namespace string, svcName string, 
 	if err != nil {
 		return "", fmt.Errorf("failed to run loadCmdBuilder: %s", err)
 	}
-	fmt.Println("Running command: ", cmd)
 	defer func() {
 		// Delete wrk lua script
 		if strings.EqualFold(inputs.LoadTool, "wrk") {

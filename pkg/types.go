@@ -85,6 +85,7 @@ type ScaleArgs struct {
 	ResolvableDomain bool
 	Verbose          bool
 	Output           string
+	Https            bool
 }
 
 type LoadArgs struct {

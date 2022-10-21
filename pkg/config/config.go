@@ -41,6 +41,7 @@ var defaultServiceCommonFlags = map[string]bool{
 	"range":            true,
 	"output":           true,
 	"svc":              true,
+	"https":            true,
 }
 
 // Initialize common flags in config file
