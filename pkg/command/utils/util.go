@@ -18,7 +18,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"os"
 )
 
@@ -36,7 +35,7 @@ func GenerateCSVFile(path string, rows [][]string) error {
 }
 
 func GenerateHTMLFile(sourceCSV string, targetHTML string) error {
-	data, err := ioutil.ReadFile(sourceCSV)
+	data, err := os.ReadFile(sourceCSV)
 	if err != nil {
 		return fmt.Errorf("failed to read csv file %s", err)
 	}

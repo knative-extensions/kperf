@@ -19,8 +19,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 
 	"log"
@@ -395,7 +395,7 @@ func loadCmdBuilder(inputs pkg.LoadArgs, namespace string, svcName string, endpo
 		content.WriteString(host)
 		content.WriteString("\"")
 		data := []byte(content.String())
-		err := ioutil.WriteFile(wrkLuaFilename, data, 0644)
+		err := os.WriteFile(wrkLuaFilename, data, 0644)
 		if err != nil {
 			return "", "", fmt.Errorf("write wrk lua script error: %w", err)
 		}

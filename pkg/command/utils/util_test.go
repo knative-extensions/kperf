@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -123,7 +122,7 @@ func TestGenerateJSONFile(t *testing.T) {
 		path := "/tmp/test.json"
 		err := GenerateJSONFile(data, path)
 		assert.NilError(t, err)
-		fileData, err := ioutil.ReadFile(path)
+		fileData, err := os.ReadFile(path)
 		assert.NilError(t, err)
 		assert.Equal(t, string(fileData), "{\"Name\":\"Cat\",\"Age\":2}")
 	})
