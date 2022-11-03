@@ -16,7 +16,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -89,7 +88,7 @@ func setupConfig(t *testing.T, configContent string, configPath string) (string,
 			err := os.MkdirAll(filepath.Dir(cfgFile), 0775)
 			assert.NilError(t, err)
 
-			err = ioutil.WriteFile(cfgFile, []byte(configContent), 0644)
+			err = os.WriteFile(cfgFile, []byte(configContent), 0644)
 			assert.NilError(t, err)
 
 			os.Args = []string{"kperf", "--config", cfgFile}
@@ -100,7 +99,7 @@ func setupConfig(t *testing.T, configContent string, configPath string) (string,
 			err := os.MkdirAll(filepath.Dir(defaultCfgFile), 0775)
 			assert.NilError(t, err)
 
-			err = ioutil.WriteFile(defaultCfgFile, []byte(configContent), 0644)
+			err = os.WriteFile(defaultCfgFile, []byte(configContent), 0644)
 			assert.NilError(t, err)
 
 			os.Args = []string{"kperf"}

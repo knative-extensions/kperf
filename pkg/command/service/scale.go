@@ -18,7 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -244,7 +244,7 @@ func Poll(httpClient http.Client, request *http.Request, maxRetries int, request
 		defer rawResp.Body.Close()
 		retries = retries + 1
 
-		body, err := ioutil.ReadAll(rawResp.Body)
+		body, err := io.ReadAll(rawResp.Body)
 		if err != nil {
 			return true, err
 		}
