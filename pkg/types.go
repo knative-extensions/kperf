@@ -86,6 +86,9 @@ type ScaleArgs struct {
 	Verbose          bool
 	Output           string
 	Https            bool
+	Iterations       int
+	TimeInterval     time.Duration
+	StableWindow     string
 }
 
 type LoadArgs struct {
@@ -121,8 +124,24 @@ type ScaleResult struct {
 type ScaleFromZeroResult struct {
 	ServiceName       string
 	ServiceNamespace  string
-	ServiceLatency    float64 `json:"serviceLatency"`
-	DeploymentLatency float64 `json:"deploymentLatency"`
+	ServiceLatency    LatencyResult `json:"serviceLatency"`
+	DeploymentLatency LatencyResult `json:"deploymentLatency"`
+}
+
+type LatencyResult struct {
+	Average float64 `json:"averge"`
+	Max     float64 `json:"max"`
+	Min     float64 `json:"min"`
+	P50     float64 `json:"p50"`
+	P90     float64 `json:"p90"`
+	P95     float64 `json:"p95"`
+	P99     float64 `json:"p99"`
+}
+
+type PatchStringValue struct {
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value"`
 }
 
 type LoadResult struct {

@@ -26,8 +26,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/montanaflynn/stats"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"knative.dev/kperf/pkg"
 	"knative.dev/kperf/pkg/command/utils"
@@ -473,4 +475,106 @@ func getNodePortFromService(svc *corev1.Service, protocol string) (string, error
 	}
 
 	return "", fmt.Errorf("%s port of ingress service not found", protocol)
+}
+
+// updateAllowZeroInitialScale updates configmap/config-autoscaler, configs allow-zero-initial-scale to new value, returns origin value of allow-zero-initial-scale
+func updateAllowZeroInitialScale(ctx context.Context, params *pkg.PerfParams, namespace, new string) (string, error) {
+	origin := ""
+	cfgms, _ := params.ClientSet.CoreV1().ConfigMaps(namespace).Get(ctx, "config-autoscaler", metav1.GetOptions{})
+	if cfgms != nil && cfgms.Data != nil {
+		val, ok := cfgms.Data["allow-zero-initial-scale"]
+		if ok {
+			origin = val
+			if origin == new {
+				return origin, nil
+			}
+		}
+	}
+
+	var payloads []pkg.PatchStringValue
+	var payload pkg.PatchStringValue
+	if new != "" {
+		payload.Op = "replace"
+		payload.Path = "/data/allow-zero-initial-scale"
+		payload.Value = new
+	} else {
+		payload.Op = "remove"
+		payload.Path = "/data/allow-zero-initial-scale"
+	}
+	payloads = append(payloads, payload)
+
+	dataBytes, err := json.Marshal(payloads)
+	if err != nil {
+		return origin, err
+	}
+
+	params.ClientSet.CoreV1().ConfigMaps(namespace).Patch(ctx, "config-autoscaler", types.JSONPatchType, dataBytes, metav1.PatchOptions{})
+	return origin, nil
+}
+
+// updateKsvc configs stable window and initial scale
+func updateKsvc(ctx context.Context, ksvcClient servingv1client.ServingV1Interface, namespace, ksvcName string, window string, initialScale string) error {
+	payload := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"template": map[string]interface{}{
+				"metadata": map[string]interface{}{
+					"annotations": map[string]string{
+						"autoscaling.knative.dev/window":        window,
+						"autoscaling.knative.dev/initial-scale": initialScale,
+					},
+				},
+			},
+		},
+	}
+	dataBytes, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	_, err = ksvcClient.Services(namespace).Patch(ctx, ksvcName, types.MergePatchType, dataBytes, metav1.PatchOptions{})
+	return err
+}
+
+// latencyResultHandler get total, avg, min, max and percentiles latency from latency list
+func latencyResultHandler(input []float64) pkg.LatencyResult {
+	// Get total, avg, min, max from latency list
+	n := len(input)
+	if n <= 0 {
+		return pkg.LatencyResult{}
+	}
+	max := input[0]
+	min := input[0]
+	var sum float64
+	for i := 0; i < n; i++ {
+		if input[i] > max {
+			max = input[i]
+		}
+		if input[i] < min {
+			min = input[i]
+		}
+		sum += input[i]
+	}
+	avg := sum / float64(n)
+
+	a, _ := stats.Percentile(input, 50)
+	b, _ := stats.Percentile(input, 90)
+	c, _ := stats.Percentile(input, 95)
+	d, _ := stats.Percentile(input, 99)
+
+	fmt.Printf("Average: %f s\n", avg)
+	fmt.Printf("Min: 	 %f s\n", min)
+	fmt.Printf("Max: 	 %f s\n", max)
+	fmt.Printf("P50:  	 %f s\n", a)
+	fmt.Printf("P90:  	 %f s\n", b)
+	fmt.Printf("P95:   	 %f s\n", c)
+	fmt.Printf("P99:   	 %f s\n", d)
+
+	return pkg.LatencyResult{
+		Average: avg,
+		Min:     min,
+		Max:     max,
+		P50:     a,
+		P90:     b,
+		P95:     c,
+		P99:     d,
+	}
 }
