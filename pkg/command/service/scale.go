@@ -43,6 +43,7 @@ import (
 
 const (
 	OutputFilename = "ksvc_scaling_time"
+	InitialScale   = "0"
 )
 
 type Response struct {
@@ -88,6 +89,9 @@ kperf service scale --svc-perfix svc --range 1,200 --namespace ns --concurrency 
 	serviceScaleCommand.Flags().DurationVarP(&scaleArgs.RequestInterval, "wait", "", 2*time.Second, "Time to wait before retring to call the Knatice Service")
 	serviceScaleCommand.Flags().DurationVarP(&scaleArgs.RequestTimeout, "timeout", "", 2*time.Second, "Duration to wait for Knative Service to be ready")
 	serviceScaleCommand.Flags().BoolVarP(&scaleArgs.Https, "https", "", false, "Use https with TLS")
+	serviceScaleCommand.Flags().IntVarP(&scaleArgs.Iterations, "iterations", "i", 1, "Number of iterations to invoke the service")
+	serviceScaleCommand.Flags().DurationVarP(&scaleArgs.TimeInterval, "time-interval", "T", 10*time.Second, "The time interval of each scale up, recommend to set it no less than the sum of the stable window and cold startup time")
+	serviceScaleCommand.Flags().StringVarP(&scaleArgs.StableWindow, "stable-window", "s", "6s", "stable window per revision")
 	return serviceScaleCommand
 }
 
@@ -111,10 +115,21 @@ func ScaleServicesUpFromZero(params *pkg.PerfParams, inputs pkg.ScaleArgs) error
 	scaleFromZeroResult.KnativeInfo.IngressVersion = ingressInfo["version"]
 
 	rows := make([][]string, 0)
-	rows = append([][]string{{"svc_name", "svc_namespace", "svc_latency", "deployment_latency"}}, rows...)
+	rows = append([][]string{{
+		"svc_name", "svc_namespace",
+		"svc_latency_avg", "svc_latency_min", "svc_latency_max",
+		"svc_latency_p50", "svc_latency_p90", "svc_latency_p95", "svc_latency_p99",
+		"deployment_latency_avg", "deployment_latency_min", "deployment_latency_max",
+		"deployment_latency_p50", "deployment_latency_p90", "deployment_latency_p95", "deployment_latency_p99"}},
+		rows...)
 
 	for _, m := range scaleFromZeroResult.Measurment {
-		rows = append(rows, []string{m.ServiceName, m.ServiceNamespace, fmt.Sprintf("%f", m.ServiceLatency), fmt.Sprintf("%f", m.DeploymentLatency)})
+		rows = append(rows, []string{
+			m.ServiceName, m.ServiceNamespace,
+			fmt.Sprintf("%f", m.ServiceLatency.Average), fmt.Sprintf("%f", m.ServiceLatency.Min), fmt.Sprintf("%f", m.ServiceLatency.Max),
+			fmt.Sprintf("%f", m.ServiceLatency.P50), fmt.Sprintf("%f", m.ServiceLatency.P90), fmt.Sprintf("%f", m.ServiceLatency.P95), fmt.Sprintf("%f", m.ServiceLatency.P99),
+			fmt.Sprintf("%f", m.DeploymentLatency.Average), fmt.Sprintf("%f", m.DeploymentLatency.Min), fmt.Sprintf("%f", m.DeploymentLatency.Max),
+			fmt.Sprintf("%f", m.DeploymentLatency.P50), fmt.Sprintf("%f", m.DeploymentLatency.P90), fmt.Sprintf("%f", m.DeploymentLatency.P95), fmt.Sprintf("%f", m.DeploymentLatency.P99)})
 	}
 
 	// generate CSV, HTML and JSON outputs from rows and scaleFromZeroResult
@@ -138,6 +153,14 @@ func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sca
 		return result, err
 	}
 	count := len(objs)
+	// update configmap-autosacle, set allow-zero-initial-scale to true
+	origin, err := updateAllowZeroInitialScale(ctx, params, "knative-serving", "true")
+	if err != nil {
+		fmt.Printf("failed to set allow-zero-initial-scale: %s", err)
+		return result, err
+	}
+	// restore configmap
+	defer updateAllowZeroInitialScale(ctx, params, "knative-serving", origin)
 
 	var wg sync.WaitGroup
 	var m sync.Mutex
@@ -145,21 +168,47 @@ func scaleAndMeasure(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sca
 	for i := 0; i < count; i++ {
 		go func(ndx int, m *sync.Mutex) {
 			defer wg.Done()
-			sdur, ddur, err := runScaleFromZero(ctx, params, inputs, objs[ndx].Namespace, objs[ndx].Service)
-			if err == nil {
-				//measure
-				fmt.Printf("result of scale for service %s is %f, %f \n", objs[ndx].Service.Name, sdur.Seconds(), ddur.Seconds())
-				m.Lock()
-				result.Measurment = append(result.Measurment, pkg.ScaleFromZeroResult{
-					ServiceName:       objs[ndx].Service.Name,
-					ServiceNamespace:  objs[ndx].Service.Namespace,
-					ServiceLatency:    sdur.Seconds(),
-					DeploymentLatency: ddur.Seconds(),
-				})
-				m.Unlock()
-			} else {
-				fmt.Printf("result of scale is error: %s", err)
+			// set stable window and initial scale to speed up scaling to zero
+			err := updateKsvc(ctx, ksvcClient, objs[ndx].Namespace, objs[ndx].Service.Name, inputs.StableWindow, InitialScale)
+			if err != nil {
+				fmt.Printf("failed to set stable window: %s", err)
+				return
 			}
+
+			fmt.Printf("scale up service %s/%s in %d iterations:\n", objs[ndx].Namespace, objs[ndx].Service.Name, inputs.Iterations)
+			var svcLatencyList, dpLatencyList []float64
+
+			// Iterate inputs.Iterations times to get latency(average, max, min, p50...) of scaling service up from zero
+			for j := 0; j < inputs.Iterations; j++ {
+				time.Sleep(inputs.TimeInterval)
+				sdur, ddur, err := runScaleFromZero(ctx, params, inputs, objs[ndx].Namespace, objs[ndx].Service)
+				if err == nil {
+					svcLatencyList = append(svcLatencyList, sdur.Seconds())
+					dpLatencyList = append(dpLatencyList, ddur.Seconds())
+				} else {
+					fmt.Printf("result of scale is error: %s", err)
+					return
+				}
+			}
+			fmt.Printf("====================== service %s/%s result =====================\n", objs[ndx].Namespace, objs[ndx].Service.Name)
+			if inputs.Verbose {
+				for k := 0; k < len(svcLatencyList); k++ {
+					fmt.Printf("iteration %4d, service latency: %f s, deployment latency: %f s\n", k, svcLatencyList[k], dpLatencyList[k])
+				}
+			}
+			fmt.Printf("service latency result:\n")
+			svcLatencyResult := latencyResultHandler(svcLatencyList)
+			fmt.Printf("deployment latency result:\n")
+			dpLatencyResult := latencyResultHandler(dpLatencyList)
+
+			m.Lock()
+			result.Measurment = append(result.Measurment, pkg.ScaleFromZeroResult{
+				ServiceName:       objs[ndx].Service.Name,
+				ServiceNamespace:  objs[ndx].Service.Namespace,
+				ServiceLatency:    svcLatencyResult,
+				DeploymentLatency: dpLatencyResult,
+			})
+			m.Unlock()
 		}(i, &m)
 	}
 	wg.Wait()
@@ -195,6 +244,7 @@ func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sc
 	req, _ := http.NewRequest("GET", endpoint, nil)
 	req.Host = svc.Status.RouteStatusFields.URL.URL().Host
 
+	start := time.Now()
 	go func() {
 		_, err = Poll(client, req, inputs.MaxRetries, inputs.RequestInterval, inputs.RequestTimeout, endpoint)
 		if err != nil {
@@ -207,7 +257,6 @@ func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sc
 		sdch <- struct{}{}
 	}()
 
-	start := time.Now()
 	// Get the duration that takes to change deployment spec.
 	var dd time.Duration
 	for {

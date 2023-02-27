@@ -248,26 +248,56 @@ Detailed description about the usage of the kperf dashboard:
 
 ### Scale from zero and Measure Knative Service latency
 
-- Scales a service from zero and measure the latency for the service to come up and the deployment to change
+- Scales a service from zero, iterative measure the latency for the service to come up and the deployment to change, give results of average, max, min, percentiles latency, and write them to output(CSV, JSON and HTML)
 
 **Example, scale up services that already scaled down to zero in namespace `ktest`
 
+> recommand to set `--time-interval` >= 10s, the minimal stable window is 6s and the cold startup latency of kperf default workload is 2s~4s(different from hosts)
+
 ```shell script
-$ kperf service scale  --namespace ktest --svc-prefix ktest --range 0,9  --verbose --output /tmp
-result of scale for service ktest-3 is 11.153888, 2.255348
-result of scale for service ktest-2 is 11.223628, 2.197076
-result of scale for service ktest-8 is 11.183334, 2.228188
-result of scale for service ktest-5 is 12.190056, 2.425972
-result of scale for service ktest-0 is 12.443247, 2.365808
-result of scale for service ktest-9 is 13.226459, 0.274911
-result of scale for service ktest-4 is 13.218240, 2.289996
-result of scale for service ktest-7 is 13.956690, 2.333238
-result of scale for service ktest-6 is 14.786275, 2.232580
-result of scale for service ktest-1 is 15.294111, 0.295408
+$ kperf service scale --namespace default --svc-prefix ktest --range 0,1  --verbose --output /tmp -i 20 -T 10s -s 6s
+scale up service default/ktest-0 in 20 iterations:
+======================= service default/ktest-0 result =====================
+iteration    0, service latency: 2.885382 s, deployment latency: 0.072050 s
+iteration    1, service latency: 2.989419 s, deployment latency: 0.047398 s
+iteration    2, service latency: 2.050349 s, deployment latency: 0.021817 s
+iteration    3, service latency: 2.051122 s, deployment latency: 0.024518 s
+iteration    4, service latency: 2.070070 s, deployment latency: 0.021189 s
+iteration    5, service latency: 2.075538 s, deployment latency: 0.023571 s
+iteration    6, service latency: 2.074330 s, deployment latency: 0.024800 s
+iteration    7, service latency: 2.067129 s, deployment latency: 0.030077 s
+iteration    8, service latency: 2.090450 s, deployment latency: 0.022437 s
+iteration    9, service latency: 2.068713 s, deployment latency: 0.024025 s
+iteration   10, service latency: 2.062881 s, deployment latency: 0.023880 s
+iteration   11, service latency: 2.070932 s, deployment latency: 0.021486 s
+iteration   12, service latency: 2.081731 s, deployment latency: 0.024668 s
+iteration   13, service latency: 2.072034 s, deployment latency: 0.027175 s
+iteration   14, service latency: 2.066353 s, deployment latency: 0.021117 s
+iteration   15, service latency: 2.087384 s, deployment latency: 0.024184 s
+iteration   16, service latency: 2.072947 s, deployment latency: 0.027255 s
+iteration   17, service latency: 2.073980 s, deployment latency: 0.028488 s
+iteration   18, service latency: 2.063301 s, deployment latency: 0.027137 s
+iteration   19, service latency: 2.075841 s, deployment latency: 0.024166 s
+service latency result:
+average: 2.157494 s
+min:     2.050349 s
+max:     2.989419 s
+p50:     2.072034 s
+p90:     2.090450 s
+p95:     2.885382 s
+p99:     2.937401 s
+deployment latency result:
+average: 0.028072 s
+min:     0.021117 s
+max:     0.072050 s
+p50:     0.024184 s
+p90:     0.030077 s
+p95:     0.047398 s
+p99:     0.059724 s
 failed to get Knative Eventing version: namespaces "knative-eventing" not found
-Measurement saved in CSV file /tmp/20211108115231_ksvc_creation_time.csv
-Measurement saved in JSON file /tmp/20211108115231_ksvc_creation_time.json
-Visualized measurement saved in HTML file /tmp/20211108115231_ksvc_creation_time.html
+Measurement saved in CSV file /tmp/20230203093607_ksvc_scaling_time.csv
+Visualized measurement saved in HTML file /tmp/20230203093607_ksvc_scaling_time.html
+Measurement saved in JSON file /tmp/20230203093607_ksvc_scaling_time.json
 ```
 
 - By default, the `scale` command assumes you are using Istio as your networking layer. You can use an alternative networking layer by setting the `GATEWAY_OVERRIDE` and `GATEWAY_NAMESPACE_OVERRIDE` environmental variables.
@@ -275,7 +305,7 @@ Visualized measurement saved in HTML file /tmp/20211108115231_ksvc_creation_time
 For example, to run the `scale` command using Kourier,
 
 ``` bash
-GATEWAY_OVERRIDE=kourier GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service scale  --namespace ktest --svc-prefix ktest --range 0,9  --verbose --output /tmp
+GATEWAY_OVERRIDE=kourier GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service scale --namespace default --svc-prefix ktest --range 0,1  --verbose --output /tmp -i 20 -T 10s -s 6s
 ```
 
 ### Scale from 0 to N using load test tool and Measure scale up latency
