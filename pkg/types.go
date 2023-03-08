@@ -89,6 +89,10 @@ type ScaleArgs struct {
 	Iterations       int
 	TimeInterval     time.Duration
 	StableWindow     string
+	Method           string
+	Body             string
+	BodyFile         string
+	ContentType      string
 }
 
 type LoadArgs struct {

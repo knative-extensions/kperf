@@ -15,12 +15,16 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -92,6 +96,10 @@ kperf service scale --svc-perfix svc --range 1,200 --namespace ns --concurrency 
 	serviceScaleCommand.Flags().IntVarP(&scaleArgs.Iterations, "iterations", "i", 1, "Number of iterations to invoke the service")
 	serviceScaleCommand.Flags().DurationVarP(&scaleArgs.TimeInterval, "time-interval", "T", 10*time.Second, "The time interval of each scale up, recommend to set it no less than the sum of the stable window and cold startup time")
 	serviceScaleCommand.Flags().StringVarP(&scaleArgs.StableWindow, "stable-window", "s", "6s", "stable window per revision")
+	serviceScaleCommand.Flags().StringVarP(&scaleArgs.Method, "method", "m", "GET", "Request method, support GET and POST")
+	serviceScaleCommand.Flags().StringVarP(&scaleArgs.ContentType, "contentType", "C", "text/html", "Request ContentType")
+	serviceScaleCommand.Flags().StringVarP(&scaleArgs.Body, "data", "D", "", "Request body")
+	serviceScaleCommand.Flags().StringVarP(&scaleArgs.BodyFile, "dataFile", "F", "", "Request body with a file, such as json")
 	return serviceScaleCommand
 }
 
@@ -241,8 +249,34 @@ func runScaleFromZero(ctx context.Context, params *pkg.PerfParams, inputs pkg.Sc
 	}
 
 	client := http.Client{}
-	req, _ := http.NewRequest("GET", endpoint, nil)
+	method := strings.ToUpper(inputs.Method)
+	header := make(http.Header)
+	header.Set("Content-Type", inputs.ContentType)
+	var bodyAll []byte
+	// post file or data, priority: file > data
+	if inputs.Body != "" {
+		bodyAll = []byte(inputs.Body)
+	}
+	if inputs.BodyFile != "" {
+		slurp, err := ioutil.ReadFile(inputs.BodyFile)
+		if err != nil {
+			fmt.Fprint(os.Stderr, err.Error())
+			fmt.Fprintf(os.Stderr, "\n")
+			os.Exit(1)
+		}
+		bodyAll = slurp
+	}
+	req, err := http.NewRequest(method, endpoint, nil)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "\n")
+		os.Exit(1)
+	}
+	// set host header
 	req.Host = svc.Status.RouteStatusFields.URL.URL().Host
+
+	req.Header = header
+	req.Body = ioutil.NopCloser(bytes.NewReader(bodyAll))
 
 	start := time.Now()
 	go func() {
