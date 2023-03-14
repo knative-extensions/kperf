@@ -250,7 +250,7 @@ Detailed description about the usage of the kperf dashboard:
 
 - Scales a service from zero, iterative measure the latency for the service to come up and the deployment to change, give results of average, max, min, percentiles latency, and write them to output(CSV, JSON and HTML)
 
-**Example, scale up services that already scaled down to zero in namespace `ktest`
+**Example**, scale up services that already scaled down to zero in namespace `ktest`
 
 > recommand to set `--time-interval` >= 10s, the minimal stable window is 6s and the cold startup latency of kperf default workload is 2s~4s(different from hosts)
 
@@ -307,6 +307,90 @@ For example, to run the `scale` command using Kourier,
 ``` bash
 GATEWAY_OVERRIDE=kourier GATEWAY_NAMESPACE_OVERRIDE=kourier-system kperf service scale --namespace default --svc-prefix ktest --range 0,1  --verbose --output /tmp -i 20 -T 10s -s 6s
 ```
+**use POST in scale**
+
+Create an knative service to display received POST request
+
+```shell
+wget https://raw.githubusercontent.com/chzhyang/faas-workloads/coldstart/knative-samples/request-display/request-display.yaml
+
+kubectl apply -f request-display.yaml
+```
+
+Send data in POST
+```shell
+kperf service scale --namespace default --svc request-display \
+--verbose --output /tmp \
+-m POST -D '{"key1":"value1", "key2":"value2"}' -C application/json
+
+scale up service default/request-display in 1 iterations:
+====================== service default/request-display result =====================
+iteration    0, service latency: 2.290199 s, deployment latency: 0.036729 s
+service latency result:
+Average: 2.290199 s
+Min:     2.290199 s
+Max:     2.290199 s
+P50:     2.290199 s
+P90:     2.290199 s
+P95:     2.290199 s
+P99:     2.290199 s
+deployment latency result:
+Average: 0.036729 s
+Min:     0.036729 s
+Max:     0.036729 s
+P50:     0.036729 s
+P90:     0.036729 s
+P95:     0.036729 s
+P99:     0.036729 s
+Measurement saved in CSV file /tmp/20230314052830_ksvc_scaling_time.csv
+Visualized measurement saved in HTML file /tmp/20230314052830_ksvc_scaling_time.html
+Measurement saved in JSON file /tmp/20230314052830_ksvc_scaling_time.json
+
+$ k logs request-display-00001-deployment-69546d444c-g9rqb 
+Defaulted container "user-container" out of: user-container, queue-proxy
+2023-03-14 05:28:29,251::INFO::Serving on http://0.0.0.0:8080
+2023-03-14 05:28:30,224::WARNING::No CloudEvent available
+2023-03-14 05:28:30,224::INFO::Received a POST request: {"key1":"value1", "key2":"value2"}
+```
+
+Send file in POST
+```shell
+# get cloudevents.Event file
+wget https://raw.githubusercontent.com/chzhyang/faas-workloads/coldstart/tf-knative-event-ceph/wrk-cloudevent/event.json
+
+GATEWAY_OVERRIDE=kourier GATEWAY_NAMESPACE_OVERRIDE=kourier-system \
+kperf service scale --namespace default --svc request-display \
+--verbose --output /tmp \
+-m POST -F event.json -C application/cloudevents+json
+
+scale up service default/request-display in 1 iterations:
+====================== service default/request-display result =====================
+iteration    0, service latency: 3.102239 s, deployment latency: 0.786127 s
+service latency result:
+Average: 3.102239 s
+Min:     3.102239 s
+Max:     3.102239 s
+P50:     3.102239 s
+P90:     3.102239 s
+P95:     3.102239 s
+P99:     3.102239 s
+deployment latency result:
+Average: 0.786127 s
+Min:     0.786127 s
+Max:     0.786127 s
+P50:     0.786127 s
+P90:     0.786127 s
+P95:     0.786127 s
+P99:     0.786127 s
+Measurement saved in CSV file /tmp/20230314052612_ksvc_scaling_time.csv
+Visualized measurement saved in HTML file /tmp/20230314052612_ksvc_scaling_time.html
+Measurement saved in JSON file /tmp/20230314052612_ksvc_scaling_time.json
+
+$ k logs request-display-00002-deployment-69546d444c-v5f9s 
+Defaulted container "user-container" out of: user-container, queue-proxy
+2023-03-14 05:26:11,488::INFO::Serving on http://0.0.0.0:8080
+2023-03-14 05:26:12,518::INFO::Reveived cloudevents.Event from ceph:s3, event id is curl.event.1
+```
 
 ### Scale from 0 to N using load test tool and Measure scale up latency
 
@@ -350,7 +434,7 @@ Flags:
   -w, --wait-time duration        Time to wait for all pods to be ready (default 10s)
 
 Global Flags:
-      --config string   kperf configuration file (default "/home/ubuntu/.config/kperf/config.yaml")
+      --config string   kperf configuration file (default "/.config/kperf/config.yaml")
 ```
 
 **Output**
