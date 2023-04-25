@@ -646,7 +646,7 @@ knative.dev/pkg/network
 knative.dev/pkg/profiling
 knative.dev/pkg/ptr
 knative.dev/pkg/tracker
-# knative.dev/serving v0.36.1-0.20230425124544-84fa64c75bd3
+# knative.dev/serving v0.36.1-0.20230425144259-08bedbea7882
 ## explicit; go 1.18
 knative.dev/serving/pkg/apis/autoscaling
 knative.dev/serving/pkg/apis/autoscaling/v1alpha1
