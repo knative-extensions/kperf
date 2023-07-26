@@ -19,7 +19,7 @@ require (
 	knative.dev/hack v0.0.0-20230712131415-ddae80293c43
 	knative.dev/networking v0.0.0-20230718160410-75dcd54d9510
 	knative.dev/pkg v0.0.0-20230718152110-aef227e72ead
-	knative.dev/serving v0.37.1-0.20230713131514-294cb9c08b37
+	knative.dev/serving v0.38.0
 )
 
 require (
