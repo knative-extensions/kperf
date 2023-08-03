@@ -11,15 +11,15 @@ require (
 	github.com/spf13/cobra v1.6.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
-	github.com/tsenart/vegeta/v12 v12.8.4
+	github.com/tsenart/vegeta/v12 v12.11.0
 	gotest.tools/v3 v3.1.0
 	k8s.io/api v0.26.5
 	k8s.io/apimachinery v0.26.5
 	k8s.io/client-go v0.26.5
-	knative.dev/hack v0.0.0-20230712131415-ddae80293c43
-	knative.dev/networking v0.0.0-20230718160410-75dcd54d9510
-	knative.dev/pkg v0.0.0-20230718152110-aef227e72ead
-	knative.dev/serving v0.38.0
+	knative.dev/hack v0.0.0-20230802014852-338500eed425
+	knative.dev/networking v0.0.0-20230802091048-29da3ac7ef4d
+	knative.dev/pkg v0.0.0-20230802191948-8d3f95106327
+	knative.dev/serving v0.38.1-0.20230802201148-0bbb5c78ac89
 )
 
 require (
@@ -53,16 +53,17 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rs/dnscache v0.0.0-20211102005908-e0241e321417 // indirect
 	github.com/spf13/afero v1.8.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.19.1 // indirect
-	golang.org/x/exp v0.0.0-20200331195152-e8c3332aa8e5 // indirect
+	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/oauth2 v0.8.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/term v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect

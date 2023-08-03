@@ -131,6 +131,9 @@ github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/rs/dnscache v0.0.0-20211102005908-e0241e321417
+## explicit; go 1.12
+github.com/rs/dnscache
 # github.com/spf13/afero v1.8.0
 ## explicit; go 1.13
 github.com/spf13/afero
@@ -158,8 +161,8 @@ github.com/spf13/viper/internal/encoding/yaml
 # github.com/subosito/gotenv v1.2.0
 ## explicit
 github.com/subosito/gotenv
-# github.com/tsenart/vegeta/v12 v12.8.4
-## explicit; go 1.13
+# github.com/tsenart/vegeta/v12 v12.11.0
+## explicit; go 1.20
 github.com/tsenart/vegeta/v12/lib
 # go.uber.org/atomic v1.9.0
 ## explicit; go 1.13
@@ -167,16 +170,15 @@ go.uber.org/atomic
 # go.uber.org/multierr v1.6.0
 ## explicit; go 1.12
 go.uber.org/multierr
-# go.uber.org/zap v1.19.1
-## explicit; go 1.13
+# go.uber.org/zap v1.24.0
+## explicit; go 1.19
 go.uber.org/zap
 go.uber.org/zap/buffer
+go.uber.org/zap/internal
 go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
-# golang.org/x/exp v0.0.0-20200331195152-e8c3332aa8e5
-## explicit; go 1.12
 # golang.org/x/net v0.12.0
 ## explicit; go 1.17
 golang.org/x/net/context
@@ -189,6 +191,9 @@ golang.org/x/net/idna
 ## explicit; go 1.17
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
+# golang.org/x/sync v0.3.0
+## explicit; go 1.17
+golang.org/x/sync/singleflight
 # golang.org/x/sys v0.10.0
 ## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
@@ -591,10 +596,10 @@ k8s.io/utils/lru
 k8s.io/utils/net
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20230712131415-ddae80293c43
+# knative.dev/hack v0.0.0-20230802014852-338500eed425
 ## explicit; go 1.18
 knative.dev/hack
-# knative.dev/networking v0.0.0-20230718160410-75dcd54d9510
+# knative.dev/networking v0.0.0-20230802091048-29da3ac7ef4d
 ## explicit; go 1.18
 knative.dev/networking/pkg/apis/networking
 knative.dev/networking/pkg/apis/networking/v1alpha1
@@ -602,7 +607,7 @@ knative.dev/networking/pkg/client/clientset/versioned/scheme
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake
 knative.dev/networking/pkg/config
-# knative.dev/pkg v0.0.0-20230718152110-aef227e72ead
+# knative.dev/pkg v0.0.0-20230802191948-8d3f95106327
 ## explicit; go 1.18
 knative.dev/pkg/apis
 knative.dev/pkg/apis/duck
@@ -619,7 +624,7 @@ knative.dev/pkg/network
 knative.dev/pkg/profiling
 knative.dev/pkg/ptr
 knative.dev/pkg/tracker
-# knative.dev/serving v0.38.0
+# knative.dev/serving v0.38.1-0.20230802201148-0bbb5c78ac89
 ## explicit; go 1.18
 knative.dev/serving/pkg/apis/autoscaling
 knative.dev/serving/pkg/apis/autoscaling/v1alpha1
