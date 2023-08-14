@@ -16,10 +16,10 @@ require (
 	k8s.io/api v0.26.5
 	k8s.io/apimachinery v0.26.5
 	k8s.io/client-go v0.26.5
-	knative.dev/hack v0.0.0-20230807013713-a75befb4fd4b
-	knative.dev/networking v0.0.0-20230808142735-29c1660fa214
-	knative.dev/pkg v0.0.0-20230808043333-ea6c1f29b641
-	knative.dev/serving v0.38.1-0.20230808142735-ad26685213da
+	knative.dev/hack v0.0.0-20230814132844-3403e3502fdc
+	knative.dev/networking v0.0.0-20230814135744-e50e66f1f80a
+	knative.dev/pkg v0.0.0-20230814093643-26b41ba523a0
+	knative.dev/serving v0.38.1-0.20230814133344-5c1c855bd92a
 )
 
 require (
@@ -62,7 +62,7 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/oauth2 v0.8.0 // indirect
+	golang.org/x/oauth2 v0.11.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
 	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/term v0.11.0 // indirect
