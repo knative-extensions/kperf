@@ -212,8 +212,8 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.3.0
 ## explicit
 golang.org/x/time/rate
-# gomodules.xyz/jsonpatch/v2 v2.2.0
-## explicit; go 1.12
+# gomodules.xyz/jsonpatch/v2 v2.3.0
+## explicit; go 1.20
 gomodules.xyz/jsonpatch/v2
 # google.golang.org/appengine v1.6.7
 ## explicit; go 1.11
@@ -596,10 +596,10 @@ k8s.io/utils/lru
 k8s.io/utils/net
 k8s.io/utils/strings/slices
 k8s.io/utils/trace
-# knative.dev/hack v0.0.0-20230814132844-3403e3502fdc
+# knative.dev/hack v0.0.0-20230815012940-044c02b7a447
 ## explicit; go 1.18
 knative.dev/hack
-# knative.dev/networking v0.0.0-20230814135744-e50e66f1f80a
+# knative.dev/networking v0.0.0-20230815014240-ed0534b4ef83
 ## explicit; go 1.18
 knative.dev/networking/pkg/apis/networking
 knative.dev/networking/pkg/apis/networking/v1alpha1
@@ -607,7 +607,7 @@ knative.dev/networking/pkg/client/clientset/versioned/scheme
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1
 knative.dev/networking/pkg/client/clientset/versioned/typed/networking/v1alpha1/fake
 knative.dev/networking/pkg/config
-# knative.dev/pkg v0.0.0-20230814093643-26b41ba523a0
+# knative.dev/pkg v0.0.0-20230815132840-4f651e092853
 ## explicit; go 1.18
 knative.dev/pkg/apis
 knative.dev/pkg/apis/duck
@@ -624,7 +624,7 @@ knative.dev/pkg/network
 knative.dev/pkg/profiling
 knative.dev/pkg/ptr
 knative.dev/pkg/tracker
-# knative.dev/serving v0.38.1-0.20230814133344-5c1c855bd92a
+# knative.dev/serving v0.38.1-0.20230815134146-59cb3d3d34c4
 ## explicit; go 1.18
 knative.dev/serving/pkg/apis/autoscaling
 knative.dev/serving/pkg/apis/autoscaling/v1alpha1
