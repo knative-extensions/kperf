@@ -18,8 +18,8 @@ require (
 	k8s.io/client-go v0.26.5
 	knative.dev/hack v0.0.0-20230818155117-9cc05a31e8c0
 	knative.dev/networking v0.0.0-20230828082700-1e4e18318353
-	knative.dev/pkg v0.0.0-20230821102121-81e4ee140363
-	knative.dev/serving v0.38.1-0.20230828082601-43f752622190
+	knative.dev/pkg v0.0.0-20230829134737-fcccb4e1a0a4
+	knative.dev/serving v0.38.1-0.20230829131530-899b332671b1
 )
 
 require (
@@ -29,7 +29,7 @@ require (
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
 	github.com/go-openapi/swag v0.22.3 // indirect
@@ -67,7 +67,7 @@ require (
 	golang.org/x/term v0.11.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.3.0 // indirect
+	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
