@@ -18,8 +18,8 @@ require (
 	k8s.io/client-go v0.26.5
 	knative.dev/hack v0.0.0-20230911131120-3af329f73ff3
 	knative.dev/networking v0.0.0-20230911132222-48042038ea3d
-	knative.dev/pkg v0.0.0-20230911130819-09df2b681efd
-	knative.dev/serving v0.38.1-0.20230911141518-4ab6bd712877
+	knative.dev/pkg v0.0.0-20230912052245-8d736b687bf4
+	knative.dev/serving v0.38.1-0.20230912142124-4bcc36043a31
 )
 
 require (
@@ -60,12 +60,12 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.uber.org/zap v1.25.0 // indirect
-	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/oauth2 v0.11.0 // indirect
+	golang.org/x/net v0.15.0 // indirect
+	golang.org/x/oauth2 v0.12.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
-	golang.org/x/term v0.11.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/term v0.12.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
